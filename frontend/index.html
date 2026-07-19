@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta name="color-scheme" content="dark light"/>
+    <title>Sliver GUI</title>
+    <style>
+        html, body, #app {
+            margin: 0;
+            background-color: #1a1a1a;
+            color: #d4d4d4;
+        }
+        html[data-theme="light"], html[data-theme="light"] body, html[data-theme="light"] #app {
+            background-color: #f5f5f5;
+            color: #1a1a1a;
+        }
+    </style>
+    <script>
+        (function() {
+            var preference = 'dark';
+            try { preference = localStorage.getItem('sliver-theme') || 'system'; } catch(e) {}
+            var resolved = preference;
+            if (preference === 'system') {
+                try {
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                        resolved = 'light';
+                    } else {
+                        resolved = 'dark';
+                    }
+                } catch(e) {}
+            }
+            document.documentElement.setAttribute('data-theme', resolved);
+        })();
+    </script>
+</head>
+<body>
+<div id="app"></div>
+<script src="./src/main.js" type="module"></script>
+</body>
+</html>

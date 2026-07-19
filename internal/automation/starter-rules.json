@@ -1,0 +1,85 @@
+{
+  "rules": [
+    {
+      "id": "starter-auto-tag-new-agents",
+      "name": "Auto-tag new agents",
+      "description": "Tag new sessions with kind, OS, architecture, and obvious elevated contexts.",
+      "enabled": false,
+      "trigger": "session-connected",
+      "targetKind": "any",
+      "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
+      "executionMode": "javascript",
+      "commands": [],
+      "script": "const tags = [target.kind];\nif (target.os) tags.push(target.os);\nif (target.arch) tags.push(target.arch);\nconst user = (target.username || '').toLowerCase();\nif (user.includes('system') || user === 'root') tags.push('high-priv');\nconst updated = sliver.tags.add(tags.join(','));\nsliver.log('Tags:', updated.join(', '));",
+      "timeoutSeconds": 30,
+      "continueOnError": false,
+      "delaySeconds": 0,
+      "cooldownSeconds": 120,
+      "intervalSeconds": 60,
+      "maxRuns": 0
+    },
+    {
+      "id": "starter-auto-tag-new-beacons",
+      "name": "Auto-tag new beacons",
+      "description": "Apply the same GUI tags when a beacon first registers.",
+      "enabled": false,
+      "trigger": "beacon-registered",
+      "targetKind": "beacon",
+      "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
+      "executionMode": "javascript",
+      "commands": [],
+      "script": "const tags = ['beacon'];\nif (target.os) tags.push(target.os);\nif (target.arch) tags.push(target.arch);\nconst user = (target.username || '').toLowerCase();\nif (user.includes('system') || user === 'root') tags.push('high-priv');\nconst updated = sliver.tags.add(tags.join(','));\nsliver.log('Tags:', updated.join(', '));",
+      "timeoutSeconds": 30,
+      "continueOnError": false,
+      "delaySeconds": 0,
+      "cooldownSeconds": 120,
+      "intervalSeconds": 60,
+      "maxRuns": 0
+    },
+    {
+      "id": "starter-first-contact-inventory",
+      "name": "First-contact inventory",
+      "description": "On a new session, collect operator context and a lightweight process snapshot.",
+      "enabled": false,
+      "trigger": "session-connected",
+      "targetKind": "session",
+      "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
+      "executionMode": "commands",
+      "commands": [
+        "whoami",
+        "info",
+        "pwd",
+        "ps"
+      ],
+      "script": "",
+      "timeoutSeconds": 180,
+      "continueOnError": true,
+      "delaySeconds": 1,
+      "cooldownSeconds": 300,
+      "intervalSeconds": 60,
+      "maxRuns": 0
+    },
+    {
+      "id": "starter-manual-network-snapshot",
+      "name": "Manual network snapshot",
+      "description": "Run on a selected agent when you want a quick process and network-state baseline.",
+      "enabled": false,
+      "trigger": "manual",
+      "targetKind": "any",
+      "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
+      "executionMode": "commands",
+      "commands": [
+        "whoami",
+        "ps",
+        "netstat"
+      ],
+      "script": "",
+      "timeoutSeconds": 180,
+      "continueOnError": true,
+      "delaySeconds": 1,
+      "cooldownSeconds": 0,
+      "intervalSeconds": 60,
+      "maxRuns": 0
+    }
+  ]
+}

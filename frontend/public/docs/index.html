@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sliver-gui docs</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #111418;
+        color: #e8edf2;
+      }
+      body {
+        margin: 0;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 16px 0 28px;
+      }
+      a {
+        color: #80bfff;
+      }
+      nav a {
+        border: 1px solid #2c3540;
+        border-radius: 6px;
+        padding: 6px 10px;
+        text-decoration: none;
+      }
+      section {
+        border-top: 1px solid #2c3540;
+        padding-top: 20px;
+        margin-top: 24px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+      }
+      th, td {
+        border-bottom: 1px solid #2c3540;
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      code {
+        border-radius: 4px;
+        background: #1b222a;
+        padding: 1px 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>sliver-gui docs</h1>
+      <nav>
+        <a href="#shortcuts">Shortcuts</a>
+        <a href="#rules">Rule Syntax</a>
+        <a href="#rpc">RPC Coverage</a>
+      </nav>
+
+      <section id="shortcuts">
+        <h2>Shortcuts</h2>
+        <table>
+          <tr><th>Shortcut</th><th>Action</th></tr>
+          <tr><td><code>Ctrl+K</code></td><td>Command palette</td></tr>
+          <tr><td><code>Ctrl+Shift+/</code></td><td>Keyboard shortcuts</td></tr>
+          <tr><td><code>F1</code></td><td>Docs</td></tr>
+          <tr><td><code>Ctrl+1</code> / <code>Ctrl+2</code> / <code>Ctrl+3</code></td><td>Agents / Server / Automation</td></tr>
+          <tr><td><code>j</code> / <code>k</code></td><td>Move table focus in agent tables</td></tr>
+          <tr><td><code>/</code></td><td>Focus agent filter</td></tr>
+        </table>
+      </section>
+
+      <section id="rules">
+        <h2>Rule Syntax</h2>
+        <p>Rules have a trigger, optional filters, and one or more actions.</p>
+        <table>
+          <tr><th>Event</th><th>Meaning</th></tr>
+          <tr><td><code>session-connected</code></td><td>A session opened.</td></tr>
+          <tr><td><code>beacon-registered</code></td><td>A beacon registered.</td></tr>
+          <tr><td><code>beacon-checkin</code></td><td>A beacon checked in.</td></tr>
+          <tr><td><code>interval</code></td><td>Timer-driven rule.</td></tr>
+          <tr><td><code>manual</code></td><td>Operator-run rule.</td></tr>
+        </table>
+      </section>
+
+      <section id="rpc">
+        <h2>RPC Coverage</h2>
+        <p>The full table lives in <code>docs/rpc-coverage.md</code>. The short rule: use direct RPCs when the GUI gains typed state, progress, binary transfer, or safer backend wrappers; keep console routing when Sliver's CLI parser is the source of truth.</p>
+      </section>
+    </main>
+  </body>
+</html>

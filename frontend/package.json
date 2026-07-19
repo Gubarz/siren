@@ -1,0 +1,49 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./jsconfig.json",
+    "lint": "eslint .",
+    "deadcode": "knip --no-config-hints",
+    "duplicates": "jscpd src --format svelte,javascript",
+    "test": "vitest",
+    "test:run": "vitest run --passWithNoTests",
+    "analyze": "npm run lint && npm run deadcode && npm run duplicates && npm run test:run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tailwindcss/vite": "^4.1.4",
+    "eslint": "^10.4.1",
+    "eslint-plugin-boundaries": "^7.0.2",
+    "eslint-plugin-svelte": "^3.19.0",
+    "eslint-plugin-tailwindcss": "^4.0.6",
+    "globals": "^17.6.0",
+    "jscpd": "^5.0.7",
+    "knip": "^6.16.1",
+    "svelte": "^5.56.3",
+    "svelte-check": "^4.6.0",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
+    "@lucide/svelte": "^1.23.0",
+    "@tanstack/svelte-virtual": "^3.13.31",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "@xyflow/svelte": "^1.6.0",
+    "ansi_up": "^6.0.6",
+    "flowbite": "^3.1.2",
+    "flowbite-svelte": "^1.33.1",
+    "flowbite-svelte-icons": "^3.1.0",
+    "fuse.js": "^7.4.2"
+  }
+}

@@ -1,0 +1,235 @@
+@import "tailwindcss";
+@import "flowbite/src/themes/default.css";
+@import "./themes.css";
+
+@plugin "flowbite/plugin";
+@source "../../node_modules/flowbite";
+@source "../../node_modules/flowbite-svelte/dist";
+@source "../../node_modules/flowbite-svelte-icons/dist";
+
+@custom-variant dark (&:where([data-theme]:not([data-theme="light"]), [data-theme]:not([data-theme="light"]) *));
+
+@theme {
+  --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-mono: 'Consolas', 'Courier New', ui-monospace, monospace;
+
+  --text-3xs: 0.5625rem; /* 9px */
+  --text-2xs: 0.625rem;  /* 10px */
+  --text-xs: 0.6875rem;  /* 11px */
+  --text-sm: 0.75rem;    /* 12px */
+  --text-base: 0.8125rem;/* 13px */
+  --text-lg: 0.9375rem;  /* 15px */
+  --text-xl: 1.125rem;   /* 18px */
+  --text-2xl: 1.375rem;  /* 22px */
+
+  --spacing-vh-60: 60vh;
+  --spacing-vh-75: 75vh;
+  --spacing-vh-80: 80vh;
+  --spacing-vh-85: 85vh;
+  --spacing-vh-90: 90vh;
+  --spacing-vw-90: 90vw;
+  --spacing-pct-90: 90%;
+
+  --leading-tight-cli: 1.4;
+
+  --z-index-titlebar: 10000;
+
+  --animate-toast-in: slideIn 0.2s ease-out;
+
+  --shadow-panel: 0 10px 30px rgb(0 0 0 / 0.5);
+
+  --z-index-popover: 10100;
+  --z-index-toast: 10300;
+
+  --color-primary-50: #f2ecf9;
+  --color-primary-100: #e6d8f3;
+  --color-primary-200: #ccadeb;
+  --color-primary-300: #b384e1;
+  --color-primary-400: #9a5bd7;
+  --color-primary-500: #ad7adf;
+  --color-primary-600: #924ed4;
+  --color-primary-700: #762ebe;
+  --color-primary-800: #5b2391;
+  --color-primary-900: #3f1f5f;
+  --color-primary-950: #08040c;
+
+  --color-fg-brand-subtle: var(--color-primary-200);
+  --color-fg-brand: var(--color-primary-500);
+  --color-fg-brand-strong: var(--color-primary-900);
+
+  --color-brand-softer: var(--color-primary-50);
+  --color-brand-soft: var(--color-primary-100);
+  --color-brand: var(--color-primary-500);
+  --color-brand-medium: var(--color-primary-200);
+  --color-brand-strong: var(--color-primary-800);
+
+  --color-danger-50: #fee7e7;
+  --color-danger-100: #fccfcf;
+  --color-danger-200: #ff9999;
+  --color-danger-300: #ff6666;
+  --color-danger-400: #ff3333;
+  --color-danger-500: #ff4a4a;
+  --color-danger-600: #ff1616;
+  --color-danger-700: #e00000;
+  --color-danger-800: #ac0000;
+  --color-danger-900: #720606;
+  --color-danger-950: #0f0101;
+
+  --color-success-50: #eef6ef;
+  --color-success-100: #deeddf;
+  --color-success-200: #b8e0ba;
+  --color-success-300: #94d197;
+  --color-success-400: #71c174;
+  --color-success-500: #4caf50;
+  --color-success-600: #409443;
+  --color-success-700: #347837;
+  --color-success-800: #285d2a;
+  --color-success-900: #213d22;
+  --color-success-950: #050a06;
+
+  --color-warning-50: #f9f4eb;
+  --color-warning-100: #f4ead7;
+  --color-warning-200: #edd6ab;
+  --color-warning-300: #e4c281;
+  --color-warning-400: #dbae57;
+  --color-warning-500: #d6a23e;
+  --color-warning-600: #c08c29;
+  --color-warning-700: #9c7221;
+  --color-warning-800: #78581a;
+  --color-warning-900: #4f3c17;
+  --color-warning-950: #0c0903;
+
+  --color-session-500: #4caf50;
+  --color-beacon-500: #d6a23e;
+  --color-device-500: #58a6ff;
+
+  --color-surface-0: #1a1a1a;
+  --color-surface-50: #181818;
+  --color-surface-100: #222222;
+  --color-surface-200: #2a2a2a;
+  --color-surface-300: #333333;
+
+  --color-canvas: var(--color-surface-0);
+  --color-panel: var(--color-surface-100);
+  --color-panel-border: var(--color-surface-300);
+  --color-line: var(--color-surface-300);
+  --color-chrome-header: #111111;
+  --color-chrome: var(--color-surface-50);
+  --color-table-header: var(--color-surface-200);
+  --color-table-line: var(--color-surface-300);
+  --color-row-hover: #2b2b2b;
+  --color-row-selected: #38066a;
+  --color-fg: #d4d4d4;
+  --color-fg-muted: #888888;
+  --color-fg-inverted: var(--color-surface-0);
+  --color-on-brand: #ffffff;
+  --color-brand-muted: color-mix(in srgb, var(--color-brand) 14%, transparent);
+}
+
+@layer base {
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* 0.8125rem equals 13px at 1.0 zoom, but will natively scale up/down! */
+    font-size: 0.8125rem; 
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .node {
+    box-sizing: border-box;
+    font-family: var(--font-mono);
+    border-radius: 6px;
+    border: 1px solid var(--color-line);
+    background: var(--color-panel);
+    color: var(--color-fg);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .node .handle { opacity: 0; }
+
+  /* Anchor xy-flow handles to the exact edges of the .node div, not the
+     xy-flow wrapper. Wrapper size sometimes drifts from the fixed w/h we
+     hand dagre (content overflow, font-size rounding, box-shadow), which
+     leaves a gap between the visible box and where edges terminate. */
+  .svelte-flow__node > .node { position: relative; }
+  .svelte-flow__node .node .svelte-flow__handle {
+    position: absolute;
+  }
+  .svelte-flow__node .node .svelte-flow__handle-top {
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .svelte-flow__node .node .svelte-flow__handle-bottom {
+    top: auto;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 50%);
+  }
+  .svelte-flow__node .node .svelte-flow__handle-left {
+    top: 50%;
+    left: 0;
+    transform: translate(-50%, -50%);
+  }
+  .svelte-flow__node .node .svelte-flow__handle-right {
+    top: 50%;
+    left: auto;
+    right: 0;
+    transform: translate(50%, -50%);
+  }
+
+  .node--selected-agent {
+    border-color: var(--color-brand);
+    background: color-mix(in srgb, var(--color-brand) 14%, var(--color-panel));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand) 48%, transparent), 0 2px 8px rgb(0 0 0 / 0.35);
+  }
+  .node--selected-device {
+    border-left-color: #9ecbff;
+    background: color-mix(in srgb, var(--color-device-500) 14%, var(--color-panel));
+    box-shadow: 0 0 0 2px rgb(88 166 255 / 0.45), 0 2px 8px rgb(0 0 0 / 0.35);
+  }
+  .node-glow-success { box-shadow: 0 0 6px var(--color-success-500); }
+  .node-glow-device { box-shadow: 0 0 6px var(--color-device-500); }
+
+  /* 200px / 16 = 12.5rem */
+  .grid-cards-auto-fill-200 { grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); }
+  /* 130px / 16 = 8.125rem */
+  .grid-cards-auto-fill-130 { grid-template-columns: repeat(auto-fill, minmax(8.125rem, 1fr)); }
+  .grid-c2-row { grid-template-columns: 1.75rem 6rem 1fr auto auto auto auto; }
+
+  .status-dot-glow { box-shadow: 0 0 6px currentColor; }
+
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .providers-grid {
+      grid-template-columns: minmax(8rem, 1fr) minmax(9rem, 0.9fr) minmax(10rem, 1.2fr) minmax(10rem, 1.2fr) auto;
+    }
+  }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.note-input input {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  padding: 2px 4px !important;
+}
+.note-input:hover,
+.note-input:focus {
+  background: rgb(255 255 255 / 0.1);
+}
