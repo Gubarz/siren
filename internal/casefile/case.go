@@ -104,6 +104,7 @@ func (s *Service) readCase(path string) (*Record, error) {
 }
 
 func (s *Service) persistLocked(c *Record) error {
+	normalizeCase(c)
 	c.UpdatedAt = time.Now().UnixMilli()
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
@@ -151,6 +152,7 @@ func (s *Service) Create(name, description string) (*Record, error) {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
+	normalizeCase(c)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.persistLocked(c); err != nil {
@@ -192,10 +194,21 @@ func (s *Service) Delete(id string) error {
 
 func cloneCase(c *Record) *Record {
 	out := *c
-	out.AgentIDs = append([]string(nil), c.AgentIDs...)
-	out.LootIDs = append([]string(nil), c.LootIDs...)
-	out.CredIDs = append([]string(nil), c.CredIDs...)
-	out.HostIDs = append([]string(nil), c.HostIDs...)
-	out.CanaryIDs = append([]string(nil), c.CanaryIDs...)
+	normalizeCase(&out)
 	return &out
+}
+
+func cloneStringSlice(in []string) []string {
+	if in == nil {
+		return []string{}
+	}
+	return append([]string(nil), in...)
+}
+
+func normalizeCase(c *Record) {
+	c.AgentIDs = cloneStringSlice(c.AgentIDs)
+	c.LootIDs = cloneStringSlice(c.LootIDs)
+	c.CredIDs = cloneStringSlice(c.CredIDs)
+	c.HostIDs = cloneStringSlice(c.HostIDs)
+	c.CanaryIDs = cloneStringSlice(c.CanaryIDs)
 }

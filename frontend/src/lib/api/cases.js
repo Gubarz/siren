@@ -23,3 +23,7 @@ export {
   RemoveFromCase,
   GenerateCaseReport,
 };
+
+export function ExportCaseReport(caseID) {
+  return window.go.main.App.ExportCaseReport(caseID)
+}

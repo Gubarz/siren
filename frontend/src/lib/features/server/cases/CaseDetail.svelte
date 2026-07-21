@@ -3,7 +3,7 @@
   import IconButton from '$components/ui/IconButton.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
   import TextArea from '$components/ui/TextArea.svelte'
-  import { GetCase, UpdateCase, RemoveFromCase, GenerateCaseReport } from '../../../api/cases.js'
+  import { GetCase, UpdateCase, RemoveFromCase, ExportCaseReport } from '../../../api/cases.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../../utils/errors.js'
 
@@ -63,21 +63,21 @@
 
   async function exportReport() {
     try {
-      const md = await GenerateCaseReport(caseID)
-      const blob = new Blob([md], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      const filename = `${(name || 'case').replace(/[^a-z0-9-_]+/gi, '_')}.md`
-      link.href = url
-      link.download = filename
-      link.click()
-      URL.revokeObjectURL(url)
+      await ExportCaseReport(caseID)
     } catch (err) {
       await dialog.alert(errorMessage(err, 'Export failed: '), 'Case')
     }
   }
 
   function memberLine(itemID) { return itemID }
+
+  function caseItemCount(c) {
+    return (c.agentIds?.length || 0) +
+      (c.lootIds?.length || 0) +
+      (c.credIds?.length || 0) +
+      (c.hostIds?.length || 0) +
+      (c.canaryIds?.length || 0)
+  }
 </script>
 
 <div class="flex flex-col h-full">
@@ -135,7 +135,7 @@
         {/if}
       {/each}
 
-      {#if record.agentIds.length + record.lootIds.length + record.credIds.length + record.hostIds.length + record.canaryIds.length === 0}
+      {#if caseItemCount(record) === 0}
         <p class="text-xs text-fg-muted italic">
           Empty case. Use "Add to case…" in the Agents, Loot, Credentials, or Hosts panels
           to attach records here.

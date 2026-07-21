@@ -1405,10 +1405,32 @@ func (a *App) RemoveFromCase(caseID, collection, itemID string) error {
 	return nil
 }
 
-// GenerateCaseReport renders a case as a Markdown document string. The
-// frontend saves it via SaveFileDialog — no server-side round trip.
+// GenerateCaseReport renders a case as a Markdown document string.
 func (a *App) GenerateCaseReport(caseID string) (string, error) {
 	return a.Cases.GenerateMarkdown(caseID, casereport.NewReporter(a.Console, a.RPC))
+}
+
+func (a *App) ExportCaseReport(caseID string) (string, error) {
+	c := a.Cases.Get(caseID)
+	if c == nil {
+		return "", fmt.Errorf("case %s not found", caseID)
+	}
+	md, err := a.GenerateCaseReport(caseID)
+	if err != nil {
+		return "", err
+	}
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Export Case Report",
+		DefaultFilename: casefile.ReportFilename(c.Name),
+		Filters: []runtime.FileFilter{{
+			DisplayName: "Markdown files (*.md)",
+			Pattern:     "*.md",
+		}},
+	})
+	if err != nil || path == "" {
+		return path, err
+	}
+	return path, os.WriteFile(path, []byte(md), 0o600)
 }
 
 // ---- Health ----
