@@ -1,0 +1,92 @@
+name: Release
+
+# Dormant by design: this workflow only runs when a v* tag is pushed.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-22.04
+            output: dist/sliver-gui
+            asset: sliver-gui-linux-amd64.tar.gz
+          - name: windows-amd64
+            os: windows-latest
+            output: dist/sliver-gui.exe
+            asset: sliver-gui-windows-amd64.zip
+          - name: macos-arm64
+            os: macos-latest
+            output: dist/sliver-gui
+            asset: sliver-gui-macos-arm64.tar.gz
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags are required for version stamping
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # ubuntu-22.04 ships WebKitGTK 4.0, matching the default build.
+      - name: Install WebKitGTK headers (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      # frontend/dist is embedded via go:embed, so it must exist first.
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run build
+
+      - name: Build binary
+        shell: bash
+        run: |
+          COMMIT=$(git rev-parse --short=12 HEAD)
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          go build \
+            -ldflags "-X sliver-gui/internal/buildinfo.Version=${GITHUB_REF_NAME} -X sliver-gui/internal/buildinfo.Commit=${COMMIT} -X sliver-gui/internal/buildinfo.Date=${DATE}" \
+            -o "${{ matrix.output }}" .
+
+      - name: Package archive (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p artifacts pkg
+          cp "${{ matrix.output }}" LICENSE README.md pkg/
+          tar -czf "artifacts/${{ matrix.asset }}" -C pkg .
+
+      - name: Package archive (zip)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force artifacts, pkg | Out-Null
+          Copy-Item "${{ matrix.output }}", LICENSE, README.md pkg/
+          Compress-Archive -Path pkg/* -DestinationPath "artifacts/${{ matrix.asset }}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          # The 0.x line ships as prerelease; flip to false at 1.0.
+          prerelease: true
+          body: |
+            **Notes**
+            - Linux builds require WebKitGTK 4.0 (`libwebkit2gtk-4.0`). On distros that only ship 4.1, build from source with `BUILD_TAGS=webkit2_41 make build`.
+            - macOS builds are unsigned: right-click → Open, or run `xattr -d com.apple.quarantine` on the binary.
