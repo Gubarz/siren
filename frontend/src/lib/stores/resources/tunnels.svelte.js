@@ -14,4 +14,5 @@ export const tunnels = createResource({
     return { proxies, rportfwds }
   },
   pollInterval: 5000,
+  events: ['tunnels-changed'],
 })

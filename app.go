@@ -136,6 +136,14 @@ func NewApp() *App {
 		Crack:      crack.New(rpcClient),
 		Builders:   builders.New(rpcClient),
 	}
+	app.Console.SetRoutedCommandHandler(func(sessionID, line string) console.RoutedCommandResult {
+		result := app.Tunneling.HandleConsoleSocksCommand(sessionID, line)
+		return console.RoutedCommandResult{
+			Handled: result.Handled,
+			Output:  result.Output,
+			Refresh: result.Refresh,
+		}
+	})
 	app.Health = health.New(rpcClient, tun)
 	return app
 }

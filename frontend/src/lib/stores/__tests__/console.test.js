@@ -17,6 +17,7 @@ describe('console store', () => {
     vi.resetModules()
     ;({ SendToSessionConsole } = await import('../../api/console.js'))
     ;({ dispatchCommand, emptySession, ensureSession, peekSession } = await import('../console.svelte.js'))
+    vi.clearAllMocks()
   })
 
   it('does not create a session when peeking', () => {

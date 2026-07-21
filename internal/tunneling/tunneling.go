@@ -25,6 +25,7 @@ type ProxyInfo struct {
 	BindAddr   string `json:"bindAddr"`
 	RemoteAddr string `json:"remoteAddr,omitempty"`
 	Username   string `json:"username,omitempty"`
+	Password   string `json:"password,omitempty"`
 	BytesIn    int64  `json:"bytesIn"`
 	BytesOut   int64  `json:"bytesOut"`
 	StartedAt  int64  `json:"startedAt"`
@@ -36,11 +37,11 @@ type socksProxy struct {
 }
 
 type Service struct {
-	rpc    *rpc.Client
-	mu     sync.RWMutex
-	socks  map[uint64]*socksProxy
-	pfwd   map[uint64]*portfwdProxy
-	rpfwd  map[uint64]*rportfwdInfo // keyed by implant-assigned listener ID
+	rpc   *rpc.Client
+	mu    sync.RWMutex
+	socks map[uint64]*socksProxy
+	pfwd  map[uint64]*portfwdProxy
+	rpfwd map[uint64]*rportfwdInfo // keyed by implant-assigned listener ID
 }
 
 func New(rpc *rpc.Client) *Service {
@@ -84,7 +85,7 @@ func (s *Service) StartSocks(sessionID, bindAddr, username, password string) (ui
 	s.socks[wrapper.ID] = &socksProxy{
 		info: ProxyInfo{
 			ID: wrapper.ID, Kind: "socks", SessionID: sessionID,
-			BindAddr: bindAddr, Username: username,
+			BindAddr: bindAddr, Username: username, Password: password,
 			StartedAt: time.Now().UnixMilli(),
 		},
 		driver: driver,
@@ -173,6 +174,7 @@ func (s *Service) List() []ProxyInfo {
 			SessionID: meta.SessionID,
 			BindAddr:  meta.BindAddr,
 			Username:  meta.Username,
+			Password:  meta.Password,
 		}
 		if prev, ok := local[meta.ID]; ok {
 			info.StartedAt = prev.StartedAt

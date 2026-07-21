@@ -3,6 +3,7 @@ package console
 import (
 	"encoding/base64"
 	"os"
+	"strings"
 	"time"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -50,6 +51,9 @@ func (s *Service) SendToSessionConsole(sessionID, line string) error {
 	if line == "" {
 		return nil
 	}
+	if s.handleRoutedSessionCommand(sessionID, line) {
+		return nil
+	}
 	s.subproc.mu.Lock()
 	jobID, ok := s.subproc.bySession[sessionID]
 	s.subproc.mu.Unlock()
@@ -71,7 +75,111 @@ func (s *Service) SendToSessionConsole(sessionID, line string) error {
 	return err
 }
 
+func (s *Service) handleRoutedSessionCommand(sessionID, line string) bool {
+	if s.routedCommand == nil || sessionID == "" || !isRoutedConsoleCommand(line) {
+		return false
+	}
+	result := s.routedCommand(sessionID, line)
+	if !result.Handled {
+		return false
+	}
+	s.subproc.mu.Lock()
+	jobID := s.subproc.bySession[sessionID]
+	s.subproc.mu.Unlock()
+	if result.Output != "" && jobID != "" {
+		if job := s.subproc.get(jobID); job != nil {
+			s.emitConsoleOutput(job.id, []byte("\r\n"+strings.ReplaceAll(result.Output, "\n", "\r\n")))
+		}
+	}
+	if result.Refresh {
+		s.emitTunnelsChanged()
+	}
+	return true
+}
+
 func (s *Service) WriteConsole(jobID string, data []byte) error {
+	job := s.subproc.get(jobID)
+	if job == nil {
+		return os.ErrClosed
+	}
+	pass, routed := s.routeConsoleInput(job, data)
+	if len(pass) > 0 {
+		if _, err := job.pty.Write(pass); err != nil {
+			return err
+		}
+	}
+	for _, line := range routed {
+		result := s.routedCommand(job.sessionID, line)
+		if !result.Handled {
+			if _, err := job.pty.Write([]byte(line + subprocCommandTerminator)); err != nil {
+				return err
+			}
+			continue
+		}
+		if result.Output != "" {
+			s.emitConsoleOutput(job.id, []byte("\r\n"+strings.ReplaceAll(result.Output, "\n", "\r\n")))
+		}
+		if result.Refresh {
+			s.emitTunnelsChanged()
+		}
+	}
+	return nil
+}
+
+func (s *Service) routeConsoleInput(job *subprocJob, data []byte) ([]byte, []string) {
+	if s.routedCommand == nil || job.sessionID == "" || len(data) == 0 {
+		return data, nil
+	}
+
+	job.promptMu.Lock()
+	defer job.promptMu.Unlock()
+
+	pass := make([]byte, 0, len(data))
+	var routed []string
+
+	for _, b := range data {
+		ch := rune(b)
+		switch ch {
+		case '\r', '\n':
+			line := strings.TrimSpace(job.promptLine)
+			job.promptLine = ""
+			if isRoutedConsoleCommand(line) {
+				pass = append(pass, []byte("\x05\x15")...)
+				routed = append(routed, line)
+				continue
+			}
+			pass = append(pass, b)
+		case '\x7f', '\b':
+			if len(job.promptLine) > 0 {
+				job.promptLine = job.promptLine[:len(job.promptLine)-1]
+			}
+			pass = append(pass, b)
+		case '\x03', '\x15', '\x1b':
+			job.promptLine = ""
+			pass = append(pass, b)
+		default:
+			if ch >= ' ' {
+				job.promptLine += string(ch)
+			}
+			pass = append(pass, b)
+		}
+	}
+	return pass, routed
+}
+
+func isRoutedConsoleCommand(line string) bool {
+	line = strings.TrimSpace(line)
+	return line == "socks5" || strings.HasPrefix(line, "socks5 ")
+}
+
+func (s *Service) emitTunnelsChanged() {
+	if s.ctx == nil {
+		return
+	}
+	wailsruntime.EventsEmit(s.ctx, "tunnels-changed", map[string]any{})
+}
+
+func (s *Service) writeConsoleRaw(jobID string, data []byte) error {
 	job := s.subproc.get(jobID)
 	if job == nil {
 		return os.ErrClosed
@@ -127,18 +235,38 @@ func (s *Service) pumpSubproc(job *subprocJob) {
 				flush()
 				return
 			}
-			visible, tails, carry := filterShellOpenFrames(controlCarry, chunk)
+			visible, tails, commands, carry := filterConsoleControlFrames(controlCarry, chunk)
 			controlCarry = carry
 			for _, tail := range tails {
 				s.emitConsoleOpenShell(job.id, job.sessionID, tail)
 			}
 			pending = append(pending, visible...)
+			for _, command := range commands {
+				flush()
+				s.handleRoutedConsoleJobCommand(job, command)
+			}
 			if len(pending) >= subprocOutputBatch {
 				flush()
 			}
 		case <-ticker.C:
 			flush()
 		}
+	}
+}
+
+func (s *Service) handleRoutedConsoleJobCommand(job *subprocJob, line string) {
+	if s.routedCommand == nil {
+		return
+	}
+	result := s.routedCommand(job.sessionID, line)
+	if !result.Handled {
+		return
+	}
+	if result.Output != "" {
+		s.emitConsoleOutput(job.id, []byte(strings.ReplaceAll(result.Output, "\n", "\r\n")))
+	}
+	if result.Refresh {
+		s.emitTunnelsChanged()
 	}
 }
 

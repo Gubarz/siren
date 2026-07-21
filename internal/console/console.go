@@ -43,10 +43,24 @@ type Service struct {
 	// without threading ctx through every method call.
 	ctx     context.Context
 	subproc subprocMgr
+
+	routedCommand RoutedCommandHandler
 }
 
 func (s *Service) SetCtx(ctx context.Context) {
 	s.ctx = ctx
+}
+
+type RoutedCommandResult struct {
+	Handled bool
+	Output  string
+	Refresh bool
+}
+
+type RoutedCommandHandler func(sessionID, line string) RoutedCommandResult
+
+func (s *Service) SetRoutedCommandHandler(handler RoutedCommandHandler) {
+	s.routedCommand = handler
 }
 
 func New(rpc *rpc.Client) *Service {

@@ -56,10 +56,12 @@ type subprocMgr struct {
 }
 
 type subprocJob struct {
-	id        string
-	sessionID string
-	proc      consoleProc
-	pty       consolePTY
+	id         string
+	sessionID  string
+	proc       consoleProc
+	pty        consolePTY
+	promptMu   sync.Mutex
+	promptLine string
 }
 
 func (m *subprocMgr) newJobID() string {

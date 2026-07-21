@@ -4,16 +4,20 @@ import (
 	"bytes"
 	"encoding/base64"
 	"os"
+	"strconv"
 	"strings"
 
 	sliverconsole "github.com/bishopfox/sliver/client/console"
+	"github.com/kballard/go-shellquote"
 	reefconsole "github.com/reeflective/console"
 	"github.com/spf13/cobra"
 )
 
 const (
-	shellOpenFramePrefix = "\x1b]777;sliver-gui-open-shell="
-	shellOpenFrameSuffix = "\x07"
+	shellOpenFramePrefix      = "\x1b]777;sliver-gui-open-shell="
+	consoleCommandFramePrefix = "\x1b]777;sliver-gui-command="
+	controlFrameSuffix        = "\x07"
+	shellOpenFrameSuffix      = controlFrameSuffix
 )
 
 func pinServerTargetCommands(base reefconsole.Commands, sessionID string, con *sliverconsole.SliverClient) reefconsole.Commands {
@@ -45,7 +49,20 @@ func pinSliverTargetCommands(base reefconsole.Commands, sessionID string, con *s
 				return false
 			}, func() {})
 		}
+		if socksCmd := findTopLevelCommand(root, "socks5"); socksCmd != nil {
+			pinSocksCommand(socksCmd)
+		}
 		return root
+	}
+}
+
+func pinSocksCommand(cmd *cobra.Command) {
+	wrapCommandRun(cmd, func(command *cobra.Command, args []string) bool {
+		emitConsoleCommandFrame(socksCommandLine(command, args))
+		return false
+	}, func() {})
+	for _, child := range cmd.Commands() {
+		pinSocksCommand(child)
 	}
 }
 
@@ -140,44 +157,102 @@ func shellCommandTail(cmd *cobra.Command, args []string) string {
 
 func emitShellOpenFrame(tail string) {
 	payload := base64.StdEncoding.EncodeToString([]byte(tail))
-	_, _ = os.Stdout.WriteString(shellOpenFramePrefix + payload + shellOpenFrameSuffix)
+	_, _ = os.Stdout.WriteString(shellOpenFramePrefix + payload + controlFrameSuffix)
+}
+
+func emitConsoleCommandFrame(line string) {
+	payload := base64.StdEncoding.EncodeToString([]byte(line))
+	_, _ = os.Stdout.WriteString(consoleCommandFramePrefix + payload + controlFrameSuffix)
+}
+
+func socksCommandLine(cmd *cobra.Command, args []string) string {
+	switch commandPath(cmd) {
+	case "socks5 start":
+		host, _ := cmd.Flags().GetString("host")
+		port, _ := cmd.Flags().GetString("port")
+		user, _ := cmd.Flags().GetString("user")
+		parts := []string{"socks5", "start", "--host", host, "--port", port}
+		if user != "" {
+			parts = append(parts, "--user", user)
+		}
+		return shellquote.Join(parts...)
+	case "socks5 stop":
+		id, _ := cmd.Flags().GetUint64("id")
+		return shellquote.Join("socks5", "stop", "--id", strconv.FormatUint(id, 10))
+	default:
+		if len(args) > 0 {
+			return shellquote.Join(append([]string{"socks5"}, args...)...)
+		}
+		return "socks5"
+	}
 }
 
 func filterShellOpenFrames(carry, chunk []byte) ([]byte, []string, []byte) {
+	visible, shells, _, nextCarry := filterConsoleControlFrames(carry, chunk)
+	return visible, shells, nextCarry
+}
+
+func filterConsoleControlFrames(carry, chunk []byte) ([]byte, []string, []string, []byte) {
 	buf := make([]byte, 0, len(carry)+len(chunk))
 	buf = append(buf, carry...)
 	buf = append(buf, chunk...)
 
-	prefix := []byte(shellOpenFramePrefix)
-	suffix := []byte(shellOpenFrameSuffix)
 	visible := make([]byte, 0, len(buf))
-	var tails []string
+	var shellTails []string
+	var commands []string
 
 	for len(buf) > 0 {
-		idx := bytes.Index(buf, prefix)
+		idx, prefix, kind := nextControlFrame(buf)
 		if idx < 0 {
-			keep := prefixSuffixLen(buf, prefix)
+			keep := maxControlPrefixSuffixLen(buf)
 			visible = append(visible, buf[:len(buf)-keep]...)
 			nextCarry := append([]byte(nil), buf[len(buf)-keep:]...)
-			return visible, tails, nextCarry
+			return visible, shellTails, commands, nextCarry
 		}
 
 		visible = append(visible, buf[:idx]...)
 		rest := buf[idx+len(prefix):]
-		end := bytes.Index(rest, suffix)
+		end := bytes.Index(rest, []byte(controlFrameSuffix))
 		if end < 0 {
 			nextCarry := append([]byte(nil), buf[idx:]...)
-			return visible, tails, nextCarry
+			return visible, shellTails, commands, nextCarry
 		}
 
 		payload := rest[:end]
 		if decoded, err := base64.StdEncoding.DecodeString(string(payload)); err == nil {
-			tails = append(tails, string(decoded))
+			if kind == "shell" {
+				shellTails = append(shellTails, string(decoded))
+			} else if kind == "command" {
+				commands = append(commands, string(decoded))
+			}
 		}
-		buf = rest[end+len(suffix):]
+		buf = rest[end+len(controlFrameSuffix):]
 	}
 
-	return visible, tails, nil
+	return visible, shellTails, commands, nil
+}
+
+func nextControlFrame(buf []byte) (int, []byte, string) {
+	shellPrefix := []byte(shellOpenFramePrefix)
+	commandPrefix := []byte(consoleCommandFramePrefix)
+	shellIndex := bytes.Index(buf, shellPrefix)
+	commandIndex := bytes.Index(buf, commandPrefix)
+	if shellIndex < 0 && commandIndex < 0 {
+		return -1, nil, ""
+	}
+	if commandIndex < 0 || (shellIndex >= 0 && shellIndex < commandIndex) {
+		return shellIndex, shellPrefix, "shell"
+	}
+	return commandIndex, commandPrefix, "command"
+}
+
+func maxControlPrefixSuffixLen(buf []byte) int {
+	shellKeep := prefixSuffixLen(buf, []byte(shellOpenFramePrefix))
+	commandKeep := prefixSuffixLen(buf, []byte(consoleCommandFramePrefix))
+	if shellKeep > commandKeep {
+		return shellKeep
+	}
+	return commandKeep
 }
 
 func prefixSuffixLen(buf, prefix []byte) int {

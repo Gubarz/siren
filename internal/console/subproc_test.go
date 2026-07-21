@@ -1,7 +1,9 @@
 package console
 
 import (
+	"bytes"
 	"encoding/base64"
+	"io"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -80,4 +82,93 @@ func TestFilterShellOpenFramesAcrossChunks(t *testing.T) {
 	if len(carry) != 0 {
 		t.Fatalf("second chunk carry = %q, want empty", carry)
 	}
+}
+
+func TestFilterConsoleCommandFrames(t *testing.T) {
+	payload := base64.StdEncoding.EncodeToString([]byte("socks5 start --host 127.0.0.1 --port 1081"))
+	frame := []byte(consoleCommandFramePrefix + payload + controlFrameSuffix)
+
+	visible, tails, commands, carry := filterConsoleControlFrames(nil, append([]byte("before"), append(frame, []byte("after")...)...))
+	if string(visible) != "beforeafter" {
+		t.Fatalf("visible = %q, want beforeafter", visible)
+	}
+	if len(tails) != 0 {
+		t.Fatalf("tails = %#v, want none", tails)
+	}
+	if len(commands) != 1 || commands[0] != "socks5 start --host 127.0.0.1 --port 1081" {
+		t.Fatalf("commands = %#v, want socks5 start command", commands)
+	}
+	if len(carry) != 0 {
+		t.Fatalf("carry = %q, want empty", carry)
+	}
+}
+
+func TestWriteConsoleRoutesSocksBeforeSubmittingToSubprocess(t *testing.T) {
+	svc := New(nil)
+	pty := &recordingPTY{}
+	svc.subproc.add(&subprocJob{id: "job-1", sessionID: "session-1", pty: pty})
+
+	var routedLine string
+	svc.SetRoutedCommandHandler(func(sessionID, line string) RoutedCommandResult {
+		if sessionID != "session-1" {
+			t.Fatalf("sessionID = %q, want session-1", sessionID)
+		}
+		routedLine = line
+		return RoutedCommandResult{Handled: true, Output: "[*] Started SOCKS5\n", Refresh: true}
+	})
+
+	if err := svc.WriteConsole("job-1", []byte("socks5 start")); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.WriteConsole("job-1", []byte("\r")); err != nil {
+		t.Fatal(err)
+	}
+
+	if routedLine != "socks5 start" {
+		t.Fatalf("routed line = %q, want socks5 start", routedLine)
+	}
+	got := pty.String()
+	if !bytes.Contains([]byte(got), []byte("socks5 start")) {
+		t.Fatalf("pty writes = %q, want typed command echoed to child before submit", got)
+	}
+	if bytes.Contains([]byte(got), []byte("socks5 start\r")) {
+		t.Fatalf("pty writes = %q, command should not be submitted to child", got)
+	}
+	if !bytes.Contains([]byte(got), []byte("\x05\x15")) {
+		t.Fatalf("pty writes = %q, want readline clear sequence", got)
+	}
+}
+
+func TestSendToSessionConsoleRoutesSocksWithoutWritingSubprocess(t *testing.T) {
+	svc := New(nil)
+	pty := &recordingPTY{}
+	svc.subproc.add(&subprocJob{id: "job-1", sessionID: "session-1", pty: pty})
+
+	var routedLine string
+	svc.SetRoutedCommandHandler(func(_, line string) RoutedCommandResult {
+		routedLine = line
+		return RoutedCommandResult{Handled: true, Output: "[*] Started SOCKS5\n", Refresh: true}
+	})
+
+	if err := svc.SendToSessionConsole("session-1", "socks5 start --port 1080"); err != nil {
+		t.Fatal(err)
+	}
+	if routedLine != "socks5 start --port 1080" {
+		t.Fatalf("routed line = %q, want socks5 start --port 1080", routedLine)
+	}
+	if got := pty.String(); got != "" {
+		t.Fatalf("pty writes = %q, want no subprocess input", got)
+	}
+}
+
+type recordingPTY struct {
+	bytes.Buffer
+}
+
+func (p *recordingPTY) Read([]byte) (int, error) {
+	return 0, io.EOF
+}
+
+func (p *recordingPTY) Close() error {
+	return nil
 }
