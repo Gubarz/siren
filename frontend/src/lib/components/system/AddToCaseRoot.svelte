@@ -9,7 +9,7 @@
 </script>
 
 <AddToCaseModal
-  open={addToCase.isOpen}
+  bind:open={addToCase.isOpen}
   collection={addToCase.collection}
   itemID={addToCase.itemID}
   label={addToCase.label}
