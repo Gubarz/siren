@@ -49,6 +49,18 @@ func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurs
 	emit := s.downloadEmitter(localPath)
 	emit("request", 0, 0)
 
+	var recordID string
+	if s.history != nil {
+		recordID = s.history.AddRecord(DownloadRecord{
+			SessionID:   sessionID,
+			RemotePath:  remotePath,
+			LocalPath:   localPath,
+			IsDirectory: recurse,
+			Timestamp:   time.Now(),
+			Status:      "in_progress",
+		})
+	}
+
 	req := &sliverpb.DownloadReq{
 		Request: &commonpb.Request{
 			SessionID: sessionID,
@@ -63,6 +75,9 @@ func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurs
 
 	resp, err := s.rpc.RPC.Download(ctx, req)
 	if err != nil {
+		if s.history != nil && recordID != "" {
+			s.history.UpdateRecord(recordID, "failed", 0, err.Error())
+		}
 		return err
 	}
 
@@ -72,14 +87,24 @@ func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurs
 	if resp.Encoder == "gzip" {
 		decoded, err := decompressGzip(resp.Data, compressedSize, emit)
 		if err != nil {
+			if s.history != nil && recordID != "" {
+				s.history.UpdateRecord(recordID, "failed", compressedSize, err.Error())
+			}
 			return err
 		}
 		resp.Data = decoded
 	}
 
 	emit("write", 0, 0)
+	finalSize := int64(len(resp.Data))
 	if err := os.WriteFile(localPath, resp.Data, 0644); err != nil {
+		if s.history != nil && recordID != "" {
+			s.history.UpdateRecord(recordID, "failed", finalSize, err.Error())
+		}
 		return err
+	}
+	if s.history != nil && recordID != "" {
+		s.history.UpdateRecord(recordID, "completed", finalSize, "")
 	}
 	emit("done", 0, 0)
 	return nil

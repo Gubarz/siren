@@ -1,6 +1,7 @@
 <script>
   import Icon from '$components/ui/Icon.svelte'
   import FileViewerModal from './modals/FileViewerModal.svelte'
+  import DownloadHistoryModal from './modals/DownloadHistoryModal.svelte'
   import { UploadFiles } from '../../api/agents.js';
   import { onFileDrop } from '../../api/runtime.js';
   import { createFileBrowserActions } from './fileBrowserActions.js';
@@ -27,6 +28,16 @@
   let uploading = $state(false);
   let filterText = $state('');
   let viewerData = $state(null); // { filename, data, isBinary } or null
+  let historyModalState = $state({ isOpen: false, remotePath: '', sessionID: '' });
+
+  function openFileHistory(file) {
+    const name = file.Name || file.name;
+    historyModalState = { isOpen: true, remotePath: joinPath(name), sessionID };
+  }
+
+  function openGlobalHistory() {
+    historyModalState = { isOpen: true, remotePath: '', sessionID };
+  }
 
   let store = $derived(useFileBrowser(sessionID));
 
@@ -182,6 +193,7 @@
             ? [{ icon: 'download', label: 'Download (tar)', on: () => downloadDir(file) }]
             : [{ icon: 'download', label: 'Download', on: () => downloadFile(file) }]
           ),
+          { icon: 'history', label: 'Download History', on: () => openFileHistory(file) },
           ...(!isDir ? [{ icon: 'search', label: 'View', on: () => viewFile(file) }] : []),
         ]},
         { items: [
@@ -218,6 +230,7 @@
       <TextInput size="sm" placeholder="Filter..." bind:value={filterText} class="font-mono" />
     </div>
     {#if !picker}
+      <Button color="dark" size="sm" onclick={openGlobalHistory} title="View download history">History</Button>
       <Button color="dark" size="sm" onclick={newFolder}>New Folder</Button>
       <Button color="primary" size="sm" onclick={uploadFile} disabled={uploading}>
         {uploading ? 'Uploading...' : 'Upload'}
@@ -259,3 +272,9 @@
 </div>
 
 <FileViewerModal {viewerData} onclose={() => { viewerData = null }} />
+<DownloadHistoryModal
+  isOpen={historyModalState.isOpen}
+  remotePath={historyModalState.remotePath}
+  {sessionID}
+  onclose={() => { historyModalState = { ...historyModalState, isOpen: false } }}
+/>

@@ -13,16 +13,45 @@ import (
 const defaultRPCTimeout = 60 * time.Second
 
 type Service struct {
-	rpc *rpc.Client
-	ctx context.Context
+	rpc     *rpc.Client
+	ctx     context.Context
+	history *HistoryStore
 }
 
 func New(rpc *rpc.Client) *Service {
-	return &Service{rpc: rpc}
+	return &Service{
+		rpc:     rpc,
+		history: NewHistoryStore(),
+	}
 }
 
 func (s *Service) SetCtx(ctx context.Context) {
 	s.ctx = ctx
+}
+
+func (s *Service) SetHistoryStore(h *HistoryStore) {
+	s.history = h
+}
+
+func (s *Service) GetDownloadHistory(sessionID, remotePath string) ([]DownloadRecord, error) {
+	if s.history == nil {
+		return []DownloadRecord{}, nil
+	}
+	return s.history.GetHistory(sessionID, remotePath), nil
+}
+
+func (s *Service) GetAllDownloadHistory() ([]DownloadRecord, error) {
+	if s.history == nil {
+		return []DownloadRecord{}, nil
+	}
+	return s.history.GetAllHistory(), nil
+}
+
+func (s *Service) ClearDownloadHistory(sessionID, remotePath string) error {
+	if s.history != nil {
+		s.history.ClearHistory(sessionID, remotePath)
+	}
+	return nil
 }
 
 type PathResponse interface {
