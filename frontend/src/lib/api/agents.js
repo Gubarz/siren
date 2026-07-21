@@ -13,6 +13,7 @@ export {
   CopyPath,
   DownloadFile,
   DownloadDirectory,
+  DownloadMultipleTar,
   GetDownloadHistory,
   GetAllDownloadHistory,
   ClearDownloadHistory,

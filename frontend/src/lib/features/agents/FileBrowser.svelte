@@ -29,6 +29,7 @@
   let filterText = $state('');
   let viewerData = $state(null); // { filename, data, isBinary } or null
   let historyModalState = $state({ isOpen: false, remotePath: '', sessionID: '' });
+  let selected = $state(new Set());
 
   function openFileHistory(file) {
     const name = file.Name || file.name;
@@ -39,6 +40,31 @@
     historyModalState = { isOpen: true, remotePath: '', sessionID };
   }
 
+  function toggleSelection(name) {
+    const next = new Set(selected);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    selected = next;
+  }
+
+  function selectAll() {
+    selected = new Set(filteredFiles.map((f) => f._name));
+  }
+
+  function clearSelection() {
+    selected = new Set();
+  }
+
+  function getSelectedFileObjects() {
+    return filteredFiles.filter((f) => selected.has(f._name)).map((f) => f.rawFile);
+  }
+
+  async function downloadSelectedTar() {
+    const fileObjs = getSelectedFileObjects();
+    if (fileObjs.length === 0) return;
+    await actions.downloadMultipleTar(fileObjs);
+  }
+
   let store = $derived(useFileBrowser(sessionID));
 
   $effect(() => {
@@ -47,6 +73,7 @@
   });
   $effect(() => {
     currentPath = store.state.path;
+    selected = new Set();
   });
 
   // If picker was opened with a suggested starting path (e.g. re-opening a
@@ -65,6 +92,7 @@
   // Context menu state
 
   let tableColumns = [
+    { key: "_checkbox", label: "", width: 32, sortable: false },
     { key: "iconStr", label: "Name", width: 300 },
     { key: "_sortSize", label: "Size", width: 100 },
     { key: "typeStr", label: "Type", width: 100 },
@@ -185,16 +213,19 @@
 
   function handleRightClick(event, file) {
     const isDir = file.IsDir || file.isDir;
+    const isBulk = selected.has(file._name) && selected.size > 1;
     contextMenu.open({
       x: event.clientX, y: event.clientY,
       sections: [
         { items: [
-          ...(isDir
+          ...(isBulk
+            ? [{ icon: 'download', label: `Tar & Download (${selected.size} items)`, on: () => downloadSelectedTar() }]
+            : isDir
             ? [{ icon: 'download', label: 'Download (tar)', on: () => downloadDir(file) }]
             : [{ icon: 'download', label: 'Download', on: () => downloadFile(file) }]
           ),
           { icon: 'history', label: 'Download History', on: () => openFileHistory(file) },
-          ...(!isDir ? [{ icon: 'search', label: 'View', on: () => viewFile(file) }] : []),
+          ...(!isDir && !isBulk ? [{ icon: 'search', label: 'View', on: () => viewFile(file) }] : []),
         ]},
         { items: [
           { icon: 'pen', label: 'Rename', on: () => renameFile(file) },
@@ -230,6 +261,14 @@
       <TextInput size="sm" placeholder="Filter..." bind:value={filterText} class="font-mono" />
     </div>
     {#if !picker}
+      {#if selected.size > 0}
+        <Button color="primary" size="sm" icon="download" onclick={downloadSelectedTar}>
+          Tar & Download ({selected.size})
+        </Button>
+        <Button color="dark" size="sm" onclick={clearSelection}>Deselect</Button>
+      {:else}
+        <Button color="dark" size="sm" onclick={selectAll} disabled={filteredFiles.length === 0}>Select All</Button>
+      {/if}
       <Button color="dark" size="sm" onclick={openGlobalHistory} title="View download history">History</Button>
       <Button color="dark" size="sm" onclick={newFolder}>New Folder</Button>
       <Button color="primary" size="sm" onclick={uploadFile} disabled={uploading}>
@@ -249,6 +288,8 @@
       data={filteredFiles}
       columns={tableColumns}
       keyField="_name"
+      selectable={picker ? 'none' : 'multiple'}
+      bind:selected={selected}
       loading={store.state.loading}
       error={store.state.error}
       emptyState={{ title: 'No files found.' }}
@@ -257,7 +298,17 @@
       onRowClick={picker ? (item) => handleRowClick(item.rawFile) : undefined}
     >
       {#snippet children(item, col)}
-        {#if col.key === 'iconStr'}
+        {#if col.key === '_checkbox'}
+          <input
+            type="checkbox"
+            checked={selected.has(item._name)}
+            onclick={(e) => {
+              e.stopPropagation();
+              toggleSelection(item._name);
+            }}
+            class="cursor-pointer"
+          />
+        {:else if col.key === 'iconStr'}
           <span class:text-brand={item.isDir}>{item.iconStr}</span>
         {:else if col.key === '_sortSize'}
           <span class="font-mono">{item.sizeStr}</span>

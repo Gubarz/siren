@@ -503,6 +503,10 @@ func (a *App) DownloadDirectory(sessionID, remotePath string) error {
 	return a.Files.DownloadDirectory(sessionID, remotePath)
 }
 
+func (a *App) DownloadMultipleTar(sessionID string, items []files.BulkDownloadItem) error {
+	return a.Files.DownloadMultipleTar(sessionID, items)
+}
+
 func (a *App) GetDownloadHistory(sessionID, remotePath string) ([]files.DownloadRecord, error) {
 	return a.Files.GetDownloadHistory(sessionID, remotePath)
 }

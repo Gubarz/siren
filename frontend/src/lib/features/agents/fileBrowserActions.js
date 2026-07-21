@@ -7,6 +7,7 @@ import {
   CopyPath,
   DownloadDirectory,
   DownloadFile,
+  DownloadMultipleTar,
   MakeDir,
   RemovePath,
   RenamePath,
@@ -132,8 +133,21 @@ export function createFileBrowserActions({ sessionID, dialog, store, getCurrentP
     } catch (err) { await alertOnError(err, 'Move failed: ', 'Error') }
   }
 
+  async function downloadMultipleTar(files) {
+    if (!files || files.length === 0) return
+    const items = files.map((f) => ({
+      remotePath: join(f.Name || f.name),
+      isDirectory: !!(f.IsDir || f.isDir),
+    }))
+    try {
+      await DownloadMultipleTar(sessionID, items)
+    } catch (err) {
+      await alertOnError(err, 'Bulk download failed: ', 'Download Error')
+    }
+  }
+
   return {
-    downloadDir, downloadFile, uploadFile, newFolder,
+    downloadDir, downloadFile, downloadMultipleTar, uploadFile, newFolder,
     deleteFile, renameFile, viewFile, editPermissions,
     copyFile, moveFile, joinPath: join,
   }
