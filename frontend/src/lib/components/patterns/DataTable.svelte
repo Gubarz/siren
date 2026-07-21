@@ -21,6 +21,7 @@
     onRowDblClick,
     onRowContextMenu,
     rowClass,
+    rowStyle,
     children,
   } = $props()
 
@@ -149,6 +150,15 @@
     }
   })
 
+  // Merges the snippet's structural style (virtualization offsets) with any
+  // per-row style the caller provides (e.g., agent row colors).
+  function mergedRowStyle(item, baseStyle) {
+    const extra = rowStyle ? rowStyle(item) : ''
+    if (!extra) return baseStyle
+    if (!baseStyle) return extra
+    return baseStyle.endsWith(';') ? baseStyle + ' ' + extra : baseStyle + '; ' + extra
+  }
+
   function renderCell(item, col) {
     if (col.cell) return col.cell(item)
     return item[col.key] ?? '-'
@@ -214,13 +224,13 @@
         <EmptyState title="No items" />
       {/if}
     {:else}
-      {#snippet rowSnippet(item, rowStyle = '')}
+      {#snippet rowSnippet(item, baseStyle = '')}
         <tr
           class="border-b border-table-line cursor-pointer {rowClass ? rowClass(item) : ''}"
           class:bg-row-selected={selected.has(item[keyField])}
           class:hover:bg-row-hover={!selected.has(item[keyField])}
           tabindex="0"
-          style={rowStyle}
+          style={mergedRowStyle(item, baseStyle)}
           onclick={(e) => handleRowClick(item, e)}
           ondblclick={(e) => handleRowDblClick(item, e)}
           oncontextmenu={(e) => handleContextMenu(item, e)}

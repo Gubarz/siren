@@ -78,6 +78,50 @@ func TestTagsPersistAndLoad(t *testing.T) {
 	assertStringSlice(t, loaded.GetAgentTags("agent-1"), []string{"prod"})
 }
 
+func TestSetAgentColorRejectsUnknownColors(t *testing.T) {
+	s := newTestService(t)
+
+	if err := s.SetAgentColor("agent-1", "chartreuse"); err == nil {
+		t.Fatal("SetAgentColor accepted a color outside the palette")
+	}
+	if err := s.SetAgentColor("agent-1", " Blue "); err != nil {
+		t.Fatalf("SetAgentColor returned error: %v", err)
+	}
+	if got := s.GetAllColors()["agent-1"]; got != "blue" {
+		t.Fatalf("GetAllColors()[agent-1] = %q, want %q", got, "blue")
+	}
+}
+
+func TestSetAgentColorEmptyClears(t *testing.T) {
+	s := newTestService(t)
+
+	if err := s.SetAgentColor("agent-1", "red"); err != nil {
+		t.Fatalf("SetAgentColor returned error: %v", err)
+	}
+	if err := s.SetAgentColor("agent-1", ""); err != nil {
+		t.Fatalf("SetAgentColor(clear) returned error: %v", err)
+	}
+	if _, ok := s.GetAllColors()["agent-1"]; ok {
+		t.Fatal("GetAllColors() retained a cleared color")
+	}
+}
+
+func TestColorsPersistAndLoad(t *testing.T) {
+	s := newTestService(t)
+
+	if err := s.SetAgentColor("agent-1", "purple"); err != nil {
+		t.Fatalf("SetAgentColor returned error: %v", err)
+	}
+
+	loaded := &Service{path: s.path, tags: map[string][]string{}}
+	if err := loaded.load(); err != nil {
+		t.Fatalf("load returned error: %v", err)
+	}
+	if got := loaded.GetAllColors()["agent-1"]; got != "purple" {
+		t.Fatalf("loaded color = %q, want %q", got, "purple")
+	}
+}
+
 func newTestService(t *testing.T) *Service {
 	t.Helper()
 	return &Service{

@@ -56,7 +56,7 @@ function osIcon(os) {
 }
 
 export function agentNode(impl, ctx) {
-  const { parentBySession, allAgents, now, direction, selectedAgentIDs } = ctx
+  const { parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent } = ctx
   return {
     id: impl.ID, w: NODE_W, h: NODE_H,
     data: {
@@ -67,6 +67,7 @@ export function agentNode(impl, ctx) {
       addr: agentRemoteAddress(impl, parentBySession, allAgents),
       dead: !isAgentOnline(impl, now),
       priv: isHighPrivilege(impl.Username) ? 'high' : 'normal',
+      color: colorsByAgent?.[impl.ID] || '',
       direction,
     },
     selected: selectedAgentIDs.includes(impl.ID),

@@ -1342,6 +1342,18 @@ func (a *App) ListKnownTags() []string {
 	return a.Tags.KnownTags()
 }
 
+func (a *App) GetAllAgentColors() map[string]string {
+	return a.Tags.GetAllColors()
+}
+
+func (a *App) SetAgentColor(agentID string, color string) error {
+	if err := a.Tags.SetAgentColor(agentID, color); err != nil {
+		return err
+	}
+	runtime.EventsEmit(a.ctx, "agent-colors-updated", agentID)
+	return nil
+}
+
 // ---- Case files ----
 
 func (a *App) ListCases() []*casefile.Record {

@@ -25,18 +25,36 @@ type Service struct {
 	// tags maps agent ID -> sorted+dedup'd tag list. A missing key means the
 	// agent has no operator tags — a nil slice is preserved on read as an
 	// empty list. Notes have their own home in internal/loot; this service
-	// only owns tags.
-	tags map[string][]string
+	// only owns tags. colors maps agent ID -> a row color from the closed
+	// RowColorNames palette.
+	tags   map[string][]string
+	colors map[string]string
 }
 
 type persisted struct {
-	Tags map[string][]string `json:"tags"`
+	Tags   map[string][]string `json:"tags"`
+	Colors map[string]string   `json:"colors,omitempty"`
+}
+
+// RowColorNames is the closed palette the GUI offers for agent rows. The
+// set is closed (not free-form) so a tampered config file can't smuggle
+// arbitrary CSS into the table renderer.
+var RowColorNames = []string{"red", "orange", "yellow", "green", "blue", "purple", "pink", "gray"}
+
+func validRowColor(color string) bool {
+	for _, name := range RowColorNames {
+		if name == color {
+			return true
+		}
+	}
+	return false
 }
 
 func New() *Service {
 	s := &Service{
-		path: filepath.Join(assets.GetRootAppDir(), persistFilename),
-		tags: map[string][]string{},
+		path:   filepath.Join(assets.GetRootAppDir(), persistFilename),
+		tags:   map[string][]string{},
+		colors: map[string]string{},
 	}
 	if err := s.load(); err != nil {
 		// Startup shouldn't fatal on a missing/corrupt file — treat as empty.
@@ -54,6 +72,7 @@ func (s *Service) SetServer(host string, port uint32) {
 	defer s.mu.Unlock()
 	s.path = filepath.Join(assets.GetRootAppDir(), fmt.Sprintf("gui-agent-tags-%s_%d.json", host, port))
 	s.tags = map[string][]string{}
+	s.colors = map[string]string{}
 	_ = s.loadLocked()
 }
 
@@ -78,11 +97,14 @@ func (s *Service) loadLocked() error {
 	if p.Tags != nil {
 		s.tags = p.Tags
 	}
+	if p.Colors != nil {
+		s.colors = p.Colors
+	}
 	return nil
 }
 
 func (s *Service) persistLocked() error {
-	data, err := json.MarshalIndent(persisted{Tags: s.tags}, "", "  ")
+	data, err := json.MarshalIndent(persisted{Tags: s.tags, Colors: s.colors}, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -113,6 +135,38 @@ func (s *Service) SetAgentTags(agentID string, tags []string) error {
 		s.tags[agentID] = normalized
 	}
 	return s.persistLocked()
+}
+
+// SetAgentColor assigns a row color from RowColorNames to one agent. An
+// empty color clears the assignment.
+func (s *Service) SetAgentColor(agentID, color string) error {
+	color = strings.ToLower(strings.TrimSpace(color))
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if color == "" {
+		delete(s.colors, agentID)
+		return s.persistLocked()
+	}
+	if !validRowColor(color) {
+		return fmt.Errorf("unknown row color %q", color)
+	}
+	if s.colors == nil {
+		s.colors = map[string]string{}
+	}
+	s.colors[agentID] = color
+	return s.persistLocked()
+}
+
+// GetAllColors returns every agent's row color in one map, mirroring
+// GetAllTags for the table renderer.
+func (s *Service) GetAllColors() map[string]string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make(map[string]string, len(s.colors))
+	for id, color := range s.colors {
+		out[id] = color
+	}
+	return out
 }
 
 // GetAllTags returns every agent's tags in one map — cheap because the

@@ -10,11 +10,13 @@
   import { now } from '../../stores/ui/now.svelte.js'
   import { sessionNotes } from '$stores/resources/sessionNotes.svelte.js'
   import { agentTags } from '$stores/resources/agentTags.svelte.js'
+  import { agentColors } from '$stores/resources/agentColors.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(sessionNotes, agentTags)
+  useResource(sessionNotes, agentTags, agentColors)
   import { SaveAgentNote } from '../../api/agents.js'
   import { discoveryKey } from '../../utils/discovery.js'
+  import { agentColorStyle } from '../../utils/agentColors.js'
 
   let {
     data = [],
@@ -32,11 +34,22 @@
 
   let notes = $state({})
   let tagsByAgent = $state({})
+  let colorsByAgent = $state({})
 
   $effect(() => {
     const d = sessionNotes.data
     if (d && typeof d === 'object') notes = { ...d }
   })
+
+  $effect(() => {
+    const d = agentColors.data
+    if (d && typeof d === 'object') colorsByAgent = { ...d }
+  })
+
+  function agentRowStyle(item) {
+    if (item._isDevice) return ''
+    return agentColorStyle(colorsByAgent[item.ID])
+  }
 
   $effect(() => {
     const d = agentTags.data
@@ -156,6 +169,7 @@
 
 <DataTable data={normalizedData} {columns} keyField="_rowKey" {filterable} selectable="multi" selected={combinedSelected}
   rowClass={(item) => item._privileged ? 'text-danger-500 [&_td]:!text-danger-500' : ''}
+  rowStyle={agentRowStyle}
   onRowClick={(item, e) => item._isDevice
     ? ondiscoveryselect?.({ key: item._rowKey, additive: additiveSelection(e) })
     : onselect?.({ id: item.ID, additive: additiveSelection(e) })}

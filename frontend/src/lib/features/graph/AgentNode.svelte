@@ -2,16 +2,26 @@
   import Icon from '$components/ui/Icon.svelte'
   import Badge from '$components/ui/Badge.svelte'
   import { Handle, Position } from '@xyflow/svelte'
+  import { AGENT_COLOR_BG } from '../../utils/agentColors.js'
 
   let { data, selected = false } = $props()
   let horizontal = $derived(data.direction === 'LR')
+
+  // Row color (internal/tags palette) washes over the node's opaque panel
+  // background (gradient layer on top, panel color preserved underneath);
+  // the left border keeps its kind/selection meaning.
+  let tint = $derived(AGENT_COLOR_BG[data.color] || null)
+  let nodeStyle = $derived(
+    (selected
+      ? `border-color: var(--color-brand);`
+      : `border-left-color: var(--color-${data.kind === 'beacon' ? 'beacon' : 'success'}-500);`) +
+    (tint ? ` background-image: linear-gradient(${tint}, ${tint});` : '')
+  )
 </script>
 
 <div
   class={`node agent ${data.kind} h-28 w-64 border-l-4 px-2 py-2 ${selected ? 'node--selected-agent' : ''} ${data.dead ? 'opacity-60' : ''}`}
-  style={selected
-    ? `border-color: var(--color-brand);`
-    : `border-left-color: var(--color-${data.kind === 'beacon' ? 'beacon' : 'success'}-500);`}
+  style={nodeStyle}
 >
   <Handle type="target" position={horizontal ? Position.Left : Position.Top} class="handle" />
   <div class="flex items-center gap-2">

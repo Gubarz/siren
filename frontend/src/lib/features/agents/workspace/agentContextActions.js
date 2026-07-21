@@ -70,11 +70,26 @@ function buildDiscoveryActions({ agent, runDiscovery, promptPingSweep, clearDisc
   ]
 }
 
-function buildManagementActions({ agent, renameAgent, openReconfigure, openEditTags, addToCase }) {
+// Closed row-color palette — must stay in sync with internal/tags
+// RowColorNames (the backend rejects anything outside the set).
+const ROW_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'gray']
+
+function buildRowColorItems({ agent, targetAgents, setAgentRowColor }) {
+  const targets = targetAgents.length > 0 ? targetAgents : [agent]
+  const items = ROW_COLORS.map((name) => ({
+    label: name[0].toUpperCase() + name.slice(1),
+    on: () => setAgentRowColor(targets, name),
+  }))
+  items.push({ label: 'Clear', on: () => setAgentRowColor(targets, '') })
+  return items
+}
+
+function buildManagementActions({ agent, targetAgents, renameAgent, openReconfigure, openEditTags, addToCase, setAgentRowColor }) {
   return [
     { icon: 'pen', label: 'Rename Agent…', on: () => renameAgent(agent) },
     { icon: 'sliders', label: 'Reconfigure…', on: () => openReconfigure(agent) },
     { icon: 'tag', label: 'Edit Tags & Notes…', on: () => openEditTags(agent) },
+    { icon: 'palette', label: 'Color', children: buildRowColorItems({ agent, targetAgents, setAgentRowColor }) },
     { icon: 'folder', label: 'Add to case…', on: () => addToCase({
       collection: 'agent', itemID: agent.ID,
       label: agent.Name || agent.Hostname || agent.ID,
@@ -140,10 +155,12 @@ export function buildAgentContextSections(ctx) {
   })
   const managementActions = buildManagementActions({
     agent,
+    targetAgents,
     renameAgent: contextMenuHandlers.renameAgent,
     openReconfigure: contextMenuHandlers.openReconfigure,
     openEditTags: contextMenuHandlers.openEditTags,
     addToCase: contextMenuHandlers.addToCase,
+    setAgentRowColor: contextMenuHandlers.setAgentRowColor,
   })
   const dangerActions = buildDangerActions({
     agent, isBeacon,

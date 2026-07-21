@@ -17,9 +17,10 @@
   import { pivotListeners } from '$stores/resources/pivotListeners.svelte.js'
   import { discoveries } from '$stores/resources/discoveries.svelte.js'
   import { agentTags } from '$stores/resources/agentTags.svelte.js'
+  import { agentColors } from '$stores/resources/agentColors.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(sessions, beacons, pivots, pivotListeners, discoveries, agentTags)
+  useResource(sessions, beacons, pivots, pivotListeners, discoveries, agentTags, agentColors)
   import { selection } from '$stores/ui/selection.svelte.js'
   import { config } from '$stores/config.svelte.js'
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js'
@@ -33,6 +34,7 @@
 
   import { RemoveNetworkDiscoveries } from '../../../api/discovery.js'
   import { GetCommandCatalog } from '../../../api/console.js'
+  import { SetAgentColor } from '../../../api/tags.js'
   import { errorMessage } from '../../../utils/errors.js'
   import { discoveryKey } from '../../../utils/discovery.js'
 
@@ -178,6 +180,15 @@
   const beaconDetail = new Modal()
   const editTags = new Modal()
 
+  async function setAgentRowColor(agents, color) {
+    try {
+      await Promise.all(agents.map((a) => SetAgentColor(a.ID, color)))
+      await agentColors.refresh()
+    } catch (err) {
+      await dialog.alert(errorMessage(err, 'Row color failed: '), 'Row Color')
+    }
+  }
+
   // --- Context menus ---
   function openAgentContextMenu(nativeEvent, agent) {
     const isBeacon = agent._kind === 'beacon'
@@ -199,6 +210,7 @@
           promoteBeacon, demoteSession, newShell,
           runDiscovery, promptPingSweep, clearDiscoveries,
           renameAgent,
+          setAgentRowColor,
           addToCase: (payload) => addToCase.open(payload),
           killAgent, removeBeaconRecord,
           executeAgentCommand,

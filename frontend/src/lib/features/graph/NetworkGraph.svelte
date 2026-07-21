@@ -5,6 +5,8 @@
   import GraphAutoFit from './GraphAutoFit.svelte';
   import Panel from '$components/patterns/Panel.svelte';
   import { config } from '$stores/config.svelte.js';
+  import { agentColors } from '$stores/resources/agentColors.svelte.js';
+  import { useResource } from '$stores/lib/createResource.svelte.js';
   import { pivotParentMap } from '../../utils/agents.js';
   import { layoutGraph, preservePositions, layoutSignature, topologySignature } from './layout.js';
   import {
@@ -39,6 +41,11 @@
 
   const nodeTypes = { box: GraphNode };
 
+  useResource(agentColors)
+  let colorsByAgent = $derived(
+    agentColors?.data && typeof agentColors.data === 'object' ? agentColors.data : {},
+  )
+
   let nodes = $state.raw([]);
   let edges = $state.raw([]);
   let lastSig = '';
@@ -71,7 +78,7 @@
 
     for (const impl of allAgents) {
       rawNodes.push(agentNode(impl, {
-        parentBySession, allAgents, now, direction, selectedAgentIDs,
+        parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent,
       }));
     }
     addC2Links(rawNodes, rawEdges, {
@@ -91,7 +98,7 @@
   }
 
   $effect(() => {
-    const sig = topologySignature({ sessions, beacons, pivotGraph, pivotListeners, discoveries, now });
+    const sig = topologySignature({ sessions, beacons, pivotGraph, pivotListeners, discoveries, now, colors: colorsByAgent });
     if (sig === lastSig) return;
     lastSig = sig;
     build();

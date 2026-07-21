@@ -6,6 +6,8 @@ import {
   SetAgentTags,
   GetAllAgentTags,
   ListKnownTags,
+  GetAllAgentColors,
+  SetAgentColor,
 } from '../../../wailsjs/go/main/App.js';
 
 export {
@@ -13,4 +15,6 @@ export {
   SetAgentTags,
   GetAllAgentTags,
   ListKnownTags,
+  GetAllAgentColors,
+  SetAgentColor,
 };
