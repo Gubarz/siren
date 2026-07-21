@@ -4,6 +4,7 @@
   import { errorMessage } from '../../utils/errors.js'
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
   import DataTable from '$components/patterns/DataTable.svelte'
   import Button from '$components/ui/Button.svelte'
   import IconButton from '$components/ui/IconButton.svelte'
@@ -109,6 +110,7 @@
     if (svc.isStopped) items.push({ icon: 'play', label: 'Start', on: () => doStart(svc) })
     if (svc.isRunning) items.push({ icon: 'stop', label: 'Stop', on: () => doStop(svc) })
     items.push({ icon: 'info', label: 'Details', on: () => showDetail(svc) })
+    items.push({ icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('service', svc.name, svc.displayName || svc.name) })
     items.push({ icon: 'trash', label: 'Remove', danger: true, on: () => doRemove(svc) })
     contextMenu.open({ x: e.clientX, y: e.clientY, sections: [{ items }] })
   }

@@ -88,11 +88,12 @@ function buildRowColorItems({ agent, targetAgents, setAgentRowColor }) {
   return items
 }
 
-function buildManagementActions({ agent, targetAgents, renameAgent, openReconfigure, openEditTags, addToCase, setAgentRowColor }) {
+function buildManagementActions({ agent, targetAgents, renameAgent, openReconfigure, openEditTags, openComments, addToCase, setAgentRowColor }) {
   return [
     { icon: 'pen', label: 'Rename Agent…', on: () => renameAgent(agent) },
     { icon: 'sliders', label: 'Reconfigure…', on: () => openReconfigure(agent) },
-    { icon: 'tag', label: 'Edit Tags & Notes…', on: () => openEditTags(agent) },
+    { icon: 'tag', label: 'Edit Tags…', on: () => openEditTags(agent) },
+    { icon: 'message-square', label: 'Comments / Notes…', on: () => openComments('agent', agent.ID, agent.Name || agent.Hostname || agent.ID) },
     { icon: 'palette', label: 'Color', children: buildRowColorItems({ agent, targetAgents, setAgentRowColor }) },
     { icon: 'folder', label: 'Add to case…', on: () => addToCase({
       collection: 'agent', itemID: agent.ID,
@@ -193,6 +194,7 @@ export function buildAgentContextSections(ctx) {
     renameAgent: contextMenuHandlers.renameAgent,
     openReconfigure: contextMenuHandlers.openReconfigure,
     openEditTags: contextMenuHandlers.openEditTags,
+    openComments: contextMenuHandlers.openComments,
     addToCase: contextMenuHandlers.addToCase,
     setAgentRowColor: contextMenuHandlers.setAgentRowColor,
   })
@@ -222,11 +224,12 @@ export function buildAgentContextSections(ctx) {
   return sections
 }
 
-export function buildDiscoveryContextSections({ device, selectedCount, removeDiscoveries, clearDiscoveries }) {
+export function buildDiscoveryContextSections({ device, selectedCount, openComments, removeDiscoveries, clearDiscoveries }) {
   const multi = selectedCount > 1
   return [
     { items: [
       { icon: 'copy', label: 'Copy IP', on: () => navigator.clipboard?.writeText(device.ip || '') },
+      { icon: 'message-square', label: 'Comments / Notes…', on: () => openComments('device', device.ip || device.agentID, device.hostname || device.ip) },
     ] },
     { divider: true },
     { items: [

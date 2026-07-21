@@ -10,6 +10,7 @@
   import { DownloadLoot, RemoveLoot } from '../../api/server.js'
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { addToCase } from '$stores/ui/addToCase.svelte.js'
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
 
   let {
     embedded = false,
@@ -58,6 +59,7 @@
         {:else if col.key === '_actions'}
           <div class="flex gap-2">
             <Button color="dark" size="xs" onclick={() => download(item._id)}>Download</Button>
+            <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('loot', item._id, item._name)}>Comments</Button>
             <Button color="dark" size="xs" icon="folder" onclick={() => addToCase.open({
               collection: 'loot', itemID: item._id, label: item._name,
             })}>Case</Button>

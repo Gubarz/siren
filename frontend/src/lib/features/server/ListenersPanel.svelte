@@ -7,8 +7,10 @@
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
   useResource(jobs, profiles)
-  import { OpenFileDialog } from '../../api/runtime.js'
+  import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { OpenFileDialog } from '../../api/runtime.js'
   import Select from '$components/ui/Select.svelte'
   import Button from '$components/ui/Button.svelte'
   import Checkbox from '$components/ui/Checkbox.svelte'
@@ -51,7 +53,7 @@
     { key: '_protocol', label: 'Protocol', width: 100 },
     { key: '_port', label: 'Port', width: 80 },
     { key: '_description', label: 'Description' },
-    { key: '_actions', label: '', width: 80, sortable: false },
+    { key: '_actions', label: '', width: 150, sortable: false },
   ]
 
   let isDNS = $derived(proto === 'dns')
@@ -195,7 +197,10 @@
         {#if col.key === '_id' || col.key === '_port'}
           <span class="font-mono">{job[col.key]}</span>
         {:else if col.key === '_actions'}
-          <Button color="red" size="xs" onclick={() => kill(job._id)}>Kill</Button>
+          <div class="flex gap-2 justify-end">
+            <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('listener', String(job._id), job._name || `Job #${job._id}`)}>Comments</Button>
+            <Button color="red" size="xs" onclick={() => kill(job._id)}>Kill</Button>
+          </div>
         {:else}
           {job[col.key]}
         {/if}

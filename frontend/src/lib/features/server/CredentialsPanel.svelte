@@ -21,6 +21,7 @@
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
   import { addToCase } from '$stores/ui/addToCase.svelte.js'
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
 
   let {
     embedded = false,
@@ -247,6 +248,7 @@
         {:else if col.key === '_actions'}
           <div class="flex gap-2">
             <Button color="dark" size="xs" onclick={() => startEdit(credential._raw)}>Edit</Button>
+            <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('cred', credential._id, credential._username || 'credential')}>Comments</Button>
             <Button color="dark" size="xs" icon="folder" onclick={() => addToCase.open({
               collection: 'cred', itemID: credential._id, label: credential._username || 'credential',
             })}>Case</Button>

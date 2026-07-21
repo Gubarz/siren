@@ -16,6 +16,7 @@
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
   import { addToCase } from '$stores/ui/addToCase.svelte.js'
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
 
   let { embedded = false, onclose } = $props()
 
@@ -182,6 +183,10 @@
               {:else if col.key === '_actions'}
                 <div class="flex justify-end gap-2">
                   <Button color="dark" size="xs" onclick={(event) => { event.stopPropagation(); selectHost(host._raw) }}>View</Button>
+                  <Button color="dark" size="xs" icon="message-square" onclick={(event) => {
+                    event.stopPropagation()
+                    commentsModal.openComments('host', host._hostUUID, host._hostname || host._hostUUID)
+                  }}>Comments</Button>
                   <IconButton icon="folder" label="Add to case" tooltip="Add to case" size="xs" onclick={(event) => {
                     event.stopPropagation()
                     addToCase.open({
@@ -211,7 +216,10 @@
               <div class="mt-1 text-fg-muted">{currentHost.osVersion || '-'} / {currentHost.locale || '-'}</div>
               <div class="mt-1 text-fg-muted">First contact: {fmtTime(currentHost.firstContact)}</div>
             </div>
-            <IconButton icon="trash" label="Forget host" tooltip="Forget host" color="red" size="sm" onclick={() => removeHost(currentHost)} />
+            <div class="flex items-center gap-1">
+              <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('host', currentHost.hostUUID, currentHost.hostname || currentHost.hostUUID)}>Comments</Button>
+              <IconButton icon="trash" label="Forget host" tooltip="Forget host" color="red" size="sm" onclick={() => removeHost(currentHost)} />
+            </div>
           </div>
 
           <section class="mb-4">

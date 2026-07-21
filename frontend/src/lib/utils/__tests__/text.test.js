@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { stripTerminalFormatting, stripTerminalMetadata, commandTooltip } from '../text.js'
+import { stripTerminalFormatting, stripTerminalMetadata, commandTooltip, cleanUsername } from '../text.js'
 
 describe('stripTerminalFormatting', () => {
   it('removes ANSI escape sequences', () => {
@@ -45,5 +45,21 @@ describe('commandTooltip', () => {
     const cmd = { description: `About: ${long}` }
     const result = commandTooltip(cmd)
     expect(result.length).toBeLessThanOrEqual(243)
+  })
+})
+
+describe('cleanUsername', () => {
+  it('extracts username from user@ip (id) format', () => {
+    expect(cleanUsername('goober@192.168.1.10 (123)')).toBe('goober')
+    expect(cleanUsername('alice@10.0.0.1:31337')).toBe('alice')
+  })
+
+  it('handles clean usernames', () => {
+    expect(cleanUsername('root')).toBe('root')
+  })
+
+  it('fallbacks to Operator if empty or null', () => {
+    expect(cleanUsername('')).toBe('Operator')
+    expect(cleanUsername(null)).toBe('Operator')
   })
 })

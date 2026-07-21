@@ -31,11 +31,9 @@
     draft = ''
     Promise.all([
       GetAgentTags(agent.ID),
-      GetAgentNotes().catch(() => ({})),
       ListKnownTags(),
-    ]).then(([t, allNotes, all]) => {
+    ]).then(([t, all]) => {
       tags = t || []
-      note = (allNotes && allNotes[agent.ID]) || ''
       knownTags = all || []
     }).catch((err) => {
       error = errorMessage(err, 'Load failed: ')
@@ -79,7 +77,6 @@
     error = ''
     try {
       await SetAgentTags(agent.ID, tags)
-      await SaveAgentNote(agent.ID, note)
       open = false
     } catch (err) {
       error = errorMessage(err, 'Save failed: ')
@@ -89,7 +86,7 @@
   }
 </script>
 
-<Modal bind:open title="Edit Tags & Notes" size="md" {onclose}>
+<Modal bind:open title="Edit Tags" size="md" {onclose}>
   {#if agent}
     <p class="text-fg-muted text-sm mb-4">
       Tags for <span class="font-mono">{agent.Name || agent.ID}</span> —
@@ -128,11 +125,6 @@
           {/each}
         </div>
       {/if}
-    </div>
-
-    <div class="mb-3">
-      <label for="edit-notes-input" class="block text-xs uppercase tracking-wider text-fg-muted mb-1">Note</label>
-      <TextArea id="edit-notes-input" bind:value={note} rows={4} placeholder="Free-text note (persisted locally)…" />
     </div>
 
     {#if error}

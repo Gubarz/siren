@@ -41,3 +41,15 @@ export function commandTooltip(command) {
   if (summary.length <= 240) return summary;
   return `${summary.slice(0, 237).trimEnd()}...`;
 }
+
+export function cleanUsername(rawProfile) {
+  if (!rawProfile) return 'Operator';
+  let s = String(rawProfile).trim();
+  if (s.includes('@')) {
+    s = s.split('@')[0].trim();
+  }
+  if (s.includes(' ')) {
+    s = s.split(' ')[0].trim();
+  }
+  return s || 'Operator';
+}

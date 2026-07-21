@@ -6,6 +6,7 @@
   import Toolbar from '$components/patterns/Toolbar.svelte'
   import { GetCanaries } from '../../api/operatorControls.js'
   import { errorMessage } from '../../utils/errors.js'
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
 
   // Lists every DNS canary the teamserver has issued for implants and
   // whether it's been resolved — a resolved canary usually means someone
@@ -31,6 +32,7 @@
     { key: '_triggered', label: 'Triggered', width: 90 },
     { key: '_firstTrigger', label: 'First Trigger', width: 180 },
     { key: '_latestTrigger', label: 'Latest Trigger', width: 180 },
+    { key: '_actions', label: '', width: 100, sortable: false },
   ]
 
   onMount(() => refresh())
@@ -80,6 +82,8 @@
           {:else}
             <span class="text-fg-muted">no</span>
           {/if}
+        {:else if col.key === '_actions'}
+          <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('canary', canary._domain, canary._implant || canary._domain)}>Comments</Button>
         {:else}
           {canary[col.key]}
         {/if}

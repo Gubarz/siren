@@ -5,8 +5,9 @@
   import { UploadFiles } from '../../api/agents.js';
   import { onFileDrop } from '../../api/runtime.js';
   import { createFileBrowserActions } from './fileBrowserActions.js';
-  import { dialog } from '../../stores/ui/dialog.svelte.js';
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js';
+  import { dialog } from '$stores/ui/dialog.svelte.js';
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js';
   import { errorMessage } from '../../utils/errors.js';
   import DataTable from '$components/patterns/DataTable.svelte';
   import Button from '$components/ui/Button.svelte';
@@ -211,6 +212,13 @@
   const moveFile = (f) => actions.moveFile(f);
   const joinPath = (name) => actions.joinPath(name);
 
+  function openFileComments(file) {
+    const name = file.Name || file.name || file._name;
+    const fullPath = joinPath(name);
+    const entityID = sessionID ? `${sessionID}:${fullPath}` : fullPath;
+    commentsModal.openComments('file', entityID, name);
+  }
+
   function handleRightClick(event, file) {
     const isDir = file.IsDir || file.isDir;
     const isBulk = selected.has(file._name) && selected.size > 1;
@@ -225,6 +233,7 @@
             : [{ icon: 'download', label: 'Download', on: () => downloadFile(file) }]
           ),
           { icon: 'history', label: 'Download History', on: () => openFileHistory(file) },
+          { icon: 'message-square', label: 'Comments / Notes…', on: () => openFileComments(file) },
           ...(!isDir && !isBulk ? [{ icon: 'search', label: 'View', on: () => viewFile(file) }] : []),
         ]},
         { items: [

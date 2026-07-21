@@ -6,7 +6,8 @@
     DeleteRegistryEntry,
     WriteRegistryValue,
   } from '../../api/agents.js';
-  import { dialog } from '../../stores/ui/dialog.svelte.js';
+  import { dialog } from '$stores/ui/dialog.svelte.js';
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js';
   import { errorMessage } from '../../utils/errors.js';
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js';
   import DataTable from '$components/patterns/DataTable.svelte';
@@ -124,8 +125,14 @@
       sections: [
         { items: row
           ? row.isKey
-            ? [{ icon: 'folder-open', label: 'Open', on: () => handleKeyDoubleClick(row.rawName) }]
-            : [{ icon: 'pen', label: 'Edit Value', on: () => writeValue(row) }]
+            ? [
+                { icon: 'folder-open', label: 'Open', on: () => handleKeyDoubleClick(row.rawName) },
+                { icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('registry', `${currentHive}\\${store.state.path}\\${row.rawName}`, `${currentHive}\\${row.rawName}`) },
+              ]
+            : [
+                { icon: 'pen', label: 'Edit Value', on: () => writeValue(row) },
+                { icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('registry', `${currentHive}\\${store.state.path}\\${row.rawName}`, `${currentHive}\\${row.rawName}`) },
+              ]
           : [
               { icon: 'folder-plus', label: 'New Key', on: () => createKey() },
               { icon: 'plus', label: 'New Value', on: () => writeValue() },

@@ -1,4 +1,5 @@
 // Pure helpers for ProcessExplorer: tree builder + context-menu factory.
+import { commentsModal } from '../../stores/ui/commentsModal.svelte.js'
 
 // buildProcessTree flattens the process list into a depth-annotated array
 // so the DataTable can render tree indentation without a real tree widget.
@@ -71,6 +72,8 @@ export function buildProcessContextSections({ pid, procName, commandModal, killP
           on: () => {
             if (procName) commandInvoker(commandModal, 'getsystem', { process: procName })()
           } },
+        { icon: 'message-square', label: 'Comments / Notes…',
+          on: () => commentsModal.openComments('process', String(pid), `${procName || 'PID'} (${pid})`) },
       ],
     },
     {

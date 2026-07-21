@@ -12,6 +12,7 @@
   import { beacons } from '$stores/resources/beacons.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
   import { matchesAutomationTarget } from '../../utils/automation.js'
+  import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
 
   useResource(sessions, beacons)
 
@@ -93,6 +94,7 @@
         {draft.runCount || 0} run{draft.runCount === 1 ? '' : 's'}
       </span>
       {#if draft.id}
+        <Button color="alternative" size="sm" icon="message-square" onclick={() => commentsModal.openComments('automation', draft.id, draft.name || draft.id)} title="Comments" />
         <Button color="alternative" size="sm" icon="trash" onclick={ondelete} disabled={busy} title="Delete rule" />
         <div class="w-px h-5 bg-line mx-1"></div>
         <Select bind:value={manualTarget} options={targetOptions} class="max-w-56!" />

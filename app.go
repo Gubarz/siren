@@ -26,6 +26,7 @@ import (
 	"sliver-gui/internal/casereport"
 	"sliver-gui/internal/catalog"
 	"sliver-gui/internal/clientlog"
+	"sliver-gui/internal/comments"
 	"sliver-gui/internal/console"
 	"sliver-gui/internal/crack"
 	"sliver-gui/internal/discovery"
@@ -91,6 +92,7 @@ type App struct {
 	Hosts      *hosts.Service
 	Tags       *tags.Service
 	Cases      *casefile.Service
+	Comments   *comments.Service
 	Health     *health.Service
 }
 
@@ -126,6 +128,7 @@ func NewApp() *App {
 		Hosts:      hosts.New(rpcClient),
 		Tags:       tags.New(),
 		Cases:      casefile.New(),
+		Comments:   comments.New(),
 		Monitor:    monitor.New(rpcClient),
 		Extensions: extensions.New(rpcClient),
 		Memfiles:   memfiles.New(rpcClient),
@@ -351,6 +354,7 @@ func (a *App) Connect(profileName string) error {
 	if a.RPC.Config != nil {
 		a.Automation.SetServer(a.RPC.Config.LHost, uint32(a.RPC.Config.LPort))
 		a.Tags.SetServer(a.RPC.Config.LHost, uint32(a.RPC.Config.LPort))
+		a.Comments.SetServer(a.RPC.Config.LHost, uint32(a.RPC.Config.LPort))
 	}
 	if a.ClientLog != nil {
 		if err := a.ClientLog.Start(a.ctx); err != nil {
@@ -826,11 +830,25 @@ func (a *App) GetScreenshotData(lootID string) (string, error) {
 }
 
 func (a *App) GetAgentNotes() (map[string]string, error) {
-	return a.Loot.GetAgentNotes()
+	all := a.Comments.GetAllComments()
+	notes := make(map[string]string)
+	for key, list := range all {
+		if strings.HasPrefix(key, "agent:") && len(list) > 0 {
+			agentID := strings.TrimPrefix(key, "agent:")
+			notes[agentID] = list[len(list)-1].Text
+		}
+	}
+	return notes, nil
 }
 
 func (a *App) SaveAgentNote(agentID, text string) error {
-	return a.Loot.SaveAgentNote(agentID, text)
+	_, err := a.Comments.SetNote("agent", agentID, "Operator", text)
+	if err != nil {
+		return err
+	}
+	runtime.EventsEmit(a.ctx, "comments-updated", nil)
+	runtime.EventsEmit(a.ctx, "agent-notes-updated", agentID)
+	return nil
 }
 
 // ---- Server / Certificates / Websites ----
@@ -1367,6 +1385,33 @@ func (a *App) SetAgentColor(agentID string, color string) error {
 		return err
 	}
 	runtime.EventsEmit(a.ctx, "agent-colors-updated", agentID)
+	return nil
+}
+
+// ---- Universal Entity Comments ----
+
+func (a *App) GetEntityComments(entityType, entityID string) []comments.Comment {
+	return a.Comments.GetComments(entityType, entityID)
+}
+
+func (a *App) GetAllComments() map[string][]comments.Comment {
+	return a.Comments.GetAllComments()
+}
+
+func (a *App) AddEntityComment(entityType, entityID, author, text string) (comments.Comment, error) {
+	c, err := a.Comments.AddComment(entityType, entityID, author, text)
+	if err != nil {
+		return comments.Comment{}, err
+	}
+	runtime.EventsEmit(a.ctx, "comments-updated", entityType+":"+entityID)
+	return c, nil
+}
+
+func (a *App) DeleteEntityComment(commentID string) error {
+	if err := a.Comments.DeleteComment(commentID); err != nil {
+		return err
+	}
+	runtime.EventsEmit(a.ctx, "comments-updated", "")
 	return nil
 }
 

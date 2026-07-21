@@ -18,6 +18,7 @@
   import { SaveAgentNote } from '../../api/agents.js'
   import { discoveryKey } from '../../utils/discovery.js'
   import { agentColorStyle } from '../../utils/agentColors.js'
+  import { errorMessage } from '../../utils/errors.js'
 
   let {
     data = [],
@@ -34,12 +35,24 @@
   } = $props()
 
   let notes = $state({})
+  let noteDrafts = $state({})
+  let noteSaving = $state({})
+  let noteErrors = $state({})
   let tagsByAgent = $state({})
   let colorsByAgent = $state({})
 
   $effect(() => {
     const d = sessionNotes.data
-    if (d && typeof d === 'object') notes = { ...d }
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return
+    notes = { ...d }
+    const nextDrafts = { ...noteDrafts }
+    for (const id of Object.keys(nextDrafts)) {
+      if (!(id in d) && !noteSaving[id]) delete nextDrafts[id]
+    }
+    for (const [id, text] of Object.entries(d)) {
+      if (!noteSaving[id]) nextDrafts[id] = text || ''
+    }
+    noteDrafts = nextDrafts
   })
 
   $effect(() => {
@@ -57,9 +70,54 @@
     if (d && typeof d === 'object') tagsByAgent = { ...d }
   })
 
+  function noteValue(id) {
+    return noteDrafts[id] ?? notes[id] ?? ''
+  }
+
+  function setNoteDraft(id, text) {
+    noteDrafts = { ...noteDrafts, [id]: text }
+    if (noteErrors[id]) {
+      const next = { ...noteErrors }
+      delete next[id]
+      noteErrors = next
+    }
+  }
+
   async function saveNote(id, text) {
-    notes[id] = text
-    try { await SaveAgentNote(id, text || '') } catch {}
+    const nextText = String(text ?? '').trim()
+    if ((notes[id] ?? '') === nextText) return
+
+    noteSaving = { ...noteSaving, [id]: true }
+    try {
+      await SaveAgentNote(id, nextText)
+      if (nextText) {
+        notes = { ...notes, [id]: nextText }
+      } else {
+        const nextNotes = { ...notes }
+        delete nextNotes[id]
+        notes = nextNotes
+      }
+      noteDrafts = { ...noteDrafts, [id]: nextText }
+      await sessionNotes.refresh()
+    } catch (err) {
+      noteErrors = { ...noteErrors, [id]: errorMessage(err, 'Save failed: ') }
+    } finally {
+      const nextSaving = { ...noteSaving }
+      delete nextSaving[id]
+      noteSaving = nextSaving
+    }
+  }
+
+  function commitNote(event, id) {
+    saveNote(id, event.currentTarget.value)
+  }
+
+  function noteKeydown(event, id) {
+    event.stopPropagation()
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      event.currentTarget.blur()
+    }
   }
 
 
@@ -214,9 +272,14 @@
         <TextInput
           size="sm"
           placeholder="Add note..."
-          value={item._note}
-          oninput={(e) => saveNote(item.ID, e.target.value)}
-          class="note-input"
+          value={noteValue(item.ID)}
+          oninput={(e) => setNoteDraft(item.ID, e.currentTarget.value)}
+          onchange={(e) => commitNote(e, item.ID)}
+          onkeydown={(e) => noteKeydown(e, item.ID)}
+          onclick={(e) => e.stopPropagation()}
+          ondblclick={(e) => e.stopPropagation()}
+          title={noteErrors[item.ID] || (noteSaving[item.ID] ? 'Saving note...' : '')}
+          class="note-input {noteErrors[item.ID] ? 'border-danger-500!' : ''}"
         />
       {/if}
     {:else if col.key === 'ID'}
