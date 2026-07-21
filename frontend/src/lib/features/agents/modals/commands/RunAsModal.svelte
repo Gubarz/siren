@@ -5,7 +5,18 @@
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
   import CheckboxField from '../../../../components/forms/CheckboxField.svelte'
+  import SelectField from '../../../../components/forms/SelectField.svelte'
   import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
+  import { credentials } from '../../../../stores/resources/credentials.svelte.js'
+  import { useResource } from '../../../../stores/lib/createResource.svelte.js'
+  import {
+    credentialKey,
+    credentialLoginFields,
+    credentialPickerOptions,
+    plaintextCredentials,
+  } from '../../../../utils/credentials.js'
+
+  useResource(credentials)
 
   let {
     open = $bindable(false),
@@ -17,11 +28,15 @@
   let username = $state('')
   let password = $state('')
   let domain = $state('')
+  let selectedCredential = $state('')
   let program = $state('')
   let programArgs = $state('')
   let netonly = $state(true)
   let showWindow = $state(false)
   let timeout = $state('')
+
+  let usableCredentials = $derived(plaintextCredentials(credentials.data || []))
+  let credentialOptions = $derived(credentialPickerOptions(credentials.data || []))
 
   $effect.pre(() => {
     resetForm(initialValues)
@@ -31,6 +46,7 @@
     username = values['username'] || ''
     password = values['password'] || ''
     domain = values['domain'] || ''
+    selectedCredential = ''
     program = values['program'] || ''
     programArgs = values['args'] || ''
     netonly = values['net-only'] ?? true
@@ -38,6 +54,15 @@
     timeout = values['timeout'] || ''
   }
 
+  function applyCredential(id) {
+    selectedCredential = id
+    const credential = usableCredentials.find((item, index) => credentialKey(item, index) === id)
+    if (!credential) return
+    const fields = credentialLoginFields(credential)
+    username = fields.username
+    password = fields.password
+    domain = fields.domain
+  }
 
   let cmdPreview = $derived.by(() => {
     const parts = ['runas']
@@ -64,6 +89,15 @@
     </p>
 
     <CollapsibleGroup title="Credentials" open={true}>
+      <SelectField
+        bind:value={selectedCredential}
+        label="Stored credential"
+        options={credentialOptions}
+        placeholder={credentials.loading ? 'Loading credentials...' : 'Choose plaintext credential'}
+        disabled={credentialOptions.length === 0}
+        onchange={applyCredential}
+        description={credentialOptions.length === 0 ? 'No plaintext credentials are available in the credential store.' : 'Selecting one fills username, password, and domain.'}
+      />
       <TextField bind:value={username} label="Username" placeholder="Administrator" />
       <TextField bind:value={password} label="Password" type="password" placeholder="Password" />
       <TextField
