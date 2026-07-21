@@ -2,6 +2,7 @@
   import DataTable from '$components/patterns/DataTable.svelte'
   import StatusDot from '$components/ui/StatusDot.svelte'
   import Badge from '$components/ui/Badge.svelte'
+  import TagBadge from '$components/ui/TagBadge.svelte'
   import Icon from '$components/ui/Icon.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
   import {
@@ -200,7 +201,7 @@
       {:else if item._tags && item._tags.length > 0}
         <div class="flex flex-wrap gap-1">
           {#each item._tags as tag}
-            <span class="px-2 py-1 rounded bg-surface-200 text-3xs font-mono">{tag}</span>
+            <TagBadge {tag} />
           {/each}
         </div>
       {:else}

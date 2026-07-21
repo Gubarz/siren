@@ -3,7 +3,7 @@
   import Button from '../../../components/ui/Button.svelte'
   import TextInput from '../../../components/ui/TextInput.svelte'
   import TextArea from '../../../components/ui/TextArea.svelte'
-  import IconButton from '../../../components/ui/IconButton.svelte'
+  import TagBadge from '../../../components/ui/TagBadge.svelte'
   import { GetAgentTags, SetAgentTags, ListKnownTags } from '../../../api/tags.js'
   import { GetAgentNotes, SaveAgentNote } from '../../../api/agents.js'
   import { errorMessage } from '../../../utils/errors.js'
@@ -100,18 +100,27 @@
       <label for="edit-tags-input" class="block text-xs uppercase tracking-wider text-fg-muted mb-1">Tags</label>
       <div class="flex flex-wrap gap-1 mb-2 min-h-6">
         {#each tags as tag}
-          <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-200 text-xs font-mono">
-            {tag}
-            <IconButton icon="x" label="Remove tag" size="xs" onclick={() => removeTag(tag)} />
-          </span>
+          <TagBadge {tag} removable onremove={() => removeTag(tag)} />
         {/each}
       </div>
       <TextInput
         id="edit-tags-input"
         bind:value={draft}
-        placeholder="Type a tag and press Enter or comma…"
+        placeholder="Type a tag (e.g. env:prod or role:dc) and press Enter…"
         onkeydown={onKeydown}
       />
+      <div class="flex flex-wrap gap-1 mt-1.5 text-2xs text-fg-muted items-center">
+        <span class="mr-1">Typed prefixes:</span>
+        {#each ['env:', 'role:', 'status:', 'prio:', 'owner:', 'group:'] as prefix}
+          <button
+            type="button"
+            class="px-1.5 py-0.5 rounded bg-surface-200 hover:bg-surface-300 font-mono text-fg-muted hover:text-fg text-4xs transition-colors"
+            onclick={() => { draft = prefix; }}
+          >
+            {prefix}
+          </button>
+        {/each}
+      </div>
       {#if suggestions().length > 0}
         <div class="flex flex-wrap gap-1 mt-2">
           {#each suggestions() as s}
