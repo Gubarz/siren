@@ -71,6 +71,25 @@ func (c *Client) Connect(profileName string) error {
 
 	log.Printf("Connecting to %s:%d as %s", config.LHost, config.LPort, config.Operator)
 
+	rpcClient, grpcConn, err := dialWithTimeout(config)
+	if err != nil {
+		return err
+	}
+
+	oldConn := c.Conn
+	c.Config = config
+	c.RPC = rpcClient
+	c.Conn = grpcConn
+	c.connected.Store(true)
+	if oldConn != nil && oldConn != grpcConn {
+		_ = oldConn.Close()
+	}
+	return nil
+}
+
+// dialWithTimeout runs MTLSConnect on a goroutine so a hung handshake can be
+// abandoned after connectTimeout. On timeout the half-open conn is closed.
+func dialWithTimeout(config *assets.ClientConfig) (rpcpb.SliverRPCClient, *grpc.ClientConn, error) {
 	type connectResult struct {
 		rpcClient rpcpb.SliverRPCClient
 		grpcConn  *grpc.ClientConn
@@ -93,25 +112,15 @@ func (c *Client) Connect(profileName string) error {
 		}
 	}()
 
-	var result connectResult
 	select {
-	case result = <-resultCh:
+	case result := <-resultCh:
+		if result.err != nil {
+			return nil, nil, fmt.Errorf("failed to connect: %w", result.err)
+		}
+		return result.rpcClient, result.grpcConn, nil
 	case <-ctx.Done():
-		return fmt.Errorf("connection timed out after %s", connectTimeout)
+		return nil, nil, fmt.Errorf("connection timed out after %s", connectTimeout)
 	}
-	if result.err != nil {
-		return fmt.Errorf("failed to connect: %w", result.err)
-	}
-
-	oldConn := c.Conn
-	c.Config = config
-	c.RPC = result.rpcClient
-	c.Conn = result.grpcConn
-	c.connected.Store(true)
-	if oldConn != nil && oldConn != result.grpcConn {
-		_ = oldConn.Close()
-	}
-	return nil
 }
 
 func (c *Client) Disconnect() {

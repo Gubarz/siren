@@ -19,13 +19,21 @@ import (
 )
 
 func (s *Service) DownloadDirectory(sessionID string, remotePath string) error {
+	return s.downloadWithDialog(sessionID, remotePath, "Save Directory", remoteFilename(remotePath)+".tar", true)
+}
+
+func (s *Service) DownloadFile(sessionID string, remotePath string) error {
+	return s.downloadWithDialog(sessionID, remotePath, "Save File", remoteFilename(remotePath), false)
+}
+
+func (s *Service) downloadWithDialog(sessionID, remotePath, title, defaultName string, recurse bool) error {
 	if !s.rpc.Connected() {
 		return rpc.ErrNotConnected
 	}
 
 	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		Title:          "Save Directory",
-		DefaultFilename: remoteFilename(remotePath) + ".tar",
+		Title:           title,
+		DefaultFilename: defaultName,
 	})
 	if err != nil {
 		return fmt.Errorf("dialog error: %w", err)
@@ -34,17 +42,11 @@ func (s *Service) DownloadDirectory(sessionID string, remotePath string) error {
 		return nil
 	}
 
-	emit := func(phase string, current, total int64) {
-		if s.ctx != nil {
-			runtime.EventsEmit(s.ctx, "download-progress", map[string]interface{}{
-				"path":    localPath,
-				"phase":   phase,
-				"current": current,
-				"total":   total,
-			})
-		}
-	}
+	return s.downloadToPath(sessionID, remotePath, localPath, recurse)
+}
 
+func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurse bool) error {
+	emit := s.downloadEmitter(localPath)
 	emit("request", 0, 0)
 
 	req := &sliverpb.DownloadReq{
@@ -53,7 +55,7 @@ func (s *Service) DownloadDirectory(sessionID string, remotePath string) error {
 			Timeout:   int64(defaultRPCTimeout / time.Second),
 		},
 		Path:    remotePath,
-		Recurse: true,
+		Recurse: recurse,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
@@ -83,23 +85,8 @@ func (s *Service) DownloadDirectory(sessionID string, remotePath string) error {
 	return nil
 }
 
-func (s *Service) DownloadFile(sessionID string, remotePath string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		Title:          "Save File",
-		DefaultFilename: remoteFilename(remotePath),
-	})
-	if err != nil {
-		return fmt.Errorf("dialog error: %w", err)
-	}
-	if localPath == "" {
-		return nil
-	}
-
-	emit := func(phase string, current, total int64) {
+func (s *Service) downloadEmitter(localPath string) func(string, int64, int64) {
+	return func(phase string, current, total int64) {
 		if s.ctx != nil {
 			runtime.EventsEmit(s.ctx, "download-progress", map[string]interface{}{
 				"path":    localPath,
@@ -109,42 +96,6 @@ func (s *Service) DownloadFile(sessionID string, remotePath string) error {
 			})
 		}
 	}
-
-	emit("request", 0, 0)
-
-	req := &sliverpb.DownloadReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout / time.Second),
-		},
-		Path: remotePath,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
-	defer cancel()
-
-	resp, err := s.rpc.RPC.Download(ctx, req)
-	if err != nil {
-		return err
-	}
-
-	compressedSize := int64(len(resp.Data))
-	emit("received", compressedSize, compressedSize)
-
-	if resp.Encoder == "gzip" {
-		decoded, err := decompressGzip(resp.Data, compressedSize, emit)
-		if err != nil {
-			return err
-		}
-		resp.Data = decoded
-	}
-
-	emit("write", 0, 0)
-	if err := os.WriteFile(localPath, resp.Data, 0644); err != nil {
-		return err
-	}
-	emit("done", 0, 0)
-	return nil
 }
 
 func decompressGzip(data []byte, compressedSize int64, emit func(string, int64, int64)) ([]byte, error) {
@@ -237,13 +188,17 @@ func (s *Service) uploadLocalFile(sessionID string, remotePath string, localPath
 		})
 	}
 
+	return s.uploadRequest(sessionID, remotePath, filepath.Base(localPath), encodedData)
+}
+
+func (s *Service) uploadRequest(sessionID, remotePath, fileName string, encodedData []byte) error {
 	req := &sliverpb.UploadReq{
 		Request: &commonpb.Request{
 			SessionID: sessionID,
 			Timeout:   int64(defaultRPCTimeout / time.Second),
 		},
 		Path:     remotePath,
-		FileName: filepath.Base(localPath),
+		FileName: fileName,
 		Data:     encodedData,
 		Encoder:  "gzip",
 	}

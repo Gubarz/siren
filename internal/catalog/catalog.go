@@ -174,26 +174,9 @@ func inferredCommandArguments(command *cobra.Command) []CommandArg {
 	}
 
 	const probeLimit = 8
-	accepted := make([]bool, probeLimit+1)
-	for count := 0; count <= probeLimit; count++ {
-		args := make([]string, count)
-		for index := range args {
-			args[index] = "value"
-		}
-		accepted[count] = command.Args(command, args) == nil
-	}
+	accepted := probeAcceptedArgCounts(command, probeLimit)
 
-	minimum := -1
-	maximum := -1
-	for count, valid := range accepted {
-		if !valid {
-			continue
-		}
-		if minimum == -1 {
-			minimum = count
-		}
-		maximum = count
-	}
+	minimum, maximum := acceptedRange(accepted)
 	if maximum <= 0 {
 		return nil
 	}
@@ -206,7 +189,37 @@ func inferredCommandArguments(command *cobra.Command) []CommandArg {
 			count = 1
 		}
 	}
+	return buildInferredArgs(count, minimum, unbounded)
+}
 
+func probeAcceptedArgCounts(command *cobra.Command, probeLimit int) []bool {
+	accepted := make([]bool, probeLimit+1)
+	for count := 0; count <= probeLimit; count++ {
+		args := make([]string, count)
+		for index := range args {
+			args[index] = "value"
+		}
+		accepted[count] = command.Args(command, args) == nil
+	}
+	return accepted
+}
+
+func acceptedRange(accepted []bool) (int, int) {
+	minimum := -1
+	maximum := -1
+	for count, valid := range accepted {
+		if !valid {
+			continue
+		}
+		if minimum == -1 {
+			minimum = count
+		}
+		maximum = count
+	}
+	return minimum, maximum
+}
+
+func buildInferredArgs(count, minimum int, unbounded bool) []CommandArg {
 	arguments := make([]CommandArg, 0, count)
 	for index := 0; index < count; index++ {
 		name := "argument"

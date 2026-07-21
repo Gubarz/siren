@@ -84,50 +84,65 @@ func (s *Service) runDirectPS(args []string, sess *clientpb.Session, beacon *cli
 	}
 
 	timeoutSeconds, _ := flags.GetInt64("timeout")
+
+	out, err := s.output.capture(func() error {
+		fullInfo, proceed := s.validatePSFlags(flags)
+		if !proceed {
+			return nil
+		}
+		return s.printProcessList(sess, beacon, timeoutSeconds, fullInfo, flags)
+	})
+	return strings.TrimRight(out, "\n"), true, err
+}
+
+// validatePSFlags reconciles incompatible flag combinations and reports
+// misuse. It returns the effective full-info value and whether the command
+// should proceed.
+func (s *Service) validatePSFlags(flags *pflag.FlagSet) (bool, bool) {
 	fullInfo, _ := flags.GetBool("full")
 	tree, _ := flags.GetBool("tree")
 	ownerFilter, _ := flags.GetString("owner")
 	cmdLine, _ := flags.GetBool("print-cmdline")
 
-	out, err := s.output.capture(func() error {
-		if tree && fullInfo {
-			s.sliverCon.PrintWarnf("Process tree and full process metadata were requested. Full process metadata is not necessary for the process tree, so the request for full process metadata will be ignored.\n\n")
-			fullInfo = false
-			_ = flags.Set("full", "false")
-		}
-		if ownerFilter != "" && !fullInfo {
-			s.sliverCon.PrintErrorf("Filtering on process owner was requested, but full process metadata was not requested. Re-run the command, and specify the -f flag.\n")
-			return nil
-		}
-		if cmdLine && !fullInfo {
-			s.sliverCon.PrintErrorf("Process command line arguments were requested, but full process metadata was not requested. Re-run the command, and specify the -f flag.\n")
-			return nil
-		}
+	if tree && fullInfo {
+		s.sliverCon.PrintWarnf("Process tree and full process metadata were requested. Full process metadata is not necessary for the process tree, so the request for full process metadata will be ignored.\n\n")
+		fullInfo = false
+		_ = flags.Set("full", "false")
+	}
+	if ownerFilter != "" && !fullInfo {
+		s.sliverCon.PrintErrorf("Filtering on process owner was requested, but full process metadata was not requested. Re-run the command, and specify the -f flag.\n")
+		return false, false
+	}
+	if cmdLine && !fullInfo {
+		s.sliverCon.PrintErrorf("Process command line arguments were requested, but full process metadata was not requested. Re-run the command, and specify the -f flag.\n")
+		return false, false
+	}
+	return fullInfo, true
+}
 
-		ctx, cancel := context.WithTimeout(context.Background(), rpcContextTimeout(timeoutSeconds))
-		defer cancel()
+func (s *Service) printProcessList(sess *clientpb.Session, beacon *clientpb.Beacon, timeoutSeconds int64, fullInfo bool, flags *pflag.FlagSet) error {
+	ctx, cancel := context.WithTimeout(context.Background(), rpcContextTimeout(timeoutSeconds))
+	defer cancel()
 
-		ps, err := s.rpc.RPC.Ps(ctx, &sliverpb.PsReq{
-			FullInfo: fullInfo,
-			Request:  targetRequest(sess, beacon, timeoutSeconds),
-		})
-		if err != nil {
-			s.sliverCon.PrintErrorf("%s\n", err)
-			return nil
-		}
-		if err := rpc.CheckResponse(ps); err != nil {
-			s.sliverCon.PrintErrorf("%s\n", err)
-			return nil
-		}
-		if ps.Response != nil && ps.Response.Async {
-			s.sliverCon.PrintAsyncResponse(ps.Response)
-			return nil
-		}
-
-		processes.PrintPS(targetOS(sess, beacon), ps, false, fullInfo, flags, s.sliverCon)
-		return nil
+	ps, err := s.rpc.RPC.Ps(ctx, &sliverpb.PsReq{
+		FullInfo: fullInfo,
+		Request:  targetRequest(sess, beacon, timeoutSeconds),
 	})
-	return strings.TrimRight(out, "\n"), true, err
+	if err != nil {
+		s.sliverCon.PrintErrorf("%s\n", err)
+		return nil
+	}
+	if err := rpc.CheckResponse(ps); err != nil {
+		s.sliverCon.PrintErrorf("%s\n", err)
+		return nil
+	}
+	if ps.Response != nil && ps.Response.Async {
+		s.sliverCon.PrintAsyncResponse(ps.Response)
+		return nil
+	}
+
+	processes.PrintPS(targetOS(sess, beacon), ps, false, fullInfo, flags, s.sliverCon)
+	return nil
 }
 
 func newDirectFlagSet(name string) *pflag.FlagSet {

@@ -22,26 +22,36 @@ func main() {
 		return
 	}
 
-	// Console-mode re-exec: this process was spawned by a running GUI to
-	// host a real sliver client console for a specific session. Skip the
-	// wails app entirely and hand control to the sliver console loop.
-	if len(os.Args) >= 3 && os.Args[1] == console.ConsoleModeFlag {
-		sessionID := ""
-		if len(os.Args) >= 4 {
-			sessionID = os.Args[3]
-		}
-		if err := console.RunConsoleSubprocess(os.Args[2], sessionID); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+	if runConsoleMode() {
 		return
 	}
 
-	// Create an instance of the app structure
-	app := NewApp()
+	if err := wails.Run(appOptions(NewApp())); err != nil {
+		println("Error:", err.Error())
+	}
+}
 
-	// Create application with options
-	err := wails.Run(&options.App{
+// runConsoleMode handles the console-subprocess re-exec path: this process
+// was spawned by a running GUI to host a real sliver client console for a
+// specific session. It returns true when the process ran in console mode
+// (skipping the wails app entirely), false when the GUI should start.
+func runConsoleMode() bool {
+	if len(os.Args) < 3 || os.Args[1] != console.ConsoleModeFlag {
+		return false
+	}
+	sessionID := ""
+	if len(os.Args) >= 4 {
+		sessionID = os.Args[3]
+	}
+	if err := console.RunConsoleSubprocess(os.Args[2], sessionID); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	return true
+}
+
+func appOptions(app *App) *options.App {
+	return &options.App{
 		Title:            "sliver-gui",
 		Width:            1024,
 		Height:           768,
@@ -58,9 +68,5 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
-	})
-
-	if err != nil {
-		println("Error:", err.Error())
 	}
 }

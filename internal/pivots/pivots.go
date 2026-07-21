@@ -80,41 +80,46 @@ func (s *Service) GetPivotListeners() ([]PivotListenerSnapshot, error) {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-
-			listeners, err := s.rpc.RPC.PivotSessionListeners(
-				ctx,
-				&sliverpb.PivotListenersReq{
-					Request: &commonpb.Request{SessionID: sessionID},
-				},
-			)
-			if err != nil || listeners.GetResponse().GetErr() != "" {
-				return
-			}
-			sessionSnapshots := []PivotListenerSnapshot{}
-			for _, listener := range listeners.Listeners {
-				snapshot := PivotListenerSnapshot{
-					ParentSessionID: sessionID,
-					ID:              listener.ID,
-					Type:            listener.Type.String(),
-					BindAddress:     listener.BindAddress,
-					Pivots:          []PivotConnectionSnapshot{},
-				}
-				for _, pivot := range listener.Pivots {
-					snapshot.Pivots = append(snapshot.Pivots, PivotConnectionSnapshot{
-						PeerID:        pivot.PeerID,
-						RemoteAddress: pivot.RemoteAddress,
-					})
-				}
-				sessionSnapshots = append(sessionSnapshots, snapshot)
-			}
-
+			found := s.sessionPivotSnapshots(sessionID)
 			snapshotsMu.Lock()
-			snapshots = append(snapshots, sessionSnapshots...)
+			snapshots = append(snapshots, found...)
 			snapshotsMu.Unlock()
 		}()
 	}
 	waitGroup.Wait()
 	return snapshots, nil
+}
+
+func (s *Service) sessionPivotSnapshots(sessionID string) []PivotListenerSnapshot {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	listeners, err := s.rpc.RPC.PivotSessionListeners(
+		ctx,
+		&sliverpb.PivotListenersReq{
+			Request: &commonpb.Request{SessionID: sessionID},
+		},
+	)
+	if err != nil || listeners.GetResponse().GetErr() != "" {
+		return nil
+	}
+
+	snapshots := []PivotListenerSnapshot{}
+	for _, listener := range listeners.Listeners {
+		snapshot := PivotListenerSnapshot{
+			ParentSessionID: sessionID,
+			ID:              listener.ID,
+			Type:            listener.Type.String(),
+			BindAddress:     listener.BindAddress,
+			Pivots:          []PivotConnectionSnapshot{},
+		}
+		for _, pivot := range listener.Pivots {
+			snapshot.Pivots = append(snapshot.Pivots, PivotConnectionSnapshot{
+				PeerID:        pivot.PeerID,
+				RemoteAddress: pivot.RemoteAddress,
+			})
+		}
+		snapshots = append(snapshots, snapshot)
+	}
+	return snapshots
 }

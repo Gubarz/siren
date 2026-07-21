@@ -1,7 +1,6 @@
 package shells
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -18,13 +17,6 @@ import (
 
 	"sliver-gui/internal/console"
 	"sliver-gui/internal/rpc"
-)
-
-const (
-	maxShellOutputBytes = 4 * 1024 * 1024
-	shellTrimTarget     = 3 * 1024 * 1024
-	shellEventBatchSize = 512 * 1024
-	shellEventInterval  = 100 * time.Millisecond
 )
 
 type ShellInfo struct {
@@ -96,11 +88,23 @@ func (s *Service) StartShell(sessionID, path string, enablePTY bool, rows, cols 
 
 	enablePTY, rows, cols = prepareShellParams(session.OS, enablePTY, rows, cols)
 
+	tunnel, shellPath, pid, err := s.openShellTunnel(sessionID, path, enablePTY, rows, cols)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.registerShell(sessionID, shellPath, pid, enablePTY, tunnel), nil
+}
+
+// openShellTunnel creates the tunnel and starts the remote shell over it,
+// tearing the tunnel down if the shell request fails. Returns the resolved
+// shell path (the requested one, or whatever the target picked).
+func (s *Service) openShellTunnel(sessionID, path string, enablePTY bool, rows, cols uint32) (*core.TunnelIO, string, uint32, error) {
 	rpcTunnel, err := s.rpc.RPC.CreateTunnel(context.Background(), &sliverpb.Tunnel{
 		SessionID: sessionID,
 	})
 	if err != nil {
-		return nil, err
+		return nil, "", 0, err
 	}
 	tunnel := core.GetTunnels().Start(rpcTunnel.TunnelID, rpcTunnel.SessionID)
 
@@ -117,21 +121,25 @@ func (s *Service) StartShell(sessionID, path string, enablePTY bool, rows, cols 
 	})
 	if err != nil {
 		s.cleanUpTunnelOnError(tunnel.ID, sessionID, "after shell error")
-		return nil, err
+		return nil, "", 0, err
 	}
 	if err := rpc.CheckResponse(response); err != nil {
 		s.cleanUpTunnelOnError(tunnel.ID, sessionID, "after remote shell error")
-		return nil, err
+		return nil, "", 0, err
 	}
 
-	id := fmt.Sprintf("shell-%d", s.nextShell.Add(1))
 	shellPath := strings.TrimSpace(path)
 	if shellPath == "" {
 		shellPath = response.Path
 	}
+	return tunnel, shellPath, response.Pid, nil
+}
+
+func (s *Service) registerShell(sessionID, shellPath string, pid uint32, enablePTY bool, tunnel *core.TunnelIO) *ShellInfo {
+	id := fmt.Sprintf("shell-%d", s.nextShell.Add(1))
 	info := ShellInfo{
 		ID: id, SessionID: sessionID, Path: shellPath,
-		PID: response.Pid, PTY: enablePTY,
+		PID: pid, PTY: enablePTY,
 	}
 
 	s.shellMu.Lock()
@@ -139,7 +147,7 @@ func (s *Service) StartShell(sessionID, path string, enablePTY bool, rows, cols 
 	s.shellMu.Unlock()
 
 	go s.readShell(id, tunnel)
-	return &info, nil
+	return &info
 }
 
 func (s *Service) WriteShell(id, data string) error {
@@ -247,6 +255,16 @@ func (s *Service) readShell(id string, tunnel *core.TunnelIO) {
 	eventsDone := make(chan struct{})
 	go s.emitShellOutput(id, outputEvents, eventsDone)
 
+	readErr := s.pumpShellOutput(id, tunnel, buffer, outputEvents)
+
+	close(outputEvents)
+	<-eventsDone
+	s.finishShell(id, tunnel, readErr)
+}
+
+// pumpShellOutput forwards tunnel reads into the shell's bounded buffer and
+// the event channel until the tunnel errors or hits EOF.
+func (s *Service) pumpShellOutput(id string, tunnel *core.TunnelIO, buffer []byte, outputEvents chan<- []byte) error {
 	var readErr error
 	for {
 		n, err := tunnel.Read(buffer)
@@ -266,12 +284,12 @@ func (s *Service) readShell(id string, tunnel *core.TunnelIO) {
 			if err != io.EOF {
 				readErr = err
 			}
-			break
+			return readErr
 		}
 	}
+}
 
-	close(outputEvents)
-	<-eventsDone
+func (s *Service) finishShell(id string, tunnel *core.TunnelIO, readErr error) {
 	if readErr != nil {
 		runtime.EventsEmit(s.ctx, "shell-output", map[string]interface{}{
 			"id": id, "error": readErr.Error(),
@@ -291,39 +309,6 @@ func (s *Service) readShell(id string, tunnel *core.TunnelIO) {
 	}
 }
 
-func (s *Service) emitShellOutput(id string, chunks <-chan []byte, done chan<- struct{}) {
-	defer close(done)
-	ticker := time.NewTicker(shellEventInterval)
-	defer ticker.Stop()
-
-	pending := make([]byte, 0, shellEventBatchSize)
-	flush := func() {
-		if len(pending) == 0 {
-			return
-		}
-		runtime.EventsEmit(s.ctx, "shell-output", map[string]interface{}{
-			"id": id, "data": string(pending),
-		})
-		pending = pending[:0]
-	}
-
-	for {
-		select {
-		case chunk, ok := <-chunks:
-			if !ok {
-				flush()
-				return
-			}
-			pending = append(pending, chunk...)
-			if len(pending) >= shellEventBatchSize {
-				flush()
-			}
-		case <-ticker.C:
-			flush()
-		}
-	}
-}
-
 func (s *Service) closeTunnel(tunnelID uint64, sessionID string) error {
 	core.GetTunnels().Close(tunnelID)
 	_, err := s.rpc.RPC.CloseTunnel(context.Background(), &sliverpb.Tunnel{
@@ -331,19 +316,4 @@ func (s *Service) closeTunnel(tunnelID uint64, sessionID string) error {
 		SessionID: sessionID,
 	})
 	return err
-}
-
-func appendBoundedShellOutput(output, chunk []byte) []byte {
-	output = append(output, chunk...)
-	if len(output) <= maxShellOutputBytes {
-		return output
-	}
-
-	start := len(output) - shellTrimTarget
-	if newline := bytes.IndexByte(output[start:], '\n'); newline >= 0 {
-		start += newline + 1
-	}
-	trimmed := make([]byte, len(output)-start)
-	copy(trimmed, output[start:])
-	return trimmed
 }

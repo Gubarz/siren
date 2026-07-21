@@ -130,42 +130,52 @@ func (d *socksDriver) pumpToImplant(conn net.Conn, tunnelID uint64, sessionID st
 	for {
 		n, err := conn.Read(buf)
 		if n > 0 {
-			payload := make([]byte, n)
-			copy(payload, buf[:n])
-			frame := firstFrame
-			if seq > 0 {
-				frame = &sliverpb.SocksData{
-					TunnelID: tunnelID,
-					Request:  firstFrame.Request,
-				}
-			}
-			frame.Data = payload
-			frame.Sequence = seq
-			d.sendMu.Lock()
-			sendErr := d.stream.Send(frame)
-			d.sendMu.Unlock()
-			if sendErr != nil {
+			if !d.sendDataFrame(firstFrame, buf[:n], seq) {
 				return
 			}
 			seq++
 		}
 		if err != nil {
-			// Signal the far side to close so the implant releases the
-			// upstream socket instead of waiting on us.
 			if !errors.Is(err, io.EOF) {
 				return
 			}
-			d.sendMu.Lock()
-			_ = d.stream.Send(&sliverpb.SocksData{
-				TunnelID:  tunnelID,
-				Request:   firstFrame.Request,
-				Sequence:  seq,
-				CloseConn: true,
-			})
-			d.sendMu.Unlock()
+			d.sendCloseFrame(firstFrame, seq)
 			return
 		}
 	}
+}
+
+// sendDataFrame forwards one chunk as a SocksData frame. It reports false
+// when the stream is broken and the pump should stop.
+func (d *socksDriver) sendDataFrame(firstFrame *sliverpb.SocksData, chunk []byte, seq uint64) bool {
+	payload := make([]byte, len(chunk))
+	copy(payload, chunk)
+	frame := firstFrame
+	if seq > 0 {
+		frame = &sliverpb.SocksData{
+			TunnelID: firstFrame.TunnelID,
+			Request:  firstFrame.Request,
+		}
+	}
+	frame.Data = payload
+	frame.Sequence = seq
+	d.sendMu.Lock()
+	err := d.stream.Send(frame)
+	d.sendMu.Unlock()
+	return err == nil
+}
+
+// sendCloseFrame signals the far side to close so the implant releases the
+// upstream socket instead of waiting on us.
+func (d *socksDriver) sendCloseFrame(firstFrame *sliverpb.SocksData, seq uint64) {
+	d.sendMu.Lock()
+	_ = d.stream.Send(&sliverpb.SocksData{
+		TunnelID:  firstFrame.TunnelID,
+		Request:   firstFrame.Request,
+		Sequence:  seq,
+		CloseConn: true,
+	})
+	d.sendMu.Unlock()
 }
 
 // recvLoop pulls SocksData frames off the gRPC stream and writes them into

@@ -19,8 +19,16 @@ var (
 
 func parseDiscoveryOutput(agentID, method, output string) []NetworkDiscovery {
 	now := time.Now().UnixMilli()
-	byIP := make(map[string]NetworkDiscovery)
+	byIP := parseDiscoveryMarkers(agentID, method, output, now)
 
+	for _, line := range strings.Split(output, "\n") {
+		updateARPDevice(byIP, agentID, method, line, now)
+	}
+	return discoveryList(byIP)
+}
+
+func parseDiscoveryMarkers(agentID, method, output string, now int64) map[string]NetworkDiscovery {
+	byIP := make(map[string]NetworkDiscovery)
 	for _, match := range markerPattern.FindAllStringSubmatch(output, -1) {
 		if ip, err := netip.ParseAddr(match[1]); err == nil && discoveryHostIP(ip) {
 			ttl := parseTTL(match[3])
@@ -30,39 +38,41 @@ func parseDiscoveryOutput(agentID, method, output string) []NetworkDiscovery {
 			}
 		}
 	}
+	return byIP
+}
 
-	for _, line := range strings.Split(output, "\n") {
-		ipText := ""
-		parenMatch := arpParenPattern.FindStringSubmatch(line)
-		mac := macPattern.FindString(line)
-		if len(parenMatch) == 2 {
-			if mac == "" {
-				continue
-			}
-			ipText = parenMatch[1]
-		} else if mac != "" {
-			match := ipPattern.FindString(line)
-			ipText = match
+func updateARPDevice(byIP map[string]NetworkDiscovery, agentID, method, line string, now int64) {
+	ipText := ""
+	parenMatch := arpParenPattern.FindStringSubmatch(line)
+	mac := macPattern.FindString(line)
+	if len(parenMatch) == 2 {
+		if mac == "" {
+			return
 		}
-		ip, err := netip.ParseAddr(ipText)
-		if err != nil || !discoveryHostIP(ip) {
-			continue
-		}
-		device := byIP[ip.String()]
-		device.AgentID = agentID
-		device.IP = ip.String()
-		device.Method = method
-		device.LastSeen = now
-		if mac != "" {
-			device.MAC = normalizeMAC(mac)
-			if !hostMAC(device.MAC) {
-				continue
-			}
-			device.Vendor = vendorFromMAC(device.MAC)
-		}
-		byIP[device.IP] = device
+		ipText = parenMatch[1]
+	} else if mac != "" {
+		ipText = ipPattern.FindString(line)
 	}
+	ip, err := netip.ParseAddr(ipText)
+	if err != nil || !discoveryHostIP(ip) {
+		return
+	}
+	device := byIP[ip.String()]
+	device.AgentID = agentID
+	device.IP = ip.String()
+	device.Method = method
+	device.LastSeen = now
+	if mac != "" {
+		device.MAC = normalizeMAC(mac)
+		if !hostMAC(device.MAC) {
+			return
+		}
+		device.Vendor = vendorFromMAC(device.MAC)
+	}
+	byIP[device.IP] = device
+}
 
+func discoveryList(byIP map[string]NetworkDiscovery) []NetworkDiscovery {
 	devices := make([]NetworkDiscovery, 0, len(byIP))
 	for _, device := range byIP {
 		devices = append(devices, device)
@@ -91,11 +101,7 @@ func parsePingDiscoveryOutput(agentID, output string) []NetworkDiscovery {
 		}
 	}
 
-	devices := make([]NetworkDiscovery, 0, len(byIP))
-	for _, device := range byIP {
-		devices = append(devices, device)
-	}
-	return devices
+	return discoveryList(byIP)
 }
 
 func mergeDiscoveryResults(current, next []NetworkDiscovery) []NetworkDiscovery {
