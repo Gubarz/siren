@@ -5,6 +5,8 @@
 import { KillAgent, RemoveBeacon, RenameAgent } from '../../../api/agents.js'
 import { ClearNetworkDiscoveries, DiscoverNetwork } from '../../../api/discovery.js'
 import { OpenBeaconSession, CloseBeaconSession } from '../../../api/operatorControls.js'
+import { RunAutomationRule } from '../../../api/automation.js'
+import { automationHistory } from '$stores/resources/automationHistory.svelte.js'
 import { errorMessage } from '../../../utils/errors.js'
 
 export function createAgentActions({ dialog, discoveries, agentTabs, selectedAgentIDsIncluding }) {
@@ -96,9 +98,20 @@ export function createAgentActions({ dialog, discoveries, agentTabs, selectedAge
     }
   }
 
+  async function runAutomationRule(rule, targetAgents) {
+    const targets = targetAgents.length > 0 ? targetAgents : []
+    if (targets.length === 0) return
+    try {
+      await Promise.all(targets.map((t) => RunAutomationRule(rule.id, t.ID)))
+      await automationHistory.refresh()
+    } catch (err) {
+      await dialog.alert(errorMessage(err, `Automation "${rule.name || rule.id}" failed: `), 'Automation Error')
+    }
+  }
+
   return {
     runDiscovery, promptPingSweep, clearDiscoveries,
     killAgent, newShell, renameAgent, removeBeaconRecord,
-    promoteBeacon, demoteSession,
+    promoteBeacon, demoteSession, runAutomationRule,
   }
 }

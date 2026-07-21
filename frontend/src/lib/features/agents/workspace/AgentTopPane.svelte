@@ -18,9 +18,10 @@
   import { discoveries } from '$stores/resources/discoveries.svelte.js'
   import { agentTags } from '$stores/resources/agentTags.svelte.js'
   import { agentColors } from '$stores/resources/agentColors.svelte.js'
+  import { automation } from '$stores/resources/automation.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(sessions, beacons, pivots, pivotListeners, discoveries, agentTags, agentColors)
+  useResource(sessions, beacons, pivots, pivotListeners, discoveries, agentTags, agentColors, automation)
   import { selection } from '$stores/ui/selection.svelte.js'
   import { config } from '$stores/config.svelte.js'
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js'
@@ -164,7 +165,7 @@
   const {
     runDiscovery, promptPingSweep, clearDiscoveries,
     killAgent, newShell, renameAgent, removeBeaconRecord,
-    promoteBeacon, demoteSession,
+    promoteBeacon, demoteSession, runAutomationRule,
   } = actions
 
   async function runBulk(fn) {
@@ -203,6 +204,7 @@
         targetIDs: selectedAgentIDsIncluding(agent),
         targetAgents: selectedAgentsIncluding(agent),
         agentTabs,
+        automationRules: automation.data || [],
         contextMenuHandlers: {
           openReconfigure: reconfigure.show,
           openEditTags: editTags.show,
@@ -210,6 +212,7 @@
           promoteBeacon, demoteSession, newShell,
           runDiscovery, promptPingSweep, clearDiscoveries,
           renameAgent,
+          runAutomationRule,
           setAgentRowColor,
           addToCase: (payload) => addToCase.open(payload),
           killAgent, removeBeaconRecord,

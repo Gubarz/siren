@@ -5,6 +5,8 @@
 // Every builder is a pure function of the caller's callbacks — no store
 // reads, no side effects at import time.
 
+import { matchesAutomationTarget } from '../../../utils/automation.js'
+
 function isWindowsAgent(agent) {
   return (agent.OS || '').toLowerCase() === 'windows'
 }
@@ -109,6 +111,29 @@ function buildDangerActions({ agent, isBeacon, killAgent, removeBeaconRecord }) 
   return items
 }
 
+function buildAutomationActions({ agent, automationRules, runAutomationRule, targetAgents }) {
+  if (!automationRules || automationRules.length === 0) return []
+  const targets = targetAgents.length > 0 ? targetAgents : [agent]
+
+  const matchingRules = automationRules.filter(
+    (rule) => rule.enabled !== false && matchesAutomationTarget(agent, rule)
+  )
+
+  if (matchingRules.length === 0) return []
+
+  return [
+    {
+      icon: 'bolt',
+      label: bulkLabel('Run Automation', targets.length),
+      children: matchingRules.map((rule) => ({
+        label: rule.name || 'Unnamed Rule',
+        description: rule.trigger ? `Trigger: ${rule.trigger}` : '',
+        on: () => runAutomationRule(rule, targets),
+      })),
+    },
+  ]
+}
+
 // Turn the catalog categories into a nested-context-menu shape. Empty
 // categories are dropped so a right-click never opens an empty submenu.
 function buildCommandCategories({ catalog, targetIDs, executeAgentCommand }) {
@@ -137,6 +162,7 @@ export function buildAgentContextSections(ctx) {
     targetIDs,
     targetAgents,
     agentTabs,
+    automationRules,
     contextMenuHandlers,
   } = ctx
 
@@ -154,6 +180,12 @@ export function buildAgentContextSections(ctx) {
     runDiscovery: contextMenuHandlers.runDiscovery,
     promptPingSweep: contextMenuHandlers.promptPingSweep,
     clearDiscoveries: contextMenuHandlers.clearDiscoveries,
+  })
+  const automationActions = buildAutomationActions({
+    agent,
+    automationRules,
+    runAutomationRule: contextMenuHandlers.runAutomationRule,
+    targetAgents,
   })
   const managementActions = buildManagementActions({
     agent,
@@ -179,6 +211,9 @@ export function buildAgentContextSections(ctx) {
     { divider: true },
     { items: discoveryActions },
   ]
+  if (automationActions.length > 0) {
+    sections.push({ divider: true }, { items: automationActions })
+  }
   if (commandCategories.length > 0) {
     sections.push({ divider: true }, { title: 'Commands', items: commandCategories })
   }
