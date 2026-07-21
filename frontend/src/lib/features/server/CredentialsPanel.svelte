@@ -144,10 +144,10 @@
   }
 
   async function startEdit(c) {
-    editingID = c.ID || c.id
+    const id = c.ID || c.id
     let fresh
     try {
-      fresh = await GetCredentialByID(editingID)
+      fresh = await GetCredentialByID(id)
     } catch {
       fresh = c
     }
@@ -159,6 +159,7 @@
       collection: fresh.Collection ?? fresh.collection ?? '',
       isCracked: Boolean(fresh.IsCracked ?? fresh.isCracked ?? false),
     }
+    editingID = id
   }
 
   function cancelEdit() {
