@@ -1,11 +1,13 @@
 <script>
   import Button from '$components/ui/Button.svelte'
+  import Badge from '$components/ui/Badge.svelte'
   import Panel from '$components/patterns/Panel.svelte'
   import PanelBody from '$components/patterns/PanelBody.svelte'
   import TextArea from '$components/ui/TextArea.svelte'
   import Toolbar from '$components/patterns/Toolbar.svelte'
   import { httpC2Profiles } from '$stores/resources/httpC2Profiles.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
+  import { validateHTTPC2ProfileText } from '../../utils/httpC2ProfileValidation.js'
 
   useResource(httpC2Profiles)
   import { GetHTTPC2ProfileByName, SaveHTTPC2ProfileJSON, profileName } from '../../api/httpc2.js'
@@ -24,6 +26,13 @@
   let profiles = $derived(httpC2Profiles.data || [])
   let selectedProfile = $derived(profiles.find((profile) => profileName(profile) === selected))
   let isDirty = $derived(profileText !== savedText)
+  let validation = $derived(validateHTTPC2ProfileText(profileText))
+  let validationStatus = $derived(
+    validation.errors.length ? 'Errors' : validation.warnings.length ? 'Warnings' : 'Valid'
+  )
+  let validationVariant = $derived(
+    validation.errors.length ? 'danger' : validation.warnings.length ? 'warning' : 'success'
+  )
 
   $effect(() => {
     if (!selected && profiles.length > 0) {
@@ -54,6 +63,10 @@
 
   async function saveProfile() {
     if (!profileText.trim()) return
+    if (!validation.canSave) {
+      detailError = 'Fix HTTP C2 profile validation errors before saving.'
+      return
+    }
     saving = true
     detailError = ''
     try {
@@ -139,6 +152,12 @@
           {#if selectedProfile}
             <span class="text-fg-muted">{headerCount(selectedProfile)} headers</span>
           {/if}
+          {#if profileText}
+            <Badge variant={validationVariant} size="xs">{validationStatus}</Badge>
+            <span class="text-fg-muted">
+              {validation.summary.cookies} cookies | {validation.summary.extensions} extensions | {validation.summary.pathSegments} paths
+            </span>
+          {/if}
           {#if detailLoading}
             <span class="text-fg-muted">Loading...</span>
           {:else if isDirty}
@@ -150,15 +169,53 @@
           <div class="border-b border-line px-3 py-2 text-xs text-danger-500">{detailError}</div>
         {/if}
 
-        <div class="flex min-h-0 flex-1 p-3">
-          <TextArea
-            bind:value={profileText}
-            disabled={!selected || detailLoading}
-            rows={28}
-            spellcheck="false"
-            class="min-h-full w-full font-mono text-xs leading-5"
-            divClass="flex min-h-0 flex-1"
-          />
+        <div class="flex min-h-0 flex-1 flex-col gap-3 p-3 xl:flex-row">
+          <div class="flex h-96 min-h-0 min-w-0 shrink-0 xl:h-auto xl:flex-1">
+            <TextArea
+              bind:value={profileText}
+              disabled={!selected || detailLoading}
+              rows={28}
+              spellcheck="false"
+              class="h-full min-h-full min-w-0 w-full font-mono text-xs leading-5"
+              divClass="flex h-full min-h-0 flex-1"
+            />
+          </div>
+
+          <aside class="flex min-h-0 flex-col gap-3 overflow-auto border-t border-line pt-3 text-xs xl:w-80 xl:shrink-0 xl:border-l xl:border-t-0 xl:pl-3 xl:pt-0">
+            <section>
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-fg-muted">Validation</h3>
+                <Badge variant={validationVariant} size="xs">{validationStatus}</Badge>
+              </div>
+
+              {#if validation.errors.length}
+                <div class="space-y-2">
+                  {#each validation.errors as error}
+                    <div class="rounded border border-danger-500/30 bg-danger-500/10 px-2 py-2 text-danger-500">{error}</div>
+                  {/each}
+                </div>
+              {:else}
+                <div class="rounded border border-success-500/30 bg-success-500/10 px-2 py-2 text-success-500">
+                  Profile passes local save checks.
+                </div>
+              {/if}
+
+              {#if validation.warnings.length}
+                <div class="mt-3 space-y-2">
+                  {#each validation.warnings as warning}
+                    <div class="rounded border border-warning-500/30 bg-warning-500/10 px-2 py-2 text-warning-500">{warning}</div>
+                  {/each}
+                </div>
+              {/if}
+            </section>
+
+            {#if validation.sampleRequest}
+              <section>
+                <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-muted">Sample Request</h3>
+                <pre class="overflow-auto rounded border border-line bg-surface-900/50 p-2 font-mono text-xs leading-4 text-fg">{validation.sampleRequest}</pre>
+              </section>
+            {/if}
+          </aside>
         </div>
       </section>
     </div>
