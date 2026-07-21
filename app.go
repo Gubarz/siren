@@ -304,6 +304,10 @@ func (a *App) GetEventHistory(since int64, limit int) ([]events.StoredEvent, err
 	return a.Events.Query(since, limit), nil
 }
 
+func (a *App) SetEventsAcknowledged(seqs []int64, acked bool) int {
+	return a.Events.SetAcked(seqs, acked)
+}
+
 // ---- Connection / RPC ----
 
 func (a *App) GetClientConfigs() ([]string, error) {

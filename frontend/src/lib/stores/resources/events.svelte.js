@@ -1,4 +1,4 @@
-import { listEvents } from '../../api/events.js'
+import { listEvents, setEventsAcknowledged } from '../../api/events.js'
 
 const INITIAL_EVENT_LIMIT = 300
 const EVENT_PAGE_SIZE = 300
@@ -14,6 +14,8 @@ function normalizeEvent(event = {}) {
     username: event.username || event.Username || '',
     job: event.job || event.Job || '',
     time: event.time || event.Time || Date.now(),
+    seq: event.seq || 0,
+    acked: event.acked || false,
   }
 }
 
@@ -50,6 +52,22 @@ class EventLog {
   push(event) {
     const next = normalizeEvent(event)
     this.events = [...this.events.slice(-(this.limit - 1)), next]
+  }
+
+  // Ack state flips locally in place — the backend call persists it, and a
+  // full refetch would scroll-bomb the operator mid-review.
+  async setAcked(seqs, acked) {
+    if (!seqs.length) return
+    await setEventsAcknowledged(seqs, acked)
+    const wanted = new Set(seqs)
+    this.events = this.events.map((event) =>
+      wanted.has(event.seq) ? { ...event, acked } : event,
+    )
+  }
+
+  async ackAll() {
+    const seqs = this.events.filter((e) => e.seq && !e.acked).map((e) => e.seq)
+    await this.setAcked(seqs, true)
   }
 
   clear() {

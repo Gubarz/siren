@@ -22,13 +22,16 @@ type StoredEvent struct {
 	Job       string `json:"job,omitempty"`
 	Data      string `json:"data,omitempty"`
 	Time      int64  `json:"time"`
+	Seq       int64  `json:"seq"`
+	Acked     bool   `json:"acked,omitempty"`
 }
 
 type Store struct {
-	mu     sync.Mutex
-	events []StoredEvent
-	path   string
-	dirty  int
+	mu      sync.Mutex
+	events  []StoredEvent
+	path    string
+	dirty   int
+	nextSeq int64
 }
 
 func New() *Store {
@@ -43,6 +46,8 @@ func (s *Store) Append(ev StoredEvent) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	s.nextSeq++
+	ev.Seq = s.nextSeq
 	s.events = append(s.events, ev)
 	if len(s.events) > maxStored {
 		s.events = s.events[len(s.events)-maxStored:]
@@ -52,6 +57,29 @@ func (s *Store) Append(ev StoredEvent) {
 	if s.dirty >= persistInterval {
 		s.persistLocked()
 	}
+}
+
+// SetAcked marks events acknowledged (or back to unread) by seq. It returns
+// how many matched, and persists immediately so ack state survives crashes.
+func (s *Store) SetAcked(seqs []int64, acked bool) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	want := make(map[int64]struct{}, len(seqs))
+	for _, seq := range seqs {
+		want[seq] = struct{}{}
+	}
+	updated := 0
+	for i := range s.events {
+		if _, ok := want[s.events[i].Seq]; ok {
+			s.events[i].Acked = acked
+			updated++
+		}
+	}
+	if updated > 0 {
+		s.persistLocked()
+	}
+	return updated
 }
 
 func (s *Store) Query(since int64, limit int) []StoredEvent {
@@ -88,6 +116,26 @@ func (s *Store) load() {
 		log.Printf("events: could not decode: %v", err)
 		s.events = nil
 	}
+	s.assignMissingSeq()
+}
+
+// assignMissingSeq backfills seqs for events persisted before ack support
+// (all Seq == 0), so every stored event has a stable identity. Numbering in
+// slice order is deterministic across restarts, keeping ack state valid.
+func (s *Store) assignMissingSeq() {
+	needsSeq := false
+	for i := range s.events {
+		if s.events[i].Seq == 0 {
+			needsSeq = true
+			break
+		}
+	}
+	if needsSeq {
+		for i := range s.events {
+			s.events[i].Seq = int64(i + 1)
+		}
+	}
+	s.nextSeq = int64(len(s.events))
 }
 
 func (s *Store) persistLocked() {

@@ -12,6 +12,7 @@ const DEFAULTS = {
   graphDirection: 'TB',
   topPaneHeight: 50,
   showEventStream: true,
+  eventsHideAcked: false,
   confirmShellAdult: true,
   zoom: 1.0,
   notifications: {
@@ -58,6 +59,7 @@ class Config {
   get graphDirection() { return this.#state.graphDirection }
   get topPaneHeight() { return this.#state.topPaneHeight }
   get showEventStream() { return this.#state.showEventStream }
+  get eventsHideAcked() { return this.#state.eventsHideAcked }
   get confirmShellAdult() { return this.#state.confirmShellAdult }
   get zoom() { return this.#state.zoom }
   get notifications() { return this.#state.notifications }

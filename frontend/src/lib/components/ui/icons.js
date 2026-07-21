@@ -28,6 +28,9 @@ import List from '@lucide/svelte/icons/list'
 import Users from '@lucide/svelte/icons/users'
 import Network from '@lucide/svelte/icons/network'
 import Globe from '@lucide/svelte/icons/globe'
+import Eye from '@lucide/svelte/icons/eye'
+import EyeOff from '@lucide/svelte/icons/eye-off'
+import Undo2 from '@lucide/svelte/icons/undo-2'
 import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal'
 import Menu from '@lucide/svelte/icons/menu'
 import ChevronRight from '@lucide/svelte/icons/chevron-right'
@@ -100,6 +103,9 @@ export const icons = {
   users: Users,
   network: Network,
   globe: Globe,
+  eye: Eye,
+  'eye-off': EyeOff,
+  undo: Undo2,
   sliders: SlidersHorizontal,
   menu: Menu,
   'chevron-right': ChevronRight,
