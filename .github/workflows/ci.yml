@@ -60,11 +60,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
+      # wails generate type-loads the Go packages, which needs the WebKitGTK
+      # headers on Linux.
+      - name: Install WebKitGTK headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      # frontend/wailsjs is gitignored — bindings must be generated from
+      # the Go bindings before vite/eslint can see them.
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Generate Wails bindings
+        run: wails generate module
 
       - run: npm --prefix frontend ci
       - run: npm --prefix frontend run analyze
@@ -92,6 +112,14 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       # frontend/dist is embedded via go:embed, so it must exist first.
+      # frontend/wailsjs is gitignored — bindings must be generated from
+      # the Go bindings before vite can build the frontend.
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Generate Wails bindings
+        run: wails generate module
+
       - run: npm --prefix frontend ci
       - run: npm --prefix frontend run build
 
