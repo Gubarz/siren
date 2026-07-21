@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Enforce the 350-line .go file budget. golangci-lint has no built-in
-# file-length linter, so this shell check plugs the gap. See CLEANUP.md.
+# file-length linter, so this shell check plugs the gap. See CONTRIBUTING.md.
 #
 # app.go is the sanctioned exception — it fans out to every App method
 # and grew organically as the App-method surface.
@@ -29,6 +29,6 @@ done < <(
 
 if (( fail )); then
     echo "" >&2
-    echo "Go file-length budget exceeded. See CLEANUP.md for the split plan." >&2
+    echo "Go file-length budget exceeded. Budgets are documented in CONTRIBUTING.md." >&2
     exit 1
 fi

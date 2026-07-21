@@ -1,4 +1,4 @@
-# See CLEANUP.md for the 350-line file / 45-line function budget.
+# See CONTRIBUTING.md for the 350-line file / 45-line function budget.
 # funlen enforces the per-function line cap. File length has no built-in
 # linter — see scripts/check-go-file-length.sh (wired into `make analyze-go`).
 
