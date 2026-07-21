@@ -60,7 +60,7 @@ func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurs
 			RemotePath:  remotePath,
 			LocalPath:   localPath,
 			IsDirectory: recurse,
-			Timestamp:   time.Now(),
+			Timestamp:   nowString(),
 			Status:      "in_progress",
 		})
 	}
@@ -342,7 +342,7 @@ func (s *Service) DownloadMultipleTar(sessionID string, items []BulkDownloadItem
 				RemotePath:  item.RemotePath,
 				LocalPath:   localPath,
 				IsDirectory: item.IsDirectory,
-				Timestamp:   time.Now(),
+				Timestamp:   nowString(),
 				Status:      "in_progress",
 			})
 		}

@@ -16,15 +16,15 @@ import (
 const maxHistoryStored = 1000
 
 type DownloadRecord struct {
-	ID          string    `json:"id"`
-	SessionID   string    `json:"sessionID"`
-	RemotePath  string    `json:"remotePath"`
-	LocalPath   string    `json:"localPath"`
-	Size        int64     `json:"size"`
-	IsDirectory bool      `json:"isDirectory"`
-	Timestamp   time.Time `json:"timestamp"`
-	Status      string    `json:"status"` // "completed", "failed", "in_progress"
-	Error       string    `json:"error,omitempty"`
+	ID          string `json:"id"`
+	SessionID   string `json:"sessionID"`
+	RemotePath  string `json:"remotePath"`
+	LocalPath   string `json:"localPath"`
+	Size        int64  `json:"size"`
+	IsDirectory bool   `json:"isDirectory"`
+	Timestamp   string `json:"timestamp"`
+	Status      string `json:"status"` // "completed", "failed", "in_progress"
+	Error       string `json:"error,omitempty"`
 }
 
 type HistoryStore struct {
@@ -57,8 +57,8 @@ func (s *HistoryStore) AddRecord(rec DownloadRecord) string {
 	if rec.ID == "" {
 		rec.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	}
-	if rec.Timestamp.IsZero() {
-		rec.Timestamp = time.Now()
+	if strings.TrimSpace(rec.Timestamp) == "" {
+		rec.Timestamp = nowString()
 	}
 
 	s.records = append([]DownloadRecord{rec}, s.records...)
@@ -68,6 +68,10 @@ func (s *HistoryStore) AddRecord(rec DownloadRecord) string {
 
 	s.persistLocked()
 	return rec.ID
+}
+
+func nowString() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
 func (s *HistoryStore) UpdateRecord(id string, status string, size int64, errStr string) {

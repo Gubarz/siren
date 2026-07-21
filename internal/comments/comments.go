@@ -18,12 +18,12 @@ import (
 const persistFilename = "gui-entity-comments.json"
 
 type Comment struct {
-	ID         string    `json:"id"`
-	EntityType string    `json:"entityType"`
-	EntityID   string    `json:"entityId"`
-	Author     string    `json:"author"`
-	Text       string    `json:"text"`
-	CreatedAt  time.Time `json:"createdAt"`
+	ID         string `json:"id"`
+	EntityType string `json:"entityType"`
+	EntityID   string `json:"entityId"`
+	Author     string `json:"author"`
+	Text       string `json:"text"`
+	CreatedAt  string `json:"createdAt"`
 }
 
 type Service struct {
@@ -147,7 +147,7 @@ func (s *Service) AddComment(entityType, entityID, author, text string) (Comment
 		EntityID:   strings.TrimSpace(entityID),
 		Author:     cleanUsername(author),
 		Text:       text,
-		CreatedAt:  time.Now(),
+		CreatedAt:  nowString(),
 	}
 
 	key := entityKey(entityType, entityID)
@@ -157,7 +157,7 @@ func (s *Service) AddComment(entityType, entityID, author, text string) (Comment
 	s.comments[key] = append(s.comments[key], c)
 
 	sort.Slice(s.comments[key], func(i, j int) bool {
-		return s.comments[key][i].CreatedAt.Before(s.comments[key][j].CreatedAt)
+		return createdAtTime(s.comments[key][i]).Before(createdAtTime(s.comments[key][j]))
 	})
 
 	if err := s.persistLocked(); err != nil {
@@ -184,7 +184,7 @@ func (s *Service) SetNote(entityType, entityID, author, text string) (Comment, e
 			EntityID:   strings.TrimSpace(entityID),
 			Author:     cleanUsername(author),
 			Text:       text,
-			CreatedAt:  time.Now(),
+			CreatedAt:  nowString(),
 		}
 		s.comments[key] = append(s.comments[key], c)
 		if err := s.persistLocked(); err != nil {
@@ -199,7 +199,7 @@ func (s *Service) SetNote(entityType, entityID, author, text string) (Comment, e
 	} else {
 		s.comments[key][lastIdx].Text = text
 		s.comments[key][lastIdx].Author = cleanUsername(author)
-		s.comments[key][lastIdx].CreatedAt = time.Now()
+		s.comments[key][lastIdx].CreatedAt = nowString()
 	}
 
 	if err := s.persistLocked(); err != nil {
@@ -209,6 +209,22 @@ func (s *Service) SetNote(entityType, entityID, author, text string) (Comment, e
 		return s.comments[key][len(s.comments[key])-1], nil
 	}
 	return Comment{}, nil
+}
+
+func nowString() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
+}
+
+func createdAtTime(c Comment) time.Time {
+	ts, err := time.Parse(time.RFC3339Nano, c.CreatedAt)
+	if err == nil {
+		return ts
+	}
+	ts, err = time.Parse(time.RFC3339, c.CreatedAt)
+	if err == nil {
+		return ts
+	}
+	return time.Time{}
 }
 
 func (s *Service) DeleteComment(commentID string) error {

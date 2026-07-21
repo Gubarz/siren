@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 func TestHistoryStore(t *testing.T) {
@@ -69,7 +68,7 @@ func TestHistoryStore(t *testing.T) {
 		IsDirectory: true,
 		Status:      "failed",
 		Error:       "RPC timeout",
-		Timestamp:   time.Now(),
+		Timestamp:   nowString(),
 	}
 	store.AddRecord(rec2)
 
