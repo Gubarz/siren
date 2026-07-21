@@ -1,8 +1,8 @@
-//go:build unix
-
 package console
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	stdlog "log"
 	"os"
@@ -20,6 +20,20 @@ import (
 // switching, cwd, and any per-session bootstrap happen the same as if
 // the user had typed it. Blocks until the user exits.
 func RunConsoleSubprocess(configPath, sessionID string) error {
+	// Fail fast if this process was spawned without usable std handles
+	// (e.g. a GUI-subsystem Windows build attached to a console that
+	// didn't supply them). Sliver's readline would otherwise spin on a
+	// dead input handle forever while writing to a void stdout.
+	if os.Stdin == nil || os.Stdout == nil {
+		return errors.New("console subprocess started without a terminal")
+	}
+	if _, err := os.Stdin.Stat(); err != nil {
+		return fmt.Errorf("console subprocess stdin is unusable: %w", err)
+	}
+	if _, err := os.Stdout.Stat(); err != nil {
+		return fmt.Errorf("console subprocess stdout is unusable: %w", err)
+	}
+
 	cfg, err := loadConfigFromFile(configPath)
 	if err != nil {
 		return err

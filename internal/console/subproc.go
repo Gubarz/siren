@@ -3,25 +3,16 @@
 package console
 
 import (
-	"encoding/base64"
 	"os"
 	"os/exec"
 	"syscall"
-	"time"
 
 	"github.com/creack/pty"
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// ConsoleModeFlag names the CLI flag that puts a re-exec of this binary
-// into "run a sliver client console" mode. main.go checks for it before
-// spawning the wails app.
-const ConsoleModeFlag = "--sliver-console"
-
-const (
-	subprocOutputInterval = 16 * time.Millisecond
-	subprocOutputBatch    = 16 * 1024
-)
+// subprocCommandTerminator submits a line to the subprocess console.
+// On a unix PTY the Enter key arrives as a newline.
+const subprocCommandTerminator = "\n"
 
 // StartConsole spawns a subprocess that runs a real sliver client
 // console (readline + all commands) with its stdio wired to a fresh PTY.
@@ -60,79 +51,12 @@ func (s *Service) StartConsole(sessionID string) (string, error) {
 	}
 
 	id := s.subproc.newJobID()
-	job := &subprocJob{id: id, sessionID: sessionID, cmd: cmd, pty: master}
+	job := &subprocJob{id: id, sessionID: sessionID, proc: &unixProc{cmd: cmd}, pty: master}
 	s.subproc.add(job)
 	s.drainPendingCommands(job)
 	go s.pumpSubproc(job)
 	go s.watchConsole(job, cfgPath)
 	return id, nil
-}
-
-// drainPendingCommands flushes any commands the GUI queued for this session
-// before the subprocess was ready. Called after add() so a WriteConsole
-// racing against us finds the same job.
-func (s *Service) drainPendingCommands(job *subprocJob) {
-	pending := s.subproc.takePending(job.sessionID)
-	if len(pending) == 0 {
-		return
-	}
-	go func() {
-		// A small delay lets sliver's readline finish drawing the first
-		// prompt before we push lines at it. Without this the first queued
-		// command sometimes lands before rc processing completes and gets
-		// misparsed.
-		time.Sleep(250 * time.Millisecond)
-		for _, line := range pending {
-			_, _ = job.pty.Write([]byte(line + "\n"))
-		}
-	}()
-}
-
-// watchConsole reaps the subprocess and releases its resources on exit.
-func (s *Service) watchConsole(job *subprocJob, cfgPath string) {
-	_ = job.cmd.Wait()
-	s.subproc.remove(job.id)
-	_ = job.pty.Close()
-	_ = os.Remove(cfgPath)
-	s.emitConsoleExit(job.id, job.cmd.ProcessState)
-}
-
-// SendToSessionConsole pushes a command line to the subprocess console
-// bound to sessionID. If no console is running yet the line queues and
-// is drained on the next StartConsole for the same session — callers
-// don't have to synchronize with mount lifecycles.
-func (s *Service) SendToSessionConsole(sessionID, line string) error {
-	if line == "" {
-		return nil
-	}
-	s.subproc.mu.Lock()
-	jobID, ok := s.subproc.bySession[sessionID]
-	s.subproc.mu.Unlock()
-	if !ok {
-		s.subproc.queuePending(sessionID, line)
-		return nil
-	}
-	job := s.subproc.get(jobID)
-	if job == nil {
-		s.subproc.queuePending(sessionID, line)
-		return nil
-	}
-	// Clear whatever the user has already typed at the prompt before
-	// pushing our line: Ctrl+E (go to end of line) then Ctrl+U (kill
-	// backward to start). Without this the injected command concatenates
-	// onto their in-flight input and sliver parses the mash as one bad
-	// command.
-	_, err := job.pty.Write([]byte("\x05\x15" + line + "\n"))
-	return err
-}
-
-func (s *Service) WriteConsole(jobID string, data []byte) error {
-	job := s.subproc.get(jobID)
-	if job == nil {
-		return os.ErrClosed
-	}
-	_, err := job.pty.Write(data)
-	return err
 }
 
 func (s *Service) ResizeConsole(jobID string, cols, rows int) error {
@@ -143,121 +67,30 @@ func (s *Service) ResizeConsole(jobID string, cols, rows int) error {
 	if cols <= 0 || rows <= 0 {
 		return nil
 	}
-	return pty.Setsize(job.pty, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
+	ptyFile, ok := job.pty.(*os.File)
+	if !ok {
+		return os.ErrInvalid
+	}
+	return pty.Setsize(ptyFile, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
 }
 
-func (s *Service) StopConsole(jobID string) error {
-	job := s.subproc.get(jobID)
-	if job == nil {
+// unixProc adapts exec.Cmd to consoleProc.
+type unixProc struct {
+	cmd *exec.Cmd
+}
+
+func (p *unixProc) Wait() error { return p.cmd.Wait() }
+
+func (p *unixProc) Kill() error {
+	if p.cmd.Process == nil {
 		return nil
 	}
-	if job.cmd.Process != nil {
-		_ = job.cmd.Process.Signal(syscall.SIGTERM)
-	}
-	return nil
+	return p.cmd.Process.Signal(syscall.SIGTERM)
 }
 
-// CloseSubprocs kills every running console subprocess. Called at app
-// shutdown so orphan sliver clients don't linger against the server.
-func (s *Service) CloseSubprocs() {
-	s.subproc.mu.Lock()
-	jobs := s.subproc.jobs
-	s.subproc.jobs = nil
-	s.subproc.mu.Unlock()
-	for _, j := range jobs {
-		if j.cmd.Process != nil {
-			_ = j.cmd.Process.Signal(syscall.SIGTERM)
-		}
+func (p *unixProc) ExitCode() int {
+	if p.cmd.ProcessState == nil {
+		return -1
 	}
-}
-
-func (s *Service) pumpSubproc(job *subprocJob) {
-	chunks := make(chan []byte, 16)
-	go readPTYChunks(job.pty, chunks)
-
-	pending := make([]byte, 0, subprocOutputBatch)
-	var controlCarry []byte
-	ticker := time.NewTicker(subprocOutputInterval)
-	defer ticker.Stop()
-
-	flush := func() {
-		if len(pending) == 0 {
-			return
-		}
-		s.emitConsoleOutput(job.id, pending)
-		pending = pending[:0]
-	}
-	for {
-		select {
-		case chunk, ok := <-chunks:
-			if !ok {
-				if len(controlCarry) > 0 {
-					pending = append(pending, controlCarry...)
-					controlCarry = nil
-				}
-				flush()
-				return
-			}
-			visible, tails, carry := filterShellOpenFrames(controlCarry, chunk)
-			controlCarry = carry
-			for _, tail := range tails {
-				s.emitConsoleOpenShell(job.id, job.sessionID, tail)
-			}
-			pending = append(pending, visible...)
-			if len(pending) >= subprocOutputBatch {
-				flush()
-			}
-		case <-ticker.C:
-			flush()
-		}
-	}
-}
-
-// readPTYChunks copies PTY reads onto chunks until the PTY errors or closes.
-func readPTYChunks(ptyFile *os.File, chunks chan<- []byte) {
-	defer close(chunks)
-	buf := make([]byte, 32*1024)
-	for {
-		n, err := ptyFile.Read(buf)
-		if n > 0 {
-			chunk := make([]byte, n)
-			copy(chunk, buf[:n])
-			chunks <- chunk
-		}
-		if err != nil {
-			return
-		}
-	}
-}
-
-func (s *Service) emitConsoleOutput(jobID string, data []byte) {
-	if s.ctx == nil {
-		return
-	}
-	wailsruntime.EventsEmit(s.ctx, "console-output", map[string]any{
-		"jobID": jobID,
-		"data":  base64.StdEncoding.EncodeToString(data),
-	})
-}
-
-func (s *Service) emitConsoleExit(jobID string, state *os.ProcessState) {
-	if s.ctx == nil {
-		return
-	}
-	payload := map[string]any{"jobID": jobID}
-	if state != nil {
-		payload["exitCode"] = state.ExitCode()
-	}
-	wailsruntime.EventsEmit(s.ctx, "console-exit", payload)
-}
-
-func (s *Service) emitConsoleOpenShell(jobID, sessionID, tail string) {
-	if s.ctx == nil {
-		return
-	}
-	wailsruntime.EventsEmit(s.ctx, "console-open-shell", map[string]any{
-		"jobID":     jobID,
-		"sessionID": sessionID,
-		"tail":      tail,
-	})
+	return p.cmd.ProcessState.ExitCode()
 }

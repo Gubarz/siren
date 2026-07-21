@@ -1,17 +1,41 @@
-//go:build unix
-
 package console
 
 import (
 	"encoding/json"
+	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"sync"
 	"sync/atomic"
 
 	"github.com/bishopfox/sliver/client/assets"
 )
+
+// ConsoleModeFlag names the CLI flag that puts a re-exec of this binary
+// into "run a sliver client console" mode. main.go checks for it before
+// spawning the wails app.
+const ConsoleModeFlag = "--sliver-console"
+
+// consolePTY is the GUI-side end of the console subprocess's terminal:
+// unix PTY master on unix, ConPTY pipes on Windows. Writes land on the
+// subprocess's stdin (readline input), reads carry its rendered output.
+type consolePTY interface {
+	io.Reader
+	io.Writer
+	Close() error
+}
+
+// consoleProc is the running console subprocess itself. The platform
+// files provide the concrete implementation (exec.Cmd on unix, a raw
+// process handle on Windows where ConPTY owns process creation).
+type consoleProc interface {
+	// Wait blocks until the subprocess exits.
+	Wait() error
+	// Kill terminates the subprocess.
+	Kill() error
+	// ExitCode reports the subprocess exit code after Wait returns.
+	ExitCode() int
+}
 
 // subprocMgr owns the per-session console subprocesses. Zero value ready
 // to use. Access under mu; each running job is independent otherwise.
@@ -34,8 +58,8 @@ type subprocMgr struct {
 type subprocJob struct {
 	id        string
 	sessionID string
-	cmd       *exec.Cmd
-	pty       *os.File // master
+	proc      consoleProc
+	pty       consolePTY
 }
 
 func (m *subprocMgr) newJobID() string {
