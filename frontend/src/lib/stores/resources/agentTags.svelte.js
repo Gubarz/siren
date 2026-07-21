@@ -7,5 +7,5 @@ import { GetAllAgentTags } from '../../api/tags.js'
 export const agentTags = createResource({
   name: 'agent-tags',
   fetch: async () => GetAllAgentTags(),
-  events: ['agent-tags-updated'],
+  events: ['agent-tags-updated', 'entity-tags-updated'],
 })

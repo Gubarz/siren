@@ -4,12 +4,14 @@
   import Select from '$components/ui/Select.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
   import { credentials } from '$stores/resources/credentials.svelte.js'
+  import { entityColors } from '$stores/resources/entityColors.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(credentials)
+  useResource(credentials, entityColors)
   import Panel from '$components/patterns/Panel.svelte'
   import DataTable from '$components/patterns/DataTable.svelte'
   import Toolbar from '$components/patterns/Toolbar.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import { AddCredential, RemoveCredential } from '../../api/server.js'
   import {
     GetCredentialByID,
@@ -22,6 +24,8 @@
   import { errorMessage } from '../../utils/errors.js'
   import { addToCase } from '$stores/ui/addToCase.svelte.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
+  import { entityColorStyle } from '../../utils/entityTags.js'
 
   let {
     embedded = false,
@@ -81,7 +85,8 @@
     { key: '_hash', label: 'Hash', width: 260 },
     { key: '_hashType', label: 'Type', width: 90 },
     { key: '_collection', label: 'Collection' },
-    { key: '_actions', label: '', width: 220, sortable: false },
+    { key: '_tags', label: 'Tags', width: 108, sortable: false },
+    { key: '_actions', label: '', width: 270, sortable: false },
   ]
 
   $effect(() => {
@@ -224,6 +229,7 @@
       emptyState={{ icon: 'key', title: 'No credentials' }}
       onRowDblClick={(credential) => startEdit(credential._raw)}
       rowClass={(credential) => editingID === credential._id ? 'bg-brand-muted' : ''}
+      rowStyle={(credential) => entityColorStyle(entityColors.data, 'cred', credential._id)}
     >
       {#snippet children(credential, col)}
         {#if editingID === credential._id}
@@ -243,11 +249,14 @@
               <Button color="dark" size="xs" onclick={cancelEdit}>Cancel</Button>
             </div>
           {/if}
+        {:else if col.key === '_tags'}
+          <EntityTagBadges entityType="cred" entityID={credential._id} showEmpty />
         {:else if col.key === '_plaintext' || col.key === '_hash'}
           <span class="font-mono">{credential[col.key]}</span>
         {:else if col.key === '_actions'}
           <div class="flex gap-2">
             <Button color="dark" size="xs" onclick={() => startEdit(credential._raw)}>Edit</Button>
+            <Button color="dark" size="xs" icon="tag" onclick={() => tagsModal.openTags('cred', credential._id, credential._username || 'credential')}>Tags</Button>
             <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('cred', credential._id, credential._username || 'credential')}>Comments</Button>
             <Button color="dark" size="xs" icon="folder" onclick={() => addToCase.open({
               collection: 'cred', itemID: credential._id, label: credential._username || 'credential',

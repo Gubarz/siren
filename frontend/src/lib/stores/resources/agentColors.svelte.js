@@ -7,5 +7,5 @@ import { GetAllAgentColors } from '../../api/tags.js'
 export const agentColors = createResource({
   name: 'agent-colors',
   fetch: async () => GetAllAgentColors(),
-  events: ['agent-colors-updated'],
+  events: ['agent-colors-updated', 'entity-colors-updated'],
 })

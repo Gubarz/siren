@@ -2,9 +2,7 @@
   import Modal from "../../components/patterns/Modal.svelte";
   import Button from "../../components/ui/Button.svelte";
   import TextArea from "../../components/ui/TextArea.svelte";
-  import TextInput from "../../components/ui/TextInput.svelte";
   import IconButton from "../../components/ui/IconButton.svelte";
-  import Icon from "../../components/ui/Icon.svelte";
   import {
     GetEntityComments,
     AddEntityComment,
@@ -127,7 +125,7 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <span
-                  class="font-semibold text-xs text-primary-400 bg-primary-950/60 px-1.5 py-0.5 rounded border border-primary-800/40"
+                  class="font-semibold text-xs text-primary-400 bg-primary-950/60 px-2 py-1 rounded border border-primary-800/40"
                 >
                   {item.author || "Operator"}
                 </span>

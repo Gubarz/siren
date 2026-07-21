@@ -8,8 +8,6 @@
   import TextInput from '$components/ui/TextInput.svelte'
   import ReconfigureAgentModal from '../modals/ReconfigureAgentModal.svelte'
   import BeaconDetailModal from '../modals/BeaconDetailModal.svelte'
-  import EditTagsModal from '../modals/EditTagsModal.svelte'
-  import EntityCommentsModal from '../../comments/EntityCommentsModal.svelte'
   import BulkActionBar from './BulkActionBar.svelte'
 
   import { sessions } from '$stores/resources/sessions.svelte.js'
@@ -34,6 +32,7 @@
   import { agentTabs } from '$stores/agentTabs.svelte.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
 
   import { RemoveNetworkDiscoveries } from '../../../api/discovery.js'
   import { GetCommandCatalog } from '../../../api/console.js'
@@ -181,10 +180,13 @@
   // at the method reference.
   const reconfigure = new Modal()
   const beaconDetail = new Modal()
-  const editTags = new Modal()
 
   function openComments(type, id, label) {
     commentsModal.openComments(type, id, label)
+  }
+
+  function openTags(type, id, label) {
+    tagsModal.openTags(type, id, label)
   }
 
   async function setAgentRowColor(agents, color) {
@@ -213,7 +215,7 @@
         automationRules: automation.data || [],
         contextMenuHandlers: {
           openReconfigure: reconfigure.show,
-          openEditTags: editTags.show,
+          openTags,
           openComments,
           openBeaconDetail: (a) => beaconDetail.show(a.ID),
           promoteBeacon, demoteSession, newShell,
@@ -264,6 +266,7 @@
         device,
         selectedCount: selected.devices.size,
         openComments,
+        openTags,
         removeDiscoveries,
         clearDiscoveries,
       }),
@@ -373,4 +376,3 @@
 
 <ReconfigureAgentModal bind:open={reconfigure.open} agent={reconfigure.data} />
 <BeaconDetailModal bind:open={beaconDetail.open} beaconID={beaconDetail.data} />
-<EditTagsModal bind:open={editTags.open} agent={editTags.data} />

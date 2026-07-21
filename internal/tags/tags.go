@@ -1,7 +1,7 @@
-// Package tags stores per-agent operator tags. Sliver's teamserver has no
-// tag RPC — this is a client-side persistence layer keyed by agent ID and
-// scoped per teamserver profile (host+port), so tags don't leak between
-// operators sharing the same GUI install.
+// Package tags stores per-entity operator tags and colors. Sliver's
+// teamserver has no tag RPC — this is a client-side persistence layer scoped
+// per teamserver profile (host+port), so tags don't leak between operators
+// sharing the same GUI install.
 package tags
 
 import (
@@ -22,11 +22,9 @@ const persistFilename = "gui-agent-tags.json"
 type Service struct {
 	mu   sync.RWMutex
 	path string
-	// tags maps agent ID -> sorted+dedup'd tag list. A missing key means the
-	// agent has no operator tags — a nil slice is preserved on read as an
-	// empty list. Notes have their own home in internal/loot; this service
-	// only owns tags. colors maps agent ID -> a row color from the closed
-	// RowColorNames palette.
+	// tags maps entity key -> sorted+dedup'd tag list. A missing key means
+	// the entity has no operator tags. colors maps entity key -> color from
+	// the closed RowColorNames palette.
 	tags   map[string][]string
 	colors map[string]string
 }
@@ -50,6 +48,24 @@ func validRowColor(color string) bool {
 	return false
 }
 
+func entityKey(entityType, entityID string) string {
+	entityType = strings.ToLower(strings.TrimSpace(entityType))
+	entityID = strings.TrimSpace(entityID)
+	if entityType == "" || entityID == "" {
+		return ""
+	}
+	return entityType + ":" + entityID
+}
+
+func legacyAgentKey(agentID string) string {
+	return strings.TrimSpace(agentID)
+}
+
+func isAgentEntityKey(key string) (string, bool) {
+	agentID, ok := strings.CutPrefix(key, "agent:")
+	return agentID, ok && agentID != ""
+}
+
 func New() *Service {
 	s := &Service{
 		path:   filepath.Join(assets.GetRootAppDir(), persistFilename),
@@ -59,6 +75,7 @@ func New() *Service {
 	if err := s.load(); err != nil {
 		// Startup shouldn't fatal on a missing/corrupt file — treat as empty.
 		s.tags = map[string][]string{}
+		s.colors = map[string]string{}
 	}
 	return s
 }
@@ -115,36 +132,67 @@ func (s *Service) persistLocked() error {
 	return os.Rename(tmp, s.path)
 }
 
-// GetAgentTags returns the tag list for one agent, empty slice if none.
-func (s *Service) GetAgentTags(agentID string) []string {
+// GetEntityTags returns the tag list for one entity, empty slice if none.
+func (s *Service) GetEntityTags(entityType, entityID string) []string {
+	key := entityKey(entityType, entityID)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]string, len(s.tags[agentID]))
-	copy(out, s.tags[agentID])
+	list := s.tags[key]
+	if len(list) == 0 && strings.EqualFold(strings.TrimSpace(entityType), "agent") {
+		list = s.tags[legacyAgentKey(entityID)]
+	}
+	out := make([]string, len(list))
+	copy(out, list)
 	return out
 }
 
-// SetAgentTags replaces the tag list for one agent. Empty list deletes.
-func (s *Service) SetAgentTags(agentID string, tags []string) error {
+// SetEntityTags replaces the tag list for one entity. Empty list deletes.
+func (s *Service) SetEntityTags(entityType, entityID string, tags []string) error {
+	key := entityKey(entityType, entityID)
+	if key == "" {
+		return fmt.Errorf("entity type and id are required")
+	}
 	normalized := normalizeTags(tags)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if len(normalized) == 0 {
-		delete(s.tags, agentID)
+		delete(s.tags, key)
 	} else {
-		s.tags[agentID] = normalized
+		s.tags[key] = normalized
+	}
+	if strings.HasPrefix(key, "agent:") {
+		delete(s.tags, legacyAgentKey(entityID))
 	}
 	return s.persistLocked()
 }
 
-// SetAgentColor assigns a row color from RowColorNames to one agent. An
-// empty color clears the assignment.
-func (s *Service) SetAgentColor(agentID, color string) error {
+// GetEntityColor returns the assigned color for one entity.
+func (s *Service) GetEntityColor(entityType, entityID string) string {
+	key := entityKey(entityType, entityID)
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	color := s.colors[key]
+	if color == "" && strings.EqualFold(strings.TrimSpace(entityType), "agent") {
+		color = s.colors[legacyAgentKey(entityID)]
+	}
+	return color
+}
+
+// SetEntityColor assigns a color from RowColorNames to one entity. An empty
+// color clears the assignment.
+func (s *Service) SetEntityColor(entityType, entityID, color string) error {
+	key := entityKey(entityType, entityID)
+	if key == "" {
+		return fmt.Errorf("entity type and id are required")
+	}
 	color = strings.ToLower(strings.TrimSpace(color))
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if color == "" {
-		delete(s.colors, agentID)
+		delete(s.colors, key)
+		if strings.HasPrefix(key, "agent:") {
+			delete(s.colors, legacyAgentKey(entityID))
+		}
 		return s.persistLocked()
 	}
 	if !validRowColor(color) {
@@ -153,13 +201,15 @@ func (s *Service) SetAgentColor(agentID, color string) error {
 	if s.colors == nil {
 		s.colors = map[string]string{}
 	}
-	s.colors[agentID] = color
+	s.colors[key] = color
+	if strings.HasPrefix(key, "agent:") {
+		delete(s.colors, legacyAgentKey(entityID))
+	}
 	return s.persistLocked()
 }
 
-// GetAllColors returns every agent's row color in one map, mirroring
-// GetAllTags for the table renderer.
-func (s *Service) GetAllColors() map[string]string {
+// GetAllEntityColors returns every entity's color.
+func (s *Service) GetAllEntityColors() map[string]string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := make(map[string]string, len(s.colors))
@@ -169,9 +219,9 @@ func (s *Service) GetAllColors() map[string]string {
 	return out
 }
 
-// GetAllTags returns every agent's tags in one map — cheap because the
-// whole store is in memory. Used to build filter chips + palette entries.
-func (s *Service) GetAllTags() map[string][]string {
+// GetAllEntityTags returns every entity's tags — cheap because the whole
+// store is in memory. Used to build filter chips + palette entries.
+func (s *Service) GetAllEntityTags() map[string][]string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := make(map[string][]string, len(s.tags))
@@ -183,7 +233,60 @@ func (s *Service) GetAllTags() map[string][]string {
 	return out
 }
 
-// KnownTags returns the union of every unique tag used across all agents,
+// GetAgentTags returns the tag list for one agent, empty slice if none.
+func (s *Service) GetAgentTags(agentID string) []string {
+	return s.GetEntityTags("agent", agentID)
+}
+
+// SetAgentTags replaces the tag list for one agent. Empty list deletes.
+func (s *Service) SetAgentTags(agentID string, tags []string) error {
+	return s.SetEntityTags("agent", agentID, tags)
+}
+
+// SetAgentColor assigns a row color from RowColorNames to one agent. An
+// empty color clears the assignment.
+func (s *Service) SetAgentColor(agentID, color string) error {
+	return s.SetEntityColor("agent", agentID, color)
+}
+
+// GetAllColors returns every agent's row color in one map, mirroring
+// GetAllTags for the table renderer.
+func (s *Service) GetAllColors() map[string]string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := map[string]string{}
+	for key, color := range s.colors {
+		if agentID, ok := isAgentEntityKey(key); ok {
+			out[agentID] = color
+		} else if !strings.Contains(key, ":") {
+			out[key] = color
+		}
+	}
+	return out
+}
+
+// GetAllTags returns every agent's tags in one map.
+func (s *Service) GetAllTags() map[string][]string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := map[string][]string{}
+	for key, list := range s.tags {
+		agentID, ok := isAgentEntityKey(key)
+		if !ok && !strings.Contains(key, ":") {
+			agentID = key
+			ok = true
+		}
+		if !ok {
+			continue
+		}
+		copyList := make([]string, len(list))
+		copy(copyList, list)
+		out[agentID] = copyList
+	}
+	return out
+}
+
+// KnownTags returns the union of every unique tag used across all entities,
 // sorted, for populating a filter dropdown.
 func (s *Service) KnownTags() []string {
 	s.mu.RLock()

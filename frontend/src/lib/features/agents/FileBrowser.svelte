@@ -8,11 +8,19 @@
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js';
   import { dialog } from '$stores/ui/dialog.svelte.js';
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js';
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js';
   import { errorMessage } from '../../utils/errors.js';
   import DataTable from '$components/patterns/DataTable.svelte';
   import Button from '$components/ui/Button.svelte';
+  import Checkbox from '$components/ui/Checkbox.svelte';
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte';
   import TextInput from '$components/ui/TextInput.svelte';
+  import { entityColors } from '$stores/resources/entityColors.svelte.js';
+  import { useResource } from '$stores/lib/createResource.svelte.js';
   import { useFileBrowser } from '$stores/perAgent/fileBrowser.svelte.js';
+  import { entityColorStyle } from '../../utils/entityTags.js';
+
+  useResource(entityColors)
 
   let {
     sessionID = "",
@@ -95,6 +103,7 @@
   let tableColumns = [
     { key: "_checkbox", label: "", width: 32, sortable: false },
     { key: "iconStr", label: "Name", width: 300 },
+    { key: "_tags", label: "Tags", width: 108, sortable: false },
     { key: "_sortSize", label: "Size", width: 100 },
     { key: "typeStr", label: "Type", width: 100 },
     { key: "modTimeStr", label: "Last Modified", width: 250 }
@@ -214,14 +223,41 @@
 
   function openFileComments(file) {
     const name = file.Name || file.name || file._name;
+    commentsModal.openComments('file', fileEntityID(file), name);
+  }
+
+  function openFileTags(file) {
+    const name = file.Name || file.name || file._name;
+    tagsModal.openTags('file', fileEntityID(file), name);
+  }
+
+  function openSelectedFileTags(file) {
+    const name = fileName(file);
+    if (selected.has(name) && selected.size > 1) {
+      const targets = getSelectedFileObjects().map((target) => ({
+        type: 'file',
+        id: fileEntityID(target),
+        label: fileName(target),
+      }));
+      tagsModal.openTagsForEntities(targets, `${targets.length} files`);
+      return;
+    }
+    openFileTags(file);
+  }
+
+  function fileName(file) {
+    return file.Name || file.name || file._name || '';
+  }
+
+  function fileEntityID(file) {
+    const name = fileName(file);
     const fullPath = joinPath(name);
-    const entityID = sessionID ? `${sessionID}:${fullPath}` : fullPath;
-    commentsModal.openComments('file', entityID, name);
+    return sessionID ? `${sessionID}:${fullPath}` : fullPath;
   }
 
   function handleRightClick(event, file) {
     const isDir = file.IsDir || file.isDir;
-    const isBulk = selected.has(file._name) && selected.size > 1;
+    const isBulk = selected.has(fileName(file)) && selected.size > 1;
     contextMenu.open({
       x: event.clientX, y: event.clientY,
       sections: [
@@ -233,6 +269,7 @@
             : [{ icon: 'download', label: 'Download', on: () => downloadFile(file) }]
           ),
           { icon: 'history', label: 'Download History', on: () => openFileHistory(file) },
+          { icon: 'tag', label: isBulk ? `Tags / Color (${selected.size})…` : 'Tags / Color…', on: () => openSelectedFileTags(file) },
           { icon: 'message-square', label: 'Comments / Notes…', on: () => openFileComments(file) },
           ...(!isDir && !isBulk ? [{ icon: 'search', label: 'View', on: () => viewFile(file) }] : []),
         ]},
@@ -302,23 +339,24 @@
       loading={store.state.loading}
       error={store.state.error}
       emptyState={{ title: 'No files found.' }}
+      rowStyle={(item) => entityColorStyle(entityColors.data, 'file', fileEntityID(item.rawFile))}
       onRowDblClick={(item) => handleDoubleClick(item.rawFile)}
       onRowContextMenu={picker ? undefined : (item, e) => handleRightClick(e, item.rawFile)}
       onRowClick={picker ? (item) => handleRowClick(item.rawFile) : undefined}
     >
       {#snippet children(item, col)}
         {#if col.key === '_checkbox'}
-          <input
-            type="checkbox"
+          <Checkbox
             checked={selected.has(item._name)}
             onclick={(e) => {
               e.stopPropagation();
               toggleSelection(item._name);
             }}
-            class="cursor-pointer"
           />
         {:else if col.key === 'iconStr'}
           <span class:text-brand={item.isDir}>{item.iconStr}</span>
+        {:else if col.key === '_tags'}
+          <EntityTagBadges entityType="file" entityID={fileEntityID(item.rawFile)} showEmpty />
         {:else if col.key === '_sortSize'}
           <span class="font-mono">{item.sizeStr}</span>
         {:else if col.key === 'modTimeStr'}

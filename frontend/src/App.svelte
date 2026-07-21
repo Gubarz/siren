@@ -11,6 +11,7 @@
   import KeyboardShortcutsRoot from './lib/components/system/KeyboardShortcutsRoot.svelte'
   import AddToCaseRoot from './lib/components/system/AddToCaseRoot.svelte'
   import EntityCommentsRoot from './lib/components/system/EntityCommentsRoot.svelte'
+  import EntityTagsRoot from './lib/components/system/EntityTagsRoot.svelte'
   import AgentWorkspace from './lib/features/agents/workspace/AgentWorkspace.svelte'
   import AutomationView from './lib/features/automation/AutomationView.svelte'
   import ConnectionScreen from './lib/features/connection/ConnectionScreen.svelte'
@@ -112,4 +113,5 @@
   <KeyboardShortcutsRoot />
   <AddToCaseRoot />
   <EntityCommentsRoot />
+  <EntityTagsRoot />
 </AppShell>

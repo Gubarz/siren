@@ -1354,7 +1354,47 @@ func (a *App) SaveHTTPC2ProfileJSON(profileJSON string, overwrite bool) error {
 	return a.Server.SaveHTTPC2Profile(&config, overwrite)
 }
 
-// ---- Agent tags & notes ----
+// ---- Entity tags & colors ----
+
+func (a *App) GetEntityTags(entityType, entityID string) []string {
+	return a.Tags.GetEntityTags(entityType, entityID)
+}
+
+func (a *App) SetEntityTags(entityType, entityID string, tagList []string) error {
+	if err := a.Tags.SetEntityTags(entityType, entityID, tagList); err != nil {
+		return err
+	}
+	key := entityType + ":" + entityID
+	runtime.EventsEmit(a.ctx, "entity-tags-updated", key)
+	if strings.EqualFold(strings.TrimSpace(entityType), "agent") {
+		runtime.EventsEmit(a.ctx, "agent-tags-updated", entityID)
+	}
+	return nil
+}
+
+func (a *App) GetAllEntityTags() map[string][]string {
+	return a.Tags.GetAllEntityTags()
+}
+
+func (a *App) GetEntityColor(entityType, entityID string) string {
+	return a.Tags.GetEntityColor(entityType, entityID)
+}
+
+func (a *App) SetEntityColor(entityType, entityID string, color string) error {
+	if err := a.Tags.SetEntityColor(entityType, entityID, color); err != nil {
+		return err
+	}
+	key := entityType + ":" + entityID
+	runtime.EventsEmit(a.ctx, "entity-colors-updated", key)
+	if strings.EqualFold(strings.TrimSpace(entityType), "agent") {
+		runtime.EventsEmit(a.ctx, "agent-colors-updated", entityID)
+	}
+	return nil
+}
+
+func (a *App) GetAllEntityColors() map[string]string {
+	return a.Tags.GetAllEntityColors()
+}
 
 func (a *App) GetAgentTags(agentID string) []string {
 	return a.Tags.GetAgentTags(agentID)
@@ -1364,6 +1404,7 @@ func (a *App) SetAgentTags(agentID string, tagList []string) error {
 	if err := a.Tags.SetAgentTags(agentID, tagList); err != nil {
 		return err
 	}
+	runtime.EventsEmit(a.ctx, "entity-tags-updated", "agent:"+agentID)
 	runtime.EventsEmit(a.ctx, "agent-tags-updated", agentID)
 	return nil
 }
@@ -1384,6 +1425,7 @@ func (a *App) SetAgentColor(agentID string, color string) error {
 	if err := a.Tags.SetAgentColor(agentID, color); err != nil {
 		return err
 	}
+	runtime.EventsEmit(a.ctx, "entity-colors-updated", "agent:"+agentID)
 	runtime.EventsEmit(a.ctx, "agent-colors-updated", agentID)
 	return nil
 }

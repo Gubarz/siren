@@ -17,6 +17,21 @@ func TestSetAgentTagsNormalizesDeduplicatesAndSorts(t *testing.T) {
 	assertStringSlice(t, got, want)
 }
 
+func TestSetEntityTagsNormalizesDeduplicatesAndSorts(t *testing.T) {
+	s := newTestService(t)
+
+	if err := s.SetEntityTags("loot", "loot-1", []string{" IOC ", "ioc", "owner:Red"}); err != nil {
+		t.Fatalf("SetEntityTags returned error: %v", err)
+	}
+
+	got := s.GetEntityTags("loot", "loot-1")
+	want := []string{"ioc", "owner:red"}
+	assertStringSlice(t, got, want)
+
+	all := s.GetAllEntityTags()
+	assertStringSlice(t, all["loot:loot-1"], want)
+}
+
 func TestSetAgentTagsDeletesEmptyLists(t *testing.T) {
 	s := newTestService(t)
 
@@ -50,6 +65,21 @@ func TestTagsReturnedByServiceAreCopies(t *testing.T) {
 	assertStringSlice(t, s.GetAgentTags("agent-1"), []string{"prod"})
 }
 
+func TestEntityTagsReturnedByServiceAreCopies(t *testing.T) {
+	s := newTestService(t)
+
+	if err := s.SetEntityTags("host", "host-1", []string{"prod"}); err != nil {
+		t.Fatalf("SetEntityTags returned error: %v", err)
+	}
+
+	tags := s.GetEntityTags("host", "host-1")
+	tags[0] = "changed"
+	allTags := s.GetAllEntityTags()
+	allTags["host:host-1"][0] = "changed-again"
+
+	assertStringSlice(t, s.GetEntityTags("host", "host-1"), []string{"prod"})
+}
+
 func TestKnownTagsReturnsUniqueSortedTagsAcrossAgents(t *testing.T) {
 	s := newTestService(t)
 
@@ -78,6 +108,15 @@ func TestTagsPersistAndLoad(t *testing.T) {
 	assertStringSlice(t, loaded.GetAgentTags("agent-1"), []string{"prod"})
 }
 
+func TestLegacyAgentTagsLoadThroughAgentAndEntityApis(t *testing.T) {
+	s := newTestService(t)
+	s.tags["agent-1"] = []string{"prod"}
+
+	assertStringSlice(t, s.GetAgentTags("agent-1"), []string{"prod"})
+	assertStringSlice(t, s.GetEntityTags("agent", "agent-1"), []string{"prod"})
+	assertStringSlice(t, s.GetAllTags()["agent-1"], []string{"prod"})
+}
+
 func TestSetAgentColorRejectsUnknownColors(t *testing.T) {
 	s := newTestService(t)
 
@@ -89,6 +128,23 @@ func TestSetAgentColorRejectsUnknownColors(t *testing.T) {
 	}
 	if got := s.GetAllColors()["agent-1"]; got != "blue" {
 		t.Fatalf("GetAllColors()[agent-1] = %q, want %q", got, "blue")
+	}
+}
+
+func TestSetEntityColorRejectsUnknownColors(t *testing.T) {
+	s := newTestService(t)
+
+	if err := s.SetEntityColor("loot", "loot-1", "chartreuse"); err == nil {
+		t.Fatal("SetEntityColor accepted a color outside the palette")
+	}
+	if err := s.SetEntityColor("loot", "loot-1", " Blue "); err != nil {
+		t.Fatalf("SetEntityColor returned error: %v", err)
+	}
+	if got := s.GetEntityColor("loot", "loot-1"); got != "blue" {
+		t.Fatalf("GetEntityColor() = %q, want %q", got, "blue")
+	}
+	if got := s.GetAllEntityColors()["loot:loot-1"]; got != "blue" {
+		t.Fatalf("GetAllEntityColors()[loot:loot-1] = %q, want %q", got, "blue")
 	}
 }
 
@@ -122,11 +178,24 @@ func TestColorsPersistAndLoad(t *testing.T) {
 	}
 }
 
+func TestLegacyAgentColorsLoadThroughAgentAndEntityApis(t *testing.T) {
+	s := newTestService(t)
+	s.colors["agent-1"] = "purple"
+
+	if got := s.GetEntityColor("agent", "agent-1"); got != "purple" {
+		t.Fatalf("GetEntityColor() = %q, want %q", got, "purple")
+	}
+	if got := s.GetAllColors()["agent-1"]; got != "purple" {
+		t.Fatalf("GetAllColors()[agent-1] = %q, want %q", got, "purple")
+	}
+}
+
 func newTestService(t *testing.T) *Service {
 	t.Helper()
 	return &Service{
-		path: filepath.Join(t.TempDir(), "tags.json"),
-		tags: map[string][]string{},
+		path:   filepath.Join(t.TempDir(), "tags.json"),
+		tags:   map[string][]string{},
+		colors: map[string]string{},
 	}
 }
 

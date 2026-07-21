@@ -8,13 +8,20 @@
   } from '../../api/agents.js';
   import { dialog } from '$stores/ui/dialog.svelte.js';
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js';
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js';
   import { errorMessage } from '../../utils/errors.js';
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js';
   import DataTable from '$components/patterns/DataTable.svelte';
   import SplitPane from '$components/patterns/SplitPane.svelte';
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte';
+  import { entityColors } from '$stores/resources/entityColors.svelte.js';
+  import { useResource } from '$stores/lib/createResource.svelte.js';
   import { useRegistry } from '$stores/perAgent/registry.svelte.js';
+  import { entityColorStyle } from '../../utils/entityTags.js';
 
   let { sessionID = "" } = $props();
+
+  useResource(entityColors)
 
   const hives = ["HKLM", "HKCU", "HKU", "HKCR", "HKCC"];
 
@@ -37,6 +44,7 @@
 
   let tableColumns = [
     { key: "iconStr", label: "Name", width: 300 },
+    { key: "_tags", label: "Tags", width: 108, sortable: false },
     { key: "typeStr", label: "Type", width: 150 },
     { key: "DataStr", label: "Data", width: 400 }
   ];
@@ -119,6 +127,10 @@
     }
   }
 
+  function registryEntityID(row) {
+    return `${currentHive}\\${store.state.path}\\${row.rawName}`
+  }
+
   function showMenu(event, row = null) {
     contextMenu.open({
       x: event.clientX, y: event.clientY,
@@ -127,11 +139,13 @@
           ? row.isKey
             ? [
                 { icon: 'folder-open', label: 'Open', on: () => handleKeyDoubleClick(row.rawName) },
-                { icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('registry', `${currentHive}\\${store.state.path}\\${row.rawName}`, `${currentHive}\\${row.rawName}`) },
+                { icon: 'tag', label: 'Tags / Color…', on: () => tagsModal.openTags('registry', registryEntityID(row), `${currentHive}\\${row.rawName}`) },
+                { icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('registry', registryEntityID(row), `${currentHive}\\${row.rawName}`) },
               ]
             : [
                 { icon: 'pen', label: 'Edit Value', on: () => writeValue(row) },
-                { icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('registry', `${currentHive}\\${store.state.path}\\${row.rawName}`, `${currentHive}\\${row.rawName}`) },
+                { icon: 'tag', label: 'Tags / Color…', on: () => tagsModal.openTags('registry', registryEntityID(row), `${currentHive}\\${row.rawName}`) },
+                { icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('registry', registryEntityID(row), `${currentHive}\\${row.rawName}`) },
               ]
           : [
               { icon: 'folder-plus', label: 'New Key', on: () => createKey() },
@@ -187,12 +201,15 @@
           loading={store.state.loading}
           error={store.state.error}
           emptyState={{ title: 'No keys or values found.' }}
+          rowStyle={(item) => entityColorStyle(entityColors.data, 'registry', registryEntityID(item))}
           onRowDblClick={(item) => item.isKey ? handleKeyDoubleClick(item.rawName) : writeValue(item)}
           onRowContextMenu={(item, e) => { e.stopPropagation(); showMenu(e, item) }}
         >
           {#snippet children(item, col)}
             {#if col.key === 'iconStr'}
               <span class:text-brand={item.isKey}>{item.iconStr}</span>
+            {:else if col.key === '_tags'}
+              <EntityTagBadges entityType="registry" entityID={registryEntityID(item)} showEmpty />
             {:else if col.key === 'DataStr'}
               <span class="font-mono">{item.DataStr}</span>
             {:else}

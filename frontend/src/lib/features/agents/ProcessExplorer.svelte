@@ -6,10 +6,16 @@
   import { commandModal } from "$stores/ui/commandModal.svelte.js";
   import DataTable from "$components/patterns/DataTable.svelte";
   import Button from "$components/ui/Button.svelte";
+  import EntityTagBadges from "$components/ui/EntityTagBadges.svelte";
+  import { entityColors } from "$stores/resources/entityColors.svelte.js";
+  import { useResource } from "$stores/lib/createResource.svelte.js";
   import { useProcessList } from "$stores/perAgent/processList.svelte.js";
   import { buildProcessTree, buildProcessContextSections } from "./processExplorerHelpers.js";
+  import { entityColorStyle } from "../../utils/entityTags.js";
 
   let { sessionID = "", picker = false, onpick } = $props();
+
+  useResource(entityColors)
 
   let store = $derived(useProcessList(sessionID));
 
@@ -24,6 +30,7 @@
     { key: "PidStr", label: "PID", width: 120 },
     { key: "PpidStr", label: "PPID", width: 80 },
     { key: "ExecutableStr", label: "Executable", width: 250 },
+    { key: "_tags", label: "Tags", width: 108, sortable: false },
   ];
   const fullColumns = [
     ...baseColumns.map((c) => ({ ...c })),
@@ -145,6 +152,7 @@
       loading={store.state.loading}
       error={store.state.error}
       emptyState={{ title: "No processes found." }}
+      rowStyle={(item) => entityColorStyle(entityColors.data, 'process', item.PidStr)}
       onRowContextMenu={picker
         ? undefined
         : (item, e) => handleRightClick(e, item)}
@@ -168,6 +176,8 @@
           {/if}
         {:else if col.key === "PpidStr" || col.key === "ArchStr" || col.key === "SessionStr"}
           <span class="font-mono">{item[col.key]}</span>
+        {:else if col.key === "_tags"}
+          <EntityTagBadges entityType="process" entityID={item.PidStr} showEmpty />
         {:else}
           {item[col.key] ?? ""}
         {/if}

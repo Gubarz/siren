@@ -5,13 +5,20 @@
   import { contextMenu } from '$stores/ui/contextMenu.svelte.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
   import DataTable from '$components/patterns/DataTable.svelte'
   import Button from '$components/ui/Button.svelte'
   import IconButton from '$components/ui/IconButton.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
   import ErrorState from '$components/ui/ErrorState.svelte'
+  import { entityColors } from '$stores/resources/entityColors.svelte.js'
+  import { useResource } from '$stores/lib/createResource.svelte.js'
+  import { entityColorStyle } from '../../utils/entityTags.js'
 
   let { sessionID = '' } = $props()
+
+  useResource(entityColors)
 
   let services = $state([])
   let loading = $state(false)
@@ -20,6 +27,7 @@
 
   let columns = [
     { key: 'name', label: 'Name', width: 200 },
+    { key: '_tags', label: 'Tags', width: 108, sortable: false },
     { key: 'display', label: 'Display Name', width: 250 },
     { key: 'status', label: 'Status', width: 120 },
     { key: 'startup', label: 'Startup Type', width: 120 },
@@ -110,6 +118,7 @@
     if (svc.isStopped) items.push({ icon: 'play', label: 'Start', on: () => doStart(svc) })
     if (svc.isRunning) items.push({ icon: 'stop', label: 'Stop', on: () => doStop(svc) })
     items.push({ icon: 'info', label: 'Details', on: () => showDetail(svc) })
+    items.push({ icon: 'tag', label: 'Tags / Color…', on: () => tagsModal.openTags('service', svc.name, svc.displayName || svc.name) })
     items.push({ icon: 'message-square', label: 'Comments / Notes…', on: () => commentsModal.openComments('service', svc.name, svc.displayName || svc.name) })
     items.push({ icon: 'trash', label: 'Remove', danger: true, on: () => doRemove(svc) })
     contextMenu.open({ x: e.clientX, y: e.clientY, sections: [{ items }] })
@@ -155,9 +164,20 @@
       keyField="_name"
       loading={loading}
       emptyState={{ title: filterText ? 'No matching services.' : 'No services found.' }}
+      rowStyle={(item) => entityColorStyle(entityColors.data, 'service', item.name)}
       onRowDblClick={(item) => showDetail(item)}
       onRowContextMenu={(item, e) => handleRightClick(e, item.raw)}
-    />
+    >
+      {#snippet children(item, col)}
+        {#if col.key === 'name'}
+          {item.name}
+        {:else if col.key === '_tags'}
+          <EntityTagBadges entityType="service" entityID={item.name} showEmpty />
+        {:else}
+          {item[col.key] ?? ''}
+        {/if}
+      {/snippet}
+    </DataTable>
   </div>
 </div>
 

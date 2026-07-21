@@ -3,18 +3,30 @@
 
 import {
   GetAgentTags,
+  GetEntityTags,
   SetAgentTags,
+  SetEntityTags,
   GetAllAgentTags,
+  GetAllEntityTags,
   ListKnownTags,
   GetAllAgentColors,
+  GetAllEntityColors,
+  GetEntityColor,
   SetAgentColor,
+  SetEntityColor,
 } from '../../../wailsjs/go/main/App.js';
 
 export {
   GetAgentTags,
+  GetEntityTags,
   SetAgentTags,
+  SetEntityTags,
   GetAllAgentTags,
+  GetAllEntityTags,
   ListKnownTags,
   GetAllAgentColors,
+  GetAllEntityColors,
+  GetEntityColor,
   SetAgentColor,
+  SetEntityColor,
 };

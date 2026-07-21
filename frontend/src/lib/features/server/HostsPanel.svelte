@@ -2,9 +2,10 @@
   import { hosts } from '$stores/resources/hosts.svelte.js'
   import { sessions } from '$stores/resources/sessions.svelte.js'
   import { beacons } from '$stores/resources/beacons.svelte.js'
+  import { entityColors } from '$stores/resources/entityColors.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(hosts, sessions, beacons)
+  useResource(hosts, sessions, beacons, entityColors)
   import Badge from '$components/ui/Badge.svelte'
   import Button from '$components/ui/Button.svelte'
   import IconButton from '$components/ui/IconButton.svelte'
@@ -12,11 +13,14 @@
   import Panel from '$components/patterns/Panel.svelte'
   import DataTable from '$components/patterns/DataTable.svelte'
   import Toolbar from '$components/patterns/Toolbar.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import { getHost, RemoveHost, RemoveHostIOC } from '../../api/hosts.js'
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
   import { addToCase } from '$stores/ui/addToCase.svelte.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
+  import { entityColorStyle } from '../../utils/entityTags.js'
 
   let { embedded = false, onclose } = $props()
 
@@ -58,8 +62,9 @@
   const hostColumns = [
     { key: '_hostname', label: 'Host' },
     { key: '_agents', label: 'Agents', width: 150, sortable: false },
+    { key: '_tags', label: 'Tags', width: 108, sortable: false },
     { key: '_iocCount', label: 'IOCs', width: 70 },
-    { key: '_actions', label: '', width: 150, sortable: false },
+    { key: '_actions', label: '', width: 230, sortable: false },
   ]
   const iocColumns = [
     { key: '_path', label: 'Path' },
@@ -168,6 +173,7 @@
             emptyState={{ icon: 'server', title: 'No hosts' }}
             onRowClick={(host) => selectHost(host._raw)}
             rowClass={(host) => host._hostUUID === selectedUUID ? 'bg-row-selected' : ''}
+            rowStyle={(host) => entityColorStyle(entityColors.data, 'host', host._hostUUID)}
           >
             {#snippet children(host, col)}
               {#if col.key === '_hostname'}
@@ -178,11 +184,17 @@
                   <Badge size="xs" variant="session">{host._sessionCount} session</Badge>
                   <Badge size="xs" variant="beacon">{host._beaconCount} beacon</Badge>
                 </div>
+              {:else if col.key === '_tags'}
+                <EntityTagBadges entityType="host" entityID={host._hostUUID} showEmpty />
               {:else if col.key === '_iocCount'}
                 <span class="font-mono">{host._iocCount}</span>
               {:else if col.key === '_actions'}
                 <div class="flex justify-end gap-2">
                   <Button color="dark" size="xs" onclick={(event) => { event.stopPropagation(); selectHost(host._raw) }}>View</Button>
+                  <Button color="dark" size="xs" icon="tag" onclick={(event) => {
+                    event.stopPropagation()
+                    tagsModal.openTags('host', host._hostUUID, host._hostname || host._hostUUID)
+                  }}>Tags</Button>
                   <Button color="dark" size="xs" icon="message-square" onclick={(event) => {
                     event.stopPropagation()
                     commentsModal.openComments('host', host._hostUUID, host._hostname || host._hostUUID)
@@ -212,11 +224,13 @@
           <div class="mb-3 flex items-start justify-between gap-3">
             <div class="min-w-0">
               <h3 class="truncate text-sm font-semibold text-fg">{currentHost.hostname || '-'}</h3>
+              <EntityTagBadges entityType="host" entityID={currentHost.hostUUID} compact class="mt-1" />
               <div class="mt-1 font-mono text-fg-muted">{currentHost.hostUUID || '-'}</div>
               <div class="mt-1 text-fg-muted">{currentHost.osVersion || '-'} / {currentHost.locale || '-'}</div>
               <div class="mt-1 text-fg-muted">First contact: {fmtTime(currentHost.firstContact)}</div>
             </div>
             <div class="flex items-center gap-1">
+              <Button color="dark" size="xs" icon="tag" onclick={() => tagsModal.openTags('host', currentHost.hostUUID, currentHost.hostname || currentHost.hostUUID)}>Tags</Button>
               <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('host', currentHost.hostUUID, currentHost.hostname || currentHost.hostUUID)}>Comments</Button>
               <IconButton icon="trash" label="Forget host" tooltip="Forget host" color="red" size="sm" onclick={() => removeHost(currentHost)} />
             </div>

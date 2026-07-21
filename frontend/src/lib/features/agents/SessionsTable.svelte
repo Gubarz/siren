@@ -5,6 +5,7 @@
   import TagBadge from '$components/ui/TagBadge.svelte'
   import Icon from '$components/ui/Icon.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import {
     agentRemoteAddress, isAgentOnline, isHighPrivilege, pivotParentMap, shortAgentID,
   } from '../../utils/agents.js'
@@ -12,9 +13,11 @@
   import { sessionNotes } from '$stores/resources/sessionNotes.svelte.js'
   import { agentTags } from '$stores/resources/agentTags.svelte.js'
   import { agentColors } from '$stores/resources/agentColors.svelte.js'
+  import { entityColors } from '$stores/resources/entityColors.svelte.js'
+  import { entityTags } from '$stores/resources/entityTags.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(sessionNotes, agentTags, agentColors)
+  useResource(sessionNotes, agentTags, agentColors, entityTags, entityColors)
   import { SaveAgentNote } from '../../api/agents.js'
   import { discoveryKey } from '../../utils/discovery.js'
   import { agentColorStyle } from '../../utils/agentColors.js'
@@ -40,19 +43,12 @@
   let noteErrors = $state({})
   let tagsByAgent = $state({})
   let colorsByAgent = $state({})
+  let colorsByEntity = $state({})
 
   $effect(() => {
     const d = sessionNotes.data
     if (!d || typeof d !== 'object' || Array.isArray(d)) return
     notes = { ...d }
-    const nextDrafts = { ...noteDrafts }
-    for (const id of Object.keys(nextDrafts)) {
-      if (!(id in d) && !noteSaving[id]) delete nextDrafts[id]
-    }
-    for (const [id, text] of Object.entries(d)) {
-      if (!noteSaving[id]) nextDrafts[id] = text || ''
-    }
-    noteDrafts = nextDrafts
   })
 
   $effect(() => {
@@ -61,9 +57,14 @@
   })
 
   function agentRowStyle(item) {
-    if (item._isDevice) return ''
+    if (item._isDevice) return agentColorStyle(colorsByEntity[`device:${item._entityID}`])
     return agentColorStyle(colorsByAgent[item.ID])
   }
+
+  $effect(() => {
+    const d = entityColors.data
+    if (d && typeof d === 'object') colorsByEntity = { ...d }
+  })
 
   $effect(() => {
     const d = agentTags.data
@@ -97,7 +98,9 @@
         delete nextNotes[id]
         notes = nextNotes
       }
-      noteDrafts = { ...noteDrafts, [id]: nextText }
+      const nextDrafts = { ...noteDrafts }
+      delete nextDrafts[id]
+      noteDrafts = nextDrafts
       await sessionNotes.refresh()
     } catch (err) {
       noteErrors = { ...noteErrors, [id]: errorMessage(err, 'Save failed: ') }
@@ -112,7 +115,7 @@
     saveNote(id, event.currentTarget.value)
   }
 
-  function noteKeydown(event, id) {
+  function noteKeydown(event) {
     event.stopPropagation()
     if (event.key === 'Enter') {
       event.preventDefault()
@@ -169,6 +172,7 @@
       _rowKey: discoveryKey(device),
       _isDevice: true,
       _device: device,
+      _entityID: device.ip || device.agentID,
       _observerID: observer?.ID || device.agentID,
       _implantName: observerCount > 1 ? `${observerCount} agents` : (observer?.Name || '-'),
       ID: observer?.ID || device.agentID,
@@ -255,7 +259,7 @@
       <span class="font-mono">{fmtCheckin(item._lastCheckin, now.value)}</span>
     {:else if col.key === '_tags'}
       {#if item._isDevice}
-        <span class="text-fg-muted">-</span>
+        <EntityTagBadges entityType="device" entityID={item._entityID} showEmpty />
       {:else if item._tags && item._tags.length > 0}
         <div class="flex flex-wrap gap-1">
           {#each item._tags as tag}
@@ -275,7 +279,7 @@
           value={noteValue(item.ID)}
           oninput={(e) => setNoteDraft(item.ID, e.currentTarget.value)}
           onchange={(e) => commitNote(e, item.ID)}
-          onkeydown={(e) => noteKeydown(e, item.ID)}
+          onkeydown={(e) => noteKeydown(e)}
           onclick={(e) => e.stopPropagation()}
           ondblclick={(e) => e.stopPropagation()}
           title={noteErrors[item.ID] || (noteSaving[item.ID] ? 'Saving note...' : '')}

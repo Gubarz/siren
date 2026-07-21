@@ -7,12 +7,14 @@
   import TextArea from '$components/ui/TextArea.svelte'
   import EmptyState from '$components/ui/EmptyState.svelte'
   import Field from '$components/ui/Field.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import Tabs from '$components/patterns/Tabs.svelte'
   import { sessions } from '$stores/resources/sessions.svelte.js'
   import { beacons } from '$stores/resources/beacons.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
   import { matchesAutomationTarget } from '../../utils/automation.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
 
   useResource(sessions, beacons)
 
@@ -94,6 +96,8 @@
         {draft.runCount || 0} run{draft.runCount === 1 ? '' : 's'}
       </span>
       {#if draft.id}
+        <EntityTagBadges entityType="automation" entityID={draft.id} compact />
+        <Button color="alternative" size="sm" icon="tag" onclick={() => tagsModal.openTags('automation', draft.id, draft.name || draft.id)} title="Tags / Color" />
         <Button color="alternative" size="sm" icon="message-square" onclick={() => commentsModal.openComments('automation', draft.id, draft.name || draft.id)} title="Comments" />
         <Button color="alternative" size="sm" icon="trash" onclick={ondelete} disabled={busy} title="Delete rule" />
         <div class="w-px h-5 bg-line mx-1"></div>

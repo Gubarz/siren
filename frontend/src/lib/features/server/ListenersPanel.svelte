@@ -4,12 +4,13 @@
   import { StartWGListener, GenerateUniqueWGIP, GenerateWGClientConfig } from '../../api/wireguard.js'
   import { jobs } from '$stores/resources/jobs.svelte.js'
   import { profiles } from '$stores/resources/profiles.svelte.js'
+  import { entityColors } from '$stores/resources/entityColors.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(jobs, profiles)
-  import { dialog } from '../../stores/ui/dialog.svelte.js'
+  useResource(jobs, profiles, entityColors)
   import { errorMessage } from '../../utils/errors.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
   import { OpenFileDialog } from '../../api/runtime.js'
   import Select from '$components/ui/Select.svelte'
   import Button from '$components/ui/Button.svelte'
@@ -17,6 +18,8 @@
   import TextInput from '$components/ui/TextInput.svelte'
   import Panel from '$components/patterns/Panel.svelte'
   import DataTable from '$components/patterns/DataTable.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
+  import { entityColorStyle } from '../../utils/entityTags.js'
 
   let {
     embedded = false,
@@ -50,10 +53,11 @@
   const columns = [
     { key: '_id', label: 'ID', width: 80 },
     { key: '_name', label: 'Name' },
+    { key: '_tags', label: 'Tags', width: 108, sortable: false },
     { key: '_protocol', label: 'Protocol', width: 100 },
     { key: '_port', label: 'Port', width: 80 },
     { key: '_description', label: 'Description' },
-    { key: '_actions', label: '', width: 150, sortable: false },
+    { key: '_actions', label: '', width: 220, sortable: false },
   ]
 
   let isDNS = $derived(proto === 'dns')
@@ -192,12 +196,18 @@
       loading={jobs.loading}
       error={jobs.error && !jobs.loading ? jobs.error : null}
       emptyState={{ icon: 'headphones', title: 'No active jobs' }}
+      rowStyle={(job) => entityColorStyle(entityColors.data, 'listener', String(job._id))}
     >
       {#snippet children(job, col)}
         {#if col.key === '_id' || col.key === '_port'}
           <span class="font-mono">{job[col.key]}</span>
+        {:else if col.key === '_name'}
+          {job._name}
+        {:else if col.key === '_tags'}
+          <EntityTagBadges entityType="listener" entityID={String(job._id)} showEmpty />
         {:else if col.key === '_actions'}
           <div class="flex gap-2 justify-end">
+            <Button color="dark" size="xs" icon="tag" onclick={() => tagsModal.openTags('listener', String(job._id), job._name || `Job #${job._id}`)}>Tags</Button>
             <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('listener', String(job._id), job._name || `Job #${job._id}`)}>Comments</Button>
             <Button color="red" size="xs" onclick={() => kill(job._id)}>Kill</Button>
           </div>

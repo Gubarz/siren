@@ -4,15 +4,22 @@
   import Panel from '$components/patterns/Panel.svelte'
   import DataTable from '$components/patterns/DataTable.svelte'
   import Toolbar from '$components/patterns/Toolbar.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
+  import { entityColors } from '$stores/resources/entityColors.svelte.js'
+  import { useResource } from '$stores/lib/createResource.svelte.js'
   import { GetCanaries } from '../../api/operatorControls.js'
   import { errorMessage } from '../../utils/errors.js'
+  import { entityColorStyle } from '../../utils/entityTags.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
+  import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
 
   // Lists every DNS canary the teamserver has issued for implants and
   // whether it's been resolved — a resolved canary usually means someone
   // (sandbox / analyst) triggered the built-in DNS check.
 
   let { embedded = false, onclose } = $props()
+
+  useResource(entityColors)
 
   let canaries = $state([])
   let loading = $state(false)
@@ -29,10 +36,11 @@
   const columns = [
     { key: '_domain', label: 'Domain' },
     { key: '_implant', label: 'Implant' },
+    { key: '_tags', label: 'Tags', width: 108, sortable: false },
     { key: '_triggered', label: 'Triggered', width: 90 },
     { key: '_firstTrigger', label: 'First Trigger', width: 180 },
     { key: '_latestTrigger', label: 'Latest Trigger', width: 180 },
-    { key: '_actions', label: '', width: 100, sortable: false },
+    { key: '_actions', label: '', width: 180, sortable: false },
   ]
 
   onMount(() => refresh())
@@ -72,10 +80,13 @@
       {loading}
       error={error || null}
       emptyState={{ icon: 'bird', title: 'No DNS canaries' }}
+      rowStyle={(canary) => entityColorStyle(entityColors.data, 'canary', canary._domain)}
     >
       {#snippet children(canary, col)}
         {#if col.key === '_domain'}
           <span class="font-mono">{canary._domain}</span>
+        {:else if col.key === '_tags'}
+          <EntityTagBadges entityType="canary" entityID={canary._domain} showEmpty />
         {:else if col.key === '_triggered'}
           {#if canary._triggered}
             <span class="text-danger-500 font-semibold">yes</span>
@@ -83,7 +94,10 @@
             <span class="text-fg-muted">no</span>
           {/if}
         {:else if col.key === '_actions'}
-          <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('canary', canary._domain, canary._implant || canary._domain)}>Comments</Button>
+          <div class="flex gap-2 justify-end">
+            <Button color="dark" size="xs" icon="tag" onclick={() => tagsModal.openTags('canary', canary._domain, canary._implant || canary._domain)}>Tags</Button>
+            <Button color="dark" size="xs" icon="message-square" onclick={() => commentsModal.openComments('canary', canary._domain, canary._implant || canary._domain)}>Comments</Button>
+          </div>
         {:else}
           {canary[col.key]}
         {/if}
