@@ -22,6 +22,7 @@ import ServicesTab from '../ServicesTab.svelte'
 import TunnelsPanel from '../TunnelsPanel.svelte'
 import ExtensionsTab from '../ExtensionsTab.svelte'
 import MemfilesTab from '../MemfilesTab.svelte'
+import NetworkCommandTab from '../NetworkCommandTab.svelte'
 import WireGuardTunnelsTab from '../WireGuardTunnelsTab.svelte'
 import Console from '$components/patterns/Console/Console.svelte'
 
@@ -51,6 +52,8 @@ const TabRegistry = {
     }),
   },
   registryBrowser: { component: RegistryBrowser,   props: bySessionID },
+  ifconfig:        { component: NetworkCommandTab, props: (tab) => ({ sessionID: tab.sessionId, command: 'ifconfig' }) },
+  netstat:         { component: NetworkCommandTab, props: (tab) => ({ sessionID: tab.sessionId, command: 'netstat' }) },
   screenshot:      { component: ScreenshotViewer,  props: bySessionID },
   grep:            { component: GrepTab,           props: bySessionID },
   services:        { component: ServicesTab,       props: bySessionID },

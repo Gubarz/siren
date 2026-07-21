@@ -9,6 +9,8 @@ export const TAB_META = {
   tasks: { icon: 'list', label: 'Tasks' },
   fileBrowser: { icon: 'folder', label: 'Files' },
   processExplorer: { icon: 'cpu', label: 'Processes' },
+  ifconfig: { icon: 'network-wired', label: 'Ifconfig' },
+  netstat: { icon: 'list', label: 'Netstat' },
   registryBrowser: { icon: 'database', label: 'Registry' },
   screenshot: { icon: 'monitor', label: 'Screenshot' },
   grep: { icon: 'search', label: 'Grep' },

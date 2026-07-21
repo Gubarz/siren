@@ -48,6 +48,8 @@ function buildCoreActions({
   items.push({ icon: 'terminal', label: bulkLabel('New Shell', sessionAgents.length), on: () => sessionAgents.forEach(newShell) })
   items.push({ icon: 'folder', label: bulkLabel('File Browser', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'fileBrowser') })
   items.push({ icon: 'cpu', label: bulkLabel('Process Explorer', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'processExplorer') })
+  items.push({ icon: 'network-wired', label: bulkLabel('Ifconfig', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'ifconfig') })
+  items.push({ icon: 'list', label: bulkLabel('Netstat', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'netstat') })
   if (isWindows || windowsSessions.length > 0) {
     const registryTargets = windowsSessions.length > 0 ? windowsSessions : [agent]
     items.push({ icon: 'database', label: bulkLabel('Registry', registryTargets.length), on: () => openTabs(agentTabs, registryTargets, 'registryBrowser') })
