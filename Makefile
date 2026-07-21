@@ -24,13 +24,13 @@ dev-backend:
 analyze: analyze-go analyze-frontend
 
 analyze-go:
-	go test .
+	go test ./...
 	go vet .
 	staticcheck .
 	deadcode -test .
 	dupl -t 50 *.go
 	# Function length (45) via golangci-lint funlen; file length (350) via
-	# our shell check. Both budgets documented in CLEANUP.md.
+	# our shell check. Both budgets documented in CONTRIBUTING.md.
 	golangci-lint run --timeout=5m ./...
 	./scripts/check-go-file-length.sh
 
