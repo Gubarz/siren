@@ -1,8 +1,10 @@
 # Sliver GUI
 
-A desktop GUI for the [Sliver](https://github.com/BishopFox/sliver) C2 framework, built with [Wails v2](https://wails.io), Go, Svelte 5, Vite, and Tailwind CSS.
+[![CI](https://github.com/Gubarz/sliver-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/Gubarz/sliver-gui/actions/workflows/ci.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](go.mod) [![Platform](https://img.shields.io/badge/Platform-Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-555555)](#build-it) [![Releases](https://img.shields.io/badge/Releases-GitHub-181717?logo=github)](https://github.com/Gubarz/sliver-gui/releases)
 
-**This is still a personal/demo project. Expect sharp edges, incomplete workflows, and breaking changes.** No formal support; PRs are welcome.
+A desktop operator workbench for the [Sliver](https://github.com/BishopFox/sliver) C2 framework, built with [Wails v2](https://wails.io), Go, Svelte 5, Vite, and Tailwind CSS.
+
+**Authorized use only.** This is an offensive-security tool. Use it solely on systems you own or have explicit written permission to test.
 
 ## What It Is
 
