@@ -56,7 +56,7 @@ func writeSection(b *strings.Builder, title string, ids []string, summarize func
 	for _, id := range ids {
 		summary := summarize(id)
 		if summary == "" {
-			summary = fmt.Sprintf("`%s` — (record not resolvable)", id)
+			summary = fmt.Sprintf("`%s` - (record not resolvable)", id)
 		}
 		fmt.Fprintf(b, "- %s\n", summary)
 	}
