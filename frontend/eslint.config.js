@@ -392,6 +392,17 @@ export default [
   ...svelte.configs.recommended,
   tailwindcss.configs.recommended,
   {
+    // The tailwindcss recommended config enables its rules on **/*.js
+    // globally (including test/ and config files). Settings must be
+    // global too, or those files fall back to the plugin's default
+    // cssConfigPath (src/style.css) and crash with ENOENT.
+    settings: {
+      tailwindcss: {
+        cssConfigPath: 'src/styles/main.css',
+      },
+    },
+  },
+  {
     files: ['src/**/*.{js,svelte}', '*.js'],
     plugins: {
       local: localRules,
@@ -474,9 +485,6 @@ export default [
       }],
     },
     settings: {
-      tailwindcss: {
-        cssConfigPath: 'src/styles/main.css',
-      },
       'boundaries/elements': [
         { type: 'ui', pattern: 'src/lib/components/ui/**/*' },
         { type: 'patterns', pattern: 'src/lib/components/patterns/**/*' },
