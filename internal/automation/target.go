@@ -3,35 +3,20 @@ package automation
 import (
 	"path/filepath"
 	"strings"
-
-	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
 
-type automationTarget struct {
-	ID       string
-	Name     string
-	Hostname string
-	Username string
-	OS       string
-	Arch     string
-	Kind     string
+type Target struct {
+	ID          string
+	Name        string
+	Hostname    string
+	Username    string
+	OS          string
+	Arch        string
+	Kind        string
+	LastCheckin int64
 }
 
-func targetFromSession(session *clientpb.Session) automationTarget {
-	return automationTarget{
-		ID: session.ID, Name: session.Name, Hostname: session.Hostname,
-		Username: session.Username, OS: session.OS, Arch: session.Arch, Kind: "session",
-	}
-}
-
-func targetFromBeacon(beacon *clientpb.Beacon) automationTarget {
-	return automationTarget{
-		ID: beacon.ID, Name: beacon.Name, Hostname: beacon.Hostname,
-		Username: beacon.Username, OS: beacon.OS, Arch: beacon.Arch, Kind: "beacon",
-	}
-}
-
-func displayTargetName(target automationTarget) string {
+func displayTargetName(target Target) string {
 	if target.Name != "" {
 		return target.Name
 	}
@@ -41,7 +26,7 @@ func displayTargetName(target automationTarget) string {
 	return target.ID
 }
 
-func matchesAutomationRule(rule AutomationRule, target automationTarget) bool {
+func matchesAutomationRule(rule AutomationRule, target Target) bool {
 	if rule.TargetKind != "" && rule.TargetKind != "any" && rule.TargetKind != target.Kind {
 		return false
 	}
@@ -70,7 +55,7 @@ func matchAutomationPattern(value, patterns string) bool {
 	return false
 }
 
-func renderAutomationCommand(command string, target automationTarget) string {
+func renderAutomationCommand(command string, target Target) string {
 	replacer := strings.NewReplacer(
 		"{{id}}", target.ID,
 		"{{name}}", target.Name,

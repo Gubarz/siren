@@ -97,4 +97,3 @@ func parseRulesPayload(payload string) ([]AutomationRule, error) {
 	}
 	return nil, fmt.Errorf("could not parse rules JSON")
 }
-

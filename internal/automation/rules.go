@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -54,11 +55,6 @@ type AutomationRun struct {
 	Status     string   `json:"status"`
 	StartedAt  int64    `json:"startedAt"`
 	FinishedAt int64    `json:"finishedAt"`
-}
-
-type automationState struct {
-	Rules   []AutomationRule `json:"rules"`
-	History []AutomationRun  `json:"history"`
 }
 
 func (e *Engine) ListRules() ([]AutomationRule, error) {
@@ -168,15 +164,9 @@ func (e *Engine) RunRule(id, targetID string) error {
 		return nil
 	}
 
-	var target automationTarget
-	session, beacon, err := e.console.FindTarget(targetID)
+	target, err := e.targets.FindTarget(context.Background(), targetID)
 	if err != nil {
 		return err
-	}
-	if session != nil {
-		target = targetFromSession(session)
-	} else {
-		target = targetFromBeacon(beacon)
 	}
 	if !matchesAutomationRule(copyRule, target) {
 		return fmt.Errorf("target does not match this rule's filters")

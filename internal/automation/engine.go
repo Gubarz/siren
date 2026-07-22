@@ -2,25 +2,9 @@ package automation
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/bishopfox/sliver/client/assets"
-	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"google.golang.org/protobuf/proto"
-
-	"sliver-gui/internal/beacons"
-	"sliver-gui/internal/console"
-	"sliver-gui/internal/rpc"
 )
 
 const (
@@ -29,12 +13,13 @@ const (
 )
 
 type Engine struct {
-	rpc     *rpc.Client
-	console *console.Service
-	beacons *beacons.Service
-	tags    AgentTagStore
-	ctx     context.Context
-	path    string
+	store    StateStore
+	emitter  Emitter
+	executor CommandExecutor
+	targets  TargetProvider
+	events   EventSource
+	tags     AgentTagStore
+	ctx      context.Context
 
 	mu             sync.RWMutex
 	rules          []AutomationRule
@@ -47,32 +32,39 @@ type Engine struct {
 	beaconsPrimed  bool
 }
 
-type AgentTagStore interface {
-	GetAgentTags(agentID string) []string
-	SetAgentTags(agentID string, tags []string) error
-}
-
-func New(rpc *rpc.Client, con *console.Service, beac *beacons.Service, tagStore AgentTagStore) *Engine {
+func New(deps Dependencies) *Engine {
 	e := &Engine{
-		rpc:            rpc,
-		console:        con,
-		beacons:        beac,
-		tags:           tagStore,
-		path:           filepath.Join(assets.GetRootAppDir(), "gui-automation.json"),
+		store:          deps.Store,
+		emitter:        deps.Emitter,
+		executor:       deps.Executor,
+		targets:        deps.Targets,
+		events:         deps.Events,
+		tags:           deps.Tags,
 		running:        map[string]bool{},
 		activeByRule:   map[string]int{},
 		lastRun:        map[string]time.Time{},
 		lastInterval:   map[string]time.Time{},
 		beaconCheckins: map[string]int64{},
 	}
-	if err := e.load(); err != nil {
+	if state, err := deps.Store.Load(context.Background()); err != nil {
 		log.Printf("automation: could not load state: %v", err)
+	} else if state != nil {
+		e.rules = state.Rules
+		e.history = state.History
 	}
 	return e
 }
 
 func (e *Engine) Start(ctx context.Context) {
 	e.ctx = ctx
+	e.events.Start(ctx, func(trigger string, target Target) {
+		if trigger == "beacon-registered" && target.LastCheckin > 0 {
+			e.mu.Lock()
+			e.beaconCheckins[target.ID] = target.LastCheckin
+			e.mu.Unlock()
+		}
+		e.dispatchTrigger(trigger, target)
+	})
 	go func() {
 		ticker := time.NewTicker(beaconPollInterval)
 		defer ticker.Stop()
@@ -87,59 +79,26 @@ func (e *Engine) Start(ctx context.Context) {
 	}()
 }
 
-func (e *Engine) load() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	return e.loadLocked()
-}
-
-func (e *Engine) loadLocked() error {
-	data, err := os.ReadFile(e.path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	var state automationState
-	if err := json.Unmarshal(data, &state); err != nil {
-		return err
-	}
-	e.rules = state.Rules
-	e.history = state.History
-	return nil
-}
-
 func (e *Engine) SetServer(host string, port uint32) {
+	e.store.SetServer(host, port)
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	newPath := filepath.Join(assets.GetRootAppDir(), fmt.Sprintf("gui-automation-%s_%d.json", host, port))
-	if newPath == e.path {
-		return
-	}
-	e.path = newPath
 	e.rules = nil
 	e.history = nil
-	if err := e.loadLocked(); err != nil {
+	if state, err := e.store.Load(context.Background()); err != nil {
 		log.Printf("automation: could not load state for %s:%d: %v", host, port, err)
+	} else if state != nil {
+		e.rules = state.Rules
+		e.history = state.History
 	}
 }
 
 func (e *Engine) persistLocked() error {
-	state := automationState{Rules: e.rules, History: e.history}
-	data, err := json.MarshalIndent(state, "", "  ")
-	if err != nil {
-		return err
-	}
-	temp := e.path + ".tmp"
-	if err := os.WriteFile(temp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(temp, e.path)
+	return e.store.Save(context.Background(), &State{Rules: e.rules, History: e.history})
 }
 
 func (e *Engine) tick(now time.Time) {
-	if !e.rpc.Connected() {
+	if !e.targets.Connected() {
 		return
 	}
 	e.pollBeaconCheckins()
@@ -173,7 +132,7 @@ func (e *Engine) tick(now time.Time) {
 }
 
 func (e *Engine) pollBeaconCheckins() {
-	beaconsResp, err := e.rpc.RPC.GetBeacons(context.Background(), &commonpb.Empty{})
+	beacons, err := e.targets.GetBeacons(context.Background())
 	if err != nil {
 		return
 	}
@@ -185,11 +144,11 @@ func (e *Engine) pollBeaconCheckins() {
 	primed := e.beaconsPrimed
 	e.mu.RUnlock()
 
-	current := make(map[string]int64, len(beaconsResp.Beacons))
-	for _, beacon := range beaconsResp.Beacons {
+	current := make(map[string]int64, len(beacons))
+	for _, beacon := range beacons {
 		current[beacon.ID] = beacon.LastCheckin
 		if primed && previous[beacon.ID] != 0 && beacon.LastCheckin > previous[beacon.ID] {
-			e.dispatchTrigger("beacon-checkin", targetFromBeacon(beacon))
+			e.dispatchTrigger("beacon-checkin", beacon)
 		}
 	}
 	e.mu.Lock()
@@ -198,27 +157,8 @@ func (e *Engine) pollBeaconCheckins() {
 	e.mu.Unlock()
 }
 
-func (e *Engine) HandleSliverEvent(event *clientpb.Event) {
-	switch event.EventType {
-	case consts.SessionOpenedEvent:
-		if event.Session != nil {
-			e.dispatchTrigger("session-connected", targetFromSession(event.Session))
-		}
-	case consts.BeaconRegisteredEvent:
-		beacon := &clientpb.Beacon{}
-		if len(event.Data) > 0 && proto.Unmarshal(event.Data, beacon) == nil && beacon.ID != "" {
-			e.mu.Lock()
-			e.beaconCheckins[beacon.ID] = beacon.LastCheckin
-			e.mu.Unlock()
-			e.dispatchTrigger("beacon-registered", targetFromBeacon(beacon))
-		}
-	}
-}
-
-func (e *Engine) emit(name string, payload interface{}) {
-	if e.ctx != nil {
-		runtime.EventsEmit(e.ctx, name, payload)
-	}
+func (e *Engine) emit(name string, payload any) {
+	e.emitter.Emit(name, payload)
 }
 
 func (e *Engine) ruleByIDLocked(id string) *AutomationRule {

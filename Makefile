@@ -33,6 +33,7 @@ analyze-go:
 	# our shell check. Both budgets documented in CONTRIBUTING.md.
 	golangci-lint run --timeout=5m ./...
 	./scripts/check-go-file-length.sh
+	./scripts/check-arch.sh
 
 analyze-frontend:
 	npm --prefix frontend run analyze

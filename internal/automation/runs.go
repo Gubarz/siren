@@ -5,14 +5,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/google/uuid"
 )
 
-// dispatchTrigger fans a matching-trigger event out to every enabled rule.
-// Callers hold no locks; the fan-out takes the read lock only for the
-// duration of the rule snapshot.
-func (e *Engine) dispatchTrigger(trigger string, target automationTarget) {
+func (e *Engine) dispatchTrigger(trigger string, target Target) {
 	e.mu.RLock()
 	rules := append([]AutomationRule(nil), e.rules...)
 	e.mu.RUnlock()
@@ -23,7 +19,7 @@ func (e *Engine) dispatchTrigger(trigger string, target automationTarget) {
 	}
 }
 
-func (e *Engine) dispatchRule(rule AutomationRule, trigger string, target *automationTarget) {
+func (e *Engine) dispatchRule(rule AutomationRule, trigger string, target *Target) {
 	if rule.MaxRuns > 0 && rule.RunCount >= rule.MaxRuns {
 		return
 	}
@@ -40,31 +36,27 @@ func (e *Engine) dispatchRule(rule AutomationRule, trigger string, target *autom
 	}
 }
 
-func (e *Engine) currentTargets() []automationTarget {
-	if !e.rpc.Connected() {
+func (e *Engine) currentTargets() []Target {
+	if !e.targets.Connected() {
 		return nil
 	}
 	ctx := context.Background()
-	sessions, sessionErr := e.rpc.RPC.GetSessions(ctx, &commonpb.Empty{})
-	beaconsResp, beaconErr := e.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{})
+	sessions, sessionErr := e.targets.GetSessions(ctx)
+	beacons, beaconErr := e.targets.GetBeacons(ctx)
 	if sessionErr != nil && beaconErr != nil {
 		return nil
 	}
-	var targets []automationTarget
+	var targets []Target
 	if sessionErr == nil {
-		for _, session := range sessions.Sessions {
-			targets = append(targets, targetFromSession(session))
-		}
+		targets = append(targets, sessions...)
 	}
 	if beaconErr == nil {
-		for _, beacon := range beaconsResp.Beacons {
-			targets = append(targets, targetFromBeacon(beacon))
-		}
+		targets = append(targets, beacons...)
 	}
 	return targets
 }
 
-func (e *Engine) queueRun(rule AutomationRule, trigger string, target automationTarget) {
+func (e *Engine) queueRun(rule AutomationRule, trigger string, target Target) {
 	key := rule.ID + ":" + target.ID
 	now := time.Now()
 	e.mu.Lock()
@@ -88,7 +80,7 @@ func (e *Engine) queueRun(rule AutomationRule, trigger string, target automation
 	go e.execute(rule, trigger, target, key)
 }
 
-func (e *Engine) execute(rule AutomationRule, trigger string, target automationTarget, key string) {
+func (e *Engine) execute(rule AutomationRule, trigger string, target Target, key string) {
 	run := AutomationRun{
 		ID: uuid.NewString(), RuleID: rule.ID, RuleName: rule.Name,
 		Trigger: trigger, TargetID: target.ID,

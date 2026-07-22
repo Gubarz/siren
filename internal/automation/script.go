@@ -16,7 +16,7 @@ const (
 	maxJSOutputSize          = 10 * 1024 * 1024
 )
 
-func (e *Engine) executeCommands(rule AutomationRule, target automationTarget) (string, []string, error) {
+func (e *Engine) executeCommands(rule AutomationRule, target Target) (string, []string, error) {
 	ctx, cancel := automationContext(e.ctx, rule.TimeoutSeconds)
 	defer cancel()
 
@@ -54,7 +54,7 @@ func (e *Engine) executeCommands(rule AutomationRule, target automationTarget) (
 type jsExecution struct {
 	engine    *Engine
 	ctx       context.Context
-	target    automationTarget
+	target    Target
 	output    strings.Builder
 	commands  []string
 	truncated bool
@@ -187,7 +187,7 @@ func (je *jsExecution) setupVM(vm *sobek.Runtime, trigger string) error {
 func (e *Engine) executeJavaScript(
 	rule AutomationRule,
 	trigger string,
-	target automationTarget,
+	target Target,
 ) (string, []string, error) {
 	ctx, cancel := automationContext(e.ctx, rule.TimeoutSeconds)
 	defer cancel()
@@ -255,23 +255,13 @@ func tagSet(values []string) map[string]struct{} {
 
 func (e *Engine) runAutomationCommand(
 	ctx context.Context,
-	target automationTarget,
+	target Target,
 	command string,
 ) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-
-	result, taskID, err := e.console.RunAutomationLine(target.ID, command)
-	if err != nil || target.Kind != "beacon" {
-		return result, err
-	}
-
-	result, _, err = e.beacons.AwaitBeaconTask(ctx, target.ID, result, taskID)
-	if err != nil {
-		return result, err
-	}
-	return result, nil
+	return e.executor.Execute(ctx, target.ID, target.Kind, command)
 }
 
 func automationContext(parent context.Context, timeoutSeconds int) (context.Context, context.CancelFunc) {

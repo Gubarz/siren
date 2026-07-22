@@ -25,9 +25,13 @@ func (s *memoryTagStore) SetAgentTags(agentID string, values []string) error {
 	return nil
 }
 
+type noopEmitter struct{}
+
+func (noopEmitter) Emit(string, any) {}
+
 func TestJavaScriptCanManageGUITags(t *testing.T) {
 	store := &memoryTagStore{tags: map[string][]string{}}
-	engine := &Engine{tags: store}
+	engine := &Engine{tags: store, emitter: noopEmitter{}}
 	rule := AutomationRule{
 		Name:          "tag test",
 		ExecutionMode: ExecutionModeJavaScript,
@@ -40,7 +44,7 @@ const finalTags = sliver.tags.set(second.join(','), 'checked');
 sliver.log(finalTags.join('|'));
 `,
 	}
-	target := automationTarget{ID: "session-1", Kind: "session", OS: "windows", Arch: "amd64"}
+	target := Target{ID: "session-1", Kind: "session", OS: "windows", Arch: "amd64"}
 
 	output, commands, err := engine.executeJavaScript(rule, "manual", target)
 	if err != nil {

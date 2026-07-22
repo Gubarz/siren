@@ -37,6 +37,7 @@ import (
 	"sliver-gui/internal/hosts"
 	"sliver-gui/internal/implants"
 	"sliver-gui/internal/listeners"
+	automationstate "sliver-gui/internal/localstate/automation"
 	"sliver-gui/internal/loot"
 	"sliver-gui/internal/memfiles"
 	"sliver-gui/internal/monitor"
@@ -48,10 +49,12 @@ import (
 	"sliver-gui/internal/services"
 	uishellcode "sliver-gui/internal/shellcode"
 	"sliver-gui/internal/shells"
+	automationexec "sliver-gui/internal/sliver/automationexec"
 	"sliver-gui/internal/staging"
 	"sliver-gui/internal/tags"
 	"sliver-gui/internal/theme"
 	"sliver-gui/internal/tunneling"
+	"sliver-gui/internal/wailsadapter"
 	"sliver-gui/internal/websites"
 	"sliver-gui/internal/wireguard"
 )
@@ -60,40 +63,41 @@ type App struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	RPC        *rpc.Client
-	Console    *console.Service
-	Catalog    *catalog.Service
-	Agents     *agents.Service
-	Armory     *armory.Service
-	Beacons    *beacons.Service
-	Implants   *implants.Service
-	Listeners  *listeners.Service
-	Files      *files.Service
-	Procs      *procs.Service
-	Registry   *registry.Service
-	Shells     *shells.Service
-	Pivots     *pivots.Service
-	Services   *services.Service
-	Tunneling  *tunneling.Service
-	Loot       *loot.Service
-	Server     *server.Service
-	Monitor    *monitor.Service
-	Extensions *extensions.Service
-	Memfiles   *memfiles.Service
-	WireGuard  *wireguard.Service
-	Crack      *crack.Service
-	Builders   *builders.Service
-	Automation *automation.Engine
-	Discovery  *discovery.Service
-	Events     *events.Store
-	ClientLog  *clientlog.Service
-	Websites   *websites.Service
-	Staging    *staging.Service
-	Hosts      *hosts.Service
-	Tags       *tags.Service
-	Cases      *casefile.Service
-	Comments   *comments.Service
-	Health     *health.Service
+	RPC              *rpc.Client
+	Console          *console.Service
+	Catalog          *catalog.Service
+	Agents           *agents.Service
+	Armory           *armory.Service
+	Beacons          *beacons.Service
+	Implants         *implants.Service
+	Listeners        *listeners.Service
+	Files            *files.Service
+	Procs            *procs.Service
+	Registry         *registry.Service
+	Shells           *shells.Service
+	Pivots           *pivots.Service
+	Services         *services.Service
+	Tunneling        *tunneling.Service
+	Loot             *loot.Service
+	Server           *server.Service
+	Monitor          *monitor.Service
+	Extensions       *extensions.Service
+	Memfiles         *memfiles.Service
+	WireGuard        *wireguard.Service
+	Crack            *crack.Service
+	Builders         *builders.Service
+	Automation       *automation.Engine
+	AutomationEvents *automationexec.EventSource
+	Discovery        *discovery.Service
+	Events           *events.Store
+	ClientLog        *clientlog.Service
+	Websites         *websites.Service
+	Staging          *staging.Service
+	Hosts            *hosts.Service
+	Tags             *tags.Service
+	Cases            *casefile.Service
+	Comments         *comments.Service
+	Health           *health.Service
 }
 
 func NewApp() *App {
@@ -179,7 +183,21 @@ func (a *App) startup(ctx context.Context) {
 	a.Discovery.SetCtx(ctx)
 	a.Staging.SetCtx(ctx)
 
-	a.Automation = automation.New(a.RPC, a.Console, a.Beacons, a.Tags)
+	store := automationstate.New(assets.GetRootAppDir())
+	emitter := wailsadapter.New(ctx)
+	executor := automationexec.NewExecutor(a.Console, a.Beacons)
+	targets := automationexec.NewTargetProvider(a.RPC)
+	events := automationexec.NewEventSource()
+
+	a.Automation = automation.New(automation.Dependencies{
+		Store:    store,
+		Emitter:  emitter,
+		Executor: executor,
+		Targets:  targets,
+		Events:   events,
+		Tags:     a.Tags,
+	})
+	a.AutomationEvents = events
 	a.Automation.Start(ctx)
 
 	go func() {
@@ -282,8 +300,8 @@ func (a *App) startEventStream() {
 		case consts.SessionOpenedEvent, consts.SessionClosedEvent, consts.BeaconRegisteredEvent:
 			a.RPC.InvalidateAgentCache()
 		}
-		if a.Automation != nil {
-			a.Automation.HandleSliverEvent(ev)
+		if a.AutomationEvents != nil {
+			a.AutomationEvents.HandleSliverEvent(ev)
 		}
 		payload := map[string]interface{}{"type": ev.EventType}
 		if ev.Session != nil {
