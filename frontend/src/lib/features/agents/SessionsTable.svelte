@@ -202,7 +202,6 @@
       _implantName: agent.Name || '-',
       _remoteHost: agentRemoteAddress(agent, pivotParents, data),
       _lastCheckin: agent.LastCheckin ?? agent.lastCheckin ?? 0,
-      _online: isAgentOnline(agent, now.value),
       _type: getTypeStr(agent),
       _osIcon: getOsIcon(agent.OS),
     }
@@ -245,7 +244,7 @@
       {#if item._isDevice}
         <StatusDot variant="discovered" label="Discovered device" />
       {:else}
-        <StatusDot variant={item._online ? 'online' : 'offline'} />
+        <StatusDot variant={isAgentOnline(item, now.value) ? 'online' : 'offline'} />
       {/if}
     {:else if col.key === '_type'}
       <Badge variant={item._type}>{item._type.toUpperCase()}</Badge>
@@ -256,7 +255,13 @@
         <span>-</span>
       {/if}
     {:else if col.key === '_lastCheckin'}
-      <span class="font-mono">{fmtCheckin(item._lastCheckin, now.value)}</span>
+      <span class="font-mono">
+        {#if !item._isDevice && item._type === 'session' && isAgentOnline(item, now.value)}
+          Active
+        {:else}
+          {fmtCheckin(item._lastCheckin, now.value)}
+        {/if}
+      </span>
     {:else if col.key === '_tags'}
       {#if item._isDevice}
         <EntityTagBadges entityType="device" entityID={item._entityID} showEmpty />
