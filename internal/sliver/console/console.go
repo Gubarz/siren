@@ -26,6 +26,51 @@ var BeaconTaskNoticePattern = regexp.MustCompile(`(?i)Tasked beacon .*\(([0-9a-f
 
 const commandTimeout = 90 * time.Second
 
+type completionTrie struct {
+	children map[string]*completionTrie
+}
+
+func buildCompletions(cmd *cobra.Command) *completionTrie {
+	root := &completionTrie{children: make(map[string]*completionTrie)}
+	for _, c := range cmd.Commands() {
+		if c.Hidden {
+			continue
+		}
+		child := buildCompletions(c)
+		root.children[c.Name()] = child
+	}
+	return root
+}
+
+func (t *completionTrie) lookup(args []string) []string {
+	if t == nil {
+		return nil
+	}
+	if len(args) == 0 {
+		out := make([]string, 0, len(t.children))
+		for name := range t.children {
+			out = append(out, name)
+		}
+		return out
+	}
+
+	token := args[0]
+	if len(args) == 1 {
+		var out []string
+		for name := range t.children {
+			if strings.HasPrefix(name, token) {
+				out = append(out, name)
+			}
+		}
+		return out
+	}
+
+	if child, ok := t.children[token]; ok {
+		return child.lookup(args[1:])
+	}
+	return nil
+}
+
 type Emitter interface {
 	Emit(name string, payload any)
 }
@@ -33,14 +78,19 @@ type Emitter interface {
 type Service struct {
 	rpc *rpc.Client
 
-	mu          sync.Mutex
-	sliverCon   *console.SliverClient
-	sliverCmds  func() *cobra.Command
-	serverCmds  func() *cobra.Command
-	output      outputSink
-	consoleInit bool
-	consoleOnce sync.Once
-	consoleErr  error
+	mu           sync.Mutex
+	sliverCon    *console.SliverClient
+	sliverCmds   func() *cobra.Command
+	serverCmds   func() *cobra.Command
+	sliverRoot   *cobra.Command
+	serverRoot   *cobra.Command
+	sliverCmpl   *completionTrie
+	serverCmpl   *completionTrie
+	menuSession  string
+	output       outputSink
+	consoleInit  bool
+	consoleOnce  sync.Once
+	consoleErr   error
 
 	emitter Emitter
 	subproc subprocMgr
@@ -98,6 +148,10 @@ func (s *Service) init() error {
 		s.sliverCon = con
 		s.sliverCmds = sliverCmds
 		s.serverCmds = serverCmds
+		s.sliverRoot = sliverCmds()
+		s.serverRoot = serverCmds()
+		s.sliverCmpl = buildCompletions(s.sliverRoot)
+		s.serverCmpl = buildCompletions(s.serverRoot)
 		s.consoleInit = true
 	})
 	return s.consoleErr
@@ -125,6 +179,11 @@ func (s *Service) resetConsoleLocked() {
 	s.sliverCon = nil
 	s.sliverCmds = nil
 	s.serverCmds = nil
+	s.sliverRoot = nil
+	s.serverRoot = nil
+	s.sliverCmpl = nil
+	s.serverCmpl = nil
+	s.menuSession = ""
 	s.consoleErr = nil
 	s.consoleOnce = sync.Once{}
 }
@@ -165,8 +224,8 @@ func (s *Service) ListCommands() ([]string, error) {
 		return nil, err
 	}
 
-	root := s.sliverCmds()
-	serverRoot := s.serverCmds()
+	root := s.sliverRoot
+	serverRoot := s.serverRoot
 
 	cmdMap := make(map[string]bool)
 	var names []string
@@ -259,9 +318,9 @@ func (s *Service) GetCommandRoot(scope string) (*cobra.Command, error) {
 
 	switch scope {
 	case "session":
-		return s.sliverCmds(), nil
+		return s.sliverRoot, nil
 	case "server":
-		return s.serverCmds(), nil
+		return s.serverRoot, nil
 	default:
 		return nil, fmt.Errorf("unknown command scope %q", scope)
 	}

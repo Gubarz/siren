@@ -7,41 +7,9 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/spf13/cobra"
 
 	"sliver-gui/internal/sliver/rpc"
 )
-
-func findCompletions(cmd *cobra.Command, args []string) []string {
-	if len(args) == 0 {
-		var comps []string
-		for _, c := range cmd.Commands() {
-			if !c.Hidden {
-				comps = append(comps, c.Name())
-			}
-		}
-		return comps
-	}
-
-	token := args[0]
-	if len(args) == 1 {
-		var comps []string
-		for _, c := range cmd.Commands() {
-			if !c.Hidden && strings.HasPrefix(c.Name(), token) {
-				comps = append(comps, c.Name())
-			}
-		}
-		return comps
-	}
-
-	for _, c := range cmd.Commands() {
-		if !c.Hidden && c.Name() == token {
-			return findCompletions(c, args[1:])
-		}
-	}
-
-	return nil
-}
 
 func (s *Service) CompleteCommand(sessionID, line string) ([]string, error) {
 	s.mu.Lock()
@@ -51,10 +19,13 @@ func (s *Service) CompleteCommand(sessionID, line string) ([]string, error) {
 		return nil, err
 	}
 
-	if sessionID != "" {
-		s.sliverCon.App.SwitchMenu(consts.ImplantMenu)
-	} else {
-		s.sliverCon.App.SwitchMenu(consts.ServerMenu)
+	if sessionID != s.menuSession {
+		if sessionID != "" {
+			s.sliverCon.App.SwitchMenu(consts.ImplantMenu)
+		} else {
+			s.sliverCon.App.SwitchMenu(consts.ServerMenu)
+		}
+		s.menuSession = sessionID
 	}
 
 	menu := s.sliverCon.App.ActiveMenu()
@@ -62,15 +33,15 @@ func (s *Service) CompleteCommand(sessionID, line string) ([]string, error) {
 		return nil, nil
 	}
 
-	var root *cobra.Command
+	var trie *completionTrie
 	if sessionID != "" {
-		root = s.sliverCmds()
+		trie = s.sliverCmpl
 	} else {
-		root = s.serverCmds()
+		trie = s.serverCmpl
 	}
 
 	parts := strings.Split(line, " ")
-	return findCompletions(root, parts), nil
+	return trie.lookup(parts), nil
 }
 
 func (s *Service) CompletePath(sessionID, partial string) ([]string, error) {
@@ -120,12 +91,9 @@ func (s *Service) CompletePath(sessionID, partial string) ([]string, error) {
 }
 
 func (s *Service) sessionSep(sessionID string) string {
-	sessions, err := s.rpc.RPC.GetSessions(context.Background(), &commonpb.Empty{})
-	if err == nil {
-		for _, sess := range sessions.Sessions {
-			if sess.ID == sessionID && strings.EqualFold(sess.OS, "windows") {
-				return "\\"
-			}
+	if sess := s.rpc.LookupSession(sessionID); sess != nil {
+		if strings.EqualFold(sess.OS, "windows") {
+			return "\\"
 		}
 	}
 	return "/"
