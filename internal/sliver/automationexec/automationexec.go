@@ -10,9 +10,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sliver-gui/internal/automation"
-	"sliver-gui/internal/beacons"
-	"sliver-gui/internal/console"
-	"sliver-gui/internal/rpc"
+	"sliver-gui/internal/sliver/beacons"
+	"sliver-gui/internal/sliver/console"
+	"sliver-gui/internal/sliver/rpc"
 )
 
 type Executor struct {

@@ -4,13 +4,13 @@ import (
 	automationstate "sliver-gui/internal/localstate/automation"
 
 	"sliver-gui/internal/automation"
-	"sliver-gui/internal/beacons"
-	"sliver-gui/internal/comments"
-	"sliver-gui/internal/console"
-	"sliver-gui/internal/events"
-	"sliver-gui/internal/rpc"
+	"sliver-gui/internal/localstate/comments"
+	"sliver-gui/internal/localstate/events"
+	"sliver-gui/internal/localstate/tags"
 	automationexec "sliver-gui/internal/sliver/automationexec"
-	"sliver-gui/internal/tags"
+	"sliver-gui/internal/sliver/beacons"
+	"sliver-gui/internal/sliver/console"
+	"sliver-gui/internal/sliver/rpc"
 )
 
 type Dependencies struct {

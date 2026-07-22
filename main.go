@@ -10,7 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
 	"sliver-gui/internal/buildinfo"
-	"sliver-gui/internal/console"
+	"sliver-gui/internal/sliver/console"
 )
 
 //go:embed all:frontend/dist
