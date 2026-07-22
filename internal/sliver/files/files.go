@@ -16,6 +16,7 @@ type Service struct {
 	rpc     *rpc.Client
 	ctx     context.Context
 	history *HistoryStore
+	dl      func(ctx context.Context, in *sliverpb.DownloadReq) (*sliverpb.Download, error)
 }
 
 func New(rpc *rpc.Client) *Service {

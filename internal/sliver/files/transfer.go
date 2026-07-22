@@ -2,18 +2,13 @@ package files
 
 import (
 	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	goruntime "runtime"
 	"strings"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -55,22 +50,43 @@ func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurs
 
 	recordID := s.addDownloadHistory(sessionID, remotePath, localPath, recurse)
 
-	data, err := s.downloadData(sessionID, remotePath, recurse, emit)
+	var totalWritten int64
+	var err error
+	if recurse {
+		totalWritten, err = s.singleShotDownload(sessionID, remotePath, localPath, emit)
+	} else {
+		totalWritten, err = s.downloadToFile(sessionID, remotePath, localPath, emit)
+	}
 	if err != nil {
-		s.finalizeDownloadHistory(recordID, "failed", 0, err.Error())
+		s.finalizeDownloadHistory(recordID, "failed", totalWritten, err.Error())
 		return err
 	}
 
-	emit("write", 0, 0)
-	finalSize := int64(len(data))
-	if err := os.WriteFile(localPath, data, 0644); err != nil {
-		s.finalizeDownloadHistory(recordID, "failed", finalSize, err.Error())
-		return err
-	}
-
-	s.finalizeDownloadHistory(recordID, "completed", finalSize, "")
-	emit("done", 0, 0)
+	s.finalizeDownloadHistory(recordID, "completed", totalWritten, "")
+	emit("done", totalWritten, totalWritten)
 	return nil
+}
+
+func (s *Service) singleShotDownload(
+	sessionID, remotePath, localPath string, emit func(string, int64, int64),
+) (int64, error) {
+	data, err := s.downloadData(sessionID, remotePath, true, emit)
+	if err != nil {
+		return 0, err
+	}
+	if err := os.WriteFile(localPath, data, 0644); err != nil {
+		return 0, err
+	}
+	return int64(len(data)), nil
+}
+
+func (s *Service) downloadItemToFile(
+	sessionID string, item BulkDownloadItem, dest string, emit func(string, int64, int64),
+) (int64, error) {
+	if item.IsDirectory {
+		return s.singleShotDownload(sessionID, item.RemotePath, dest, emit)
+	}
+	return s.downloadToFile(sessionID, item.RemotePath, dest, emit)
 }
 
 func (s *Service) addDownloadHistory(sessionID, remotePath, localPath string, isDir bool) string {
@@ -93,39 +109,6 @@ func (s *Service) finalizeDownloadHistory(recordID, status string, size int64, e
 	}
 }
 
-func (s *Service) downloadData(
-	sessionID, remotePath string, recurse bool, emit func(string, int64, int64),
-) ([]byte, error) {
-	req := &sliverpb.DownloadReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout / time.Second),
-		},
-		Path:    remotePath,
-		Recurse: recurse,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
-	defer cancel()
-
-	resp, err := s.rpc.RPC.Download(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	compressedSize := int64(len(resp.Data))
-	emit("received", compressedSize, compressedSize)
-
-	if resp.Encoder == "gzip" {
-		decoded, err := decompressGzip(resp.Data, compressedSize, emit)
-		if err != nil {
-			return nil, err
-		}
-		return decoded, nil
-	}
-	return resp.Data, nil
-}
-
 func (s *Service) downloadEmitter(localPath string) func(string, int64, int64) {
 	return func(phase string, current, total int64) {
 		if s.ctx != nil {
@@ -137,35 +120,6 @@ func (s *Service) downloadEmitter(localPath string) func(string, int64, int64) {
 			})
 		}
 	}
-}
-
-func decompressGzip(data []byte, compressedSize int64, emit func(string, int64, int64)) ([]byte, error) {
-	reader := bytes.NewReader(data)
-	gzipReader, err := gzip.NewReader(reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzipReader.Close()
-
-	var buf bytes.Buffer
-	chunk := make([]byte, 32*1024)
-	for {
-		n, readErr := gzipReader.Read(chunk)
-		if n > 0 {
-			buf.Write(chunk[:n])
-			if emit != nil {
-				consumed := compressedSize - int64(reader.Len())
-				emit("decompress", consumed, compressedSize)
-			}
-		}
-		if readErr == io.EOF {
-			break
-		}
-		if readErr != nil {
-			return nil, fmt.Errorf("failed to decode gzip download: %w", readErr)
-		}
-	}
-	return buf.Bytes(), nil
 }
 
 func remoteFilename(remotePath string) string {
@@ -227,64 +181,44 @@ func (s *Service) downloadMultipleItem(
 	tw *tar.Writer, emit func(string, int64, int64),
 ) error {
 	recordID := s.addDownloadHistory(sessionID, item.RemotePath, localPath, item.IsDirectory)
-
-	data, err := s.downloadData(sessionID, item.RemotePath, item.IsDirectory, emit)
+	tmpFile, err := os.CreateTemp("", "sliver-dl-*")
 	if err != nil {
 		s.finalizeDownloadHistory(recordID, "failed", 0, err.Error())
+		return fmt.Errorf("temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	written, err := s.downloadItemToFile(sessionID, item, tmpFile.Name(), emit)
+	if err != nil {
+		s.finalizeDownloadHistory(recordID, "failed", written, err.Error())
 		return fmt.Errorf("failed to download %s: %w", item.RemotePath, err)
+	}
+	if _, err := tmpFile.Seek(0, 0); err != nil {
+		s.finalizeDownloadHistory(recordID, "failed", written, err.Error())
+		return err
 	}
 
 	baseName := remoteFilename(item.RemotePath)
+	var tarErr error
 	if item.IsDirectory {
-		if err := addDirToTar(tw, baseName, data); err != nil {
-			return err
-		}
+		tarErr = addDirToTar(tw, baseName, tmpFile)
 	} else {
-		if err := addFileToTar(tw, baseName, data); err != nil {
-			s.finalizeDownloadHistory(recordID, "failed", int64(len(data)), err.Error())
-			return err
-		}
+		tarErr = addFileToTar(tw, baseName, tmpFile)
 	}
-
-	s.finalizeDownloadHistory(recordID, "completed", int64(len(data)), "")
+	if tarErr != nil {
+		s.finalizeDownloadHistory(recordID, "failed", written, tarErr.Error())
+		return tarErr
+	}
+	s.finalizeDownloadHistory(recordID, "completed", written, "")
 	return nil
 }
 
-func addDirToTar(tw *tar.Writer, baseName string, data []byte) error {
-	tr := tar.NewReader(bytes.NewReader(data))
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			break
-		}
-		hdr.Name = filepath.Join(baseName, hdr.Name)
-		if err := tw.WriteHeader(hdr); err != nil {
-			return fmt.Errorf("failed to write header for %s: %w", hdr.Name, err)
-		}
-		if hdr.Typeflag == tar.TypeReg || hdr.Typeflag == tar.TypeRegA {
-			if _, err := io.Copy(tw, tr); err != nil {
-				return fmt.Errorf("failed to write body for %s: %w", hdr.Name, err)
-			}
-		}
+func (s *Service) downloadRPC(ctx context.Context, req *sliverpb.DownloadReq) (*sliverpb.Download, error) {
+	if s.dl != nil {
+		return s.dl(ctx, req)
 	}
-	return nil
+	return s.rpc.RPC.Download(ctx, req)
 }
 
-func addFileToTar(tw *tar.Writer, baseName string, data []byte) error {
-	hdr := &tar.Header{
-		Name:    baseName,
-		Mode:    0644,
-		Size:    int64(len(data)),
-		ModTime: time.Now(),
-	}
-	if err := tw.WriteHeader(hdr); err != nil {
-		return fmt.Errorf("failed to write header for %s: %w", baseName, err)
-	}
-	if _, err := tw.Write(data); err != nil {
-		return fmt.Errorf("failed to write data for %s: %w", baseName, err)
-	}
-	return nil
-}
+
