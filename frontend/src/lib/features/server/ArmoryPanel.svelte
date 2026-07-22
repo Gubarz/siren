@@ -10,7 +10,7 @@
   import Toolbar from '$components/patterns/Toolbar.svelte'
   import DataTable from '$components/patterns/DataTable.svelte'
   import Button from '$components/ui/Button.svelte'
-  import { ListCommands, RunSessionCommand } from '../../api/console.js'
+  import { ListArmoryPackages, ListCommands, RunSessionCommand } from '../../api/console.js'
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
   import { quote } from '../../utils/shell.js'
@@ -45,18 +45,36 @@
     error = ''
     warning = ''
     try {
-      const output = await RunSessionCommand('', 'armory')
+      const pkgInfos = await ListArmoryPackages(true)
       const installedCommands = await ListCommands()
-      packages = parseArmoryOutput(output, new Set(installedCommands || []))
-      warning = parseArmoryWarnings(output)
+      const installedSet = new Set(installedCommands || [])
+      packages = (pkgInfos || []).map((p) => ({
+        armory: p.armoryName,
+        command: p.commandName,
+        version: p.version,
+        type: p.type,
+        help: p.help,
+        installed: installedSet.has(p.commandName),
+        installedStr: installedSet.has(p.commandName) ? 'Installed' : 'Not Installed',
+      }))
       armoryCache = packages
-      armoryWarningCache = warning
-      if (packages.length === 0) {
-        const cleaned = stripTerminalFormatting(output).trim()
-        error = cleaned || 'Armory returned no packages.'
+      armoryWarningCache = ''
+      if (packages.length === 0) error = 'Armory returned no packages.'
+    } catch {
+      try {
+        const output = await RunSessionCommand('', 'armory')
+        const installedCommands = await ListCommands()
+        packages = parseArmoryOutput(output, new Set(installedCommands || []))
+        warning = parseArmoryWarnings(output)
+        armoryCache = packages
+        armoryWarningCache = warning
+        if (packages.length === 0) {
+          const cleaned = stripTerminalFormatting(output).trim()
+          error = cleaned || 'Armory returned no packages.'
+        }
+      } catch (err) {
+        error = errorMessage(err)
       }
-    } catch (err) {
-      error = errorMessage(err)
     } finally {
       loading = false
     }

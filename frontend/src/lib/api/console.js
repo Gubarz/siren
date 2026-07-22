@@ -3,6 +3,7 @@ export {
   GetCommandCatalog,
   GetShellOutput,
   InterruptShell,
+  ListArmoryPackages,
   ListCommands,
   ResizeShell,
   RunSessionCommand,
