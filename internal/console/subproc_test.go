@@ -103,8 +103,80 @@ func TestFilterConsoleCommandFrames(t *testing.T) {
 	}
 }
 
+func TestPortfwdCommandLine(t *testing.T) {
+	root := &cobra.Command{Use: "sliver"}
+	portfwd := &cobra.Command{Use: "portfwd"}
+	add := &cobra.Command{Use: "add"}
+	remove := &cobra.Command{Use: "rm"}
+	add.Flags().StringP("bind", "b", "127.0.0.1:8080", "")
+	add.Flags().StringP("remote", "r", "", "")
+	remove.Flags().IntP("id", "i", 0, "")
+	root.AddCommand(portfwd)
+	portfwd.AddCommand(add, remove)
+	if err := add.Flags().Set("bind", "127.0.0.1:9000"); err != nil {
+		t.Fatal(err)
+	}
+	if err := add.Flags().Set("remote", "10.0.0.5:80"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := portfwdCommandLine(add, nil)
+	want := "portfwd add --bind 127.0.0.1:9000 --remote 10.0.0.5:80"
+	if got != want {
+		t.Fatalf("portfwdCommandLine() = %q, want %q", got, want)
+	}
+	if err := remove.Flags().Set("id", "23"); err != nil {
+		t.Fatal(err)
+	}
+	if got := portfwdCommandLine(remove, nil); got != "portfwd rm --id 23" {
+		t.Fatalf("portfwdCommandLine(rm) = %q, want portfwd rm --id 23", got)
+	}
+}
+
+func TestIsRoutedConsoleCommandIncludesTunnelCommands(t *testing.T) {
+	for _, line := range []string{"socks5", "socks5 start", "portfwd", "portfwd add --remote 10.0.0.5:80", " portfwd rm --id 1 ", "rportfwd", "rportfwd add --bind :4444 --remote :8080"} {
+		if !isRoutedConsoleCommand(line) {
+			t.Fatalf("isRoutedConsoleCommand(%q) = false", line)
+		}
+	}
+	for _, line := range []string{"portfwds", "rportfwds", "echo portfwd"} {
+		if isRoutedConsoleCommand(line) {
+			t.Fatalf("isRoutedConsoleCommand(%q) = true", line)
+		}
+	}
+}
+
+func TestRportfwdCommandLine(t *testing.T) {
+	root := &cobra.Command{Use: "sliver"}
+	rportfwd := &cobra.Command{Use: "rportfwd"}
+	add := &cobra.Command{Use: "add"}
+	remove := &cobra.Command{Use: "rm"}
+	add.Flags().StringP("bind", "b", "", "")
+	add.Flags().StringP("remote", "r", "", "")
+	remove.Flags().Uint32P("id", "i", 0, "")
+	root.AddCommand(rportfwd)
+	rportfwd.AddCommand(add, remove)
+	if err := add.Flags().Set("bind", "0.0.0.0:4444"); err != nil {
+		t.Fatal(err)
+	}
+	if err := add.Flags().Set("remote", "127.0.0.1:8080"); err != nil {
+		t.Fatal(err)
+	}
+	if got := rportfwdCommandLine(add, nil); got != "rportfwd add --bind 0.0.0.0:4444 --remote 127.0.0.1:8080" {
+		t.Fatalf("rportfwdCommandLine(add) = %q", got)
+	}
+	if err := remove.Flags().Set("id", "31"); err != nil {
+		t.Fatal(err)
+	}
+	if got := rportfwdCommandLine(remove, nil); got != "rportfwd rm --id 31" {
+		t.Fatalf("rportfwdCommandLine(rm) = %q", got)
+	}
+}
+
 func TestWriteConsoleRoutesSocksBeforeSubmittingToSubprocess(t *testing.T) {
 	svc := New(nil)
+	emitter := &recordingEmitter{}
+	svc.SetEmitter(emitter)
 	pty := &recordingPTY{}
 	svc.subproc.add(&subprocJob{id: "job-1", sessionID: "session-1", pty: pty})
 
@@ -137,6 +209,9 @@ func TestWriteConsoleRoutesSocksBeforeSubmittingToSubprocess(t *testing.T) {
 	if !bytes.Contains([]byte(got), []byte("\x05\x15")) {
 		t.Fatalf("pty writes = %q, want readline clear sequence", got)
 	}
+	if len(emitter.names) != 2 || emitter.names[0] != "console-output" || emitter.names[1] != "tunnels-changed" {
+		t.Fatalf("emitted events = %#v, want console-output then tunnels-changed", emitter.names)
+	}
 }
 
 func TestSendToSessionConsoleRoutesSocksWithoutWritingSubprocess(t *testing.T) {
@@ -163,6 +238,14 @@ func TestSendToSessionConsoleRoutesSocksWithoutWritingSubprocess(t *testing.T) {
 
 type recordingPTY struct {
 	bytes.Buffer
+}
+
+type recordingEmitter struct {
+	names []string
+}
+
+func (e *recordingEmitter) Emit(name string, _ any) {
+	e.names = append(e.names, name)
 }
 
 func (p *recordingPTY) Read([]byte) (int, error) {

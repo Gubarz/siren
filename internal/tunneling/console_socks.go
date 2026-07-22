@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,12 +19,32 @@ type ConsoleCommandResult struct {
 	Refresh bool   `json:"refresh"`
 }
 
+func (s *Service) HandleConsoleTunnelCommand(sessionID, line string) ConsoleCommandResult {
+	args, err := shellquote.Split(line)
+	if err != nil || len(args) == 0 {
+		return ConsoleCommandResult{}
+	}
+	switch strings.ToLower(args[0]) {
+	case "socks5":
+		return s.handleConsoleSocksArgs(sessionID, args)
+	case "portfwd":
+		return s.handleConsolePortfwdArgs(sessionID, args)
+	case "rportfwd":
+		return s.handleConsoleRportfwdArgs(sessionID, args)
+	default:
+		return ConsoleCommandResult{}
+	}
+}
+
 func (s *Service) HandleConsoleSocksCommand(sessionID, line string) ConsoleCommandResult {
 	args, err := shellquote.Split(line)
 	if err != nil || len(args) == 0 || strings.ToLower(args[0]) != "socks5" {
 		return ConsoleCommandResult{}
 	}
+	return s.handleConsoleSocksArgs(sessionID, args)
+}
 
+func (s *Service) handleConsoleSocksArgs(sessionID string, args []string) ConsoleCommandResult {
 	result := ConsoleCommandResult{Handled: true}
 	if len(args) == 1 {
 		result.Output = s.renderSocksList(sessionID)
@@ -52,6 +73,10 @@ func (s *Service) HandleConsoleSocksCommand(sessionID, line string) ConsoleComma
 }
 
 func (s *Service) handleConsoleSocksStart(sessionID string, args []string) (string, error) {
+	return handleConsoleSocksStart(s.StartSocks, sessionID, args)
+}
+
+func handleConsoleSocksStart(start func(string, string, string, string) (uint64, error), sessionID string, args []string) (string, error) {
 	if sessionID == "" {
 		return "", fmt.Errorf("socks5 start requires an active session")
 	}
@@ -80,7 +105,19 @@ func (s *Service) handleConsoleSocksStart(sessionID string, args []string) (stri
 		)
 	}
 
-	lines := append(warnings, fmt.Sprintf("[*] Started SOCKS5 %s %s %s %s", strings.TrimSpace(*host), strings.TrimSpace(*port), strings.TrimSpace(*user), password))
+	bindHost := strings.TrimSpace(*host)
+	bindPort := strings.TrimSpace(*port)
+	if bindHost == "" {
+		return "", fmt.Errorf("socks5 host cannot be empty")
+	}
+	if bindPort == "" {
+		return "", fmt.Errorf("socks5 port cannot be empty")
+	}
+	if _, err := start(sessionID, net.JoinHostPort(bindHost, bindPort), strings.TrimSpace(*user), password); err != nil {
+		return "", err
+	}
+
+	lines := append(warnings, fmt.Sprintf("[*] Started SOCKS5 %s %s %s %s", bindHost, bindPort, strings.TrimSpace(*user), password))
 	lines = append(lines, "[!] In-band SOCKS proxies can be a little unstable depending on protocol")
 	return strings.Join(lines, "\n") + "\n", nil
 }

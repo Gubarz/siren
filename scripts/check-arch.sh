@@ -11,4 +11,11 @@ if go list -deps ./internal/automation 2>/dev/null | grep -v '^sliver-gui/intern
   exit 1
 fi
 
+# Phase 2: bootstrap must never import Wails.
+if go list -deps ./internal/bootstrap 2>/dev/null | grep -q 'github\.com/wailsapp/wails'; then
+  echo "check-arch: bootstrap imports Wails" >&2
+  go list -deps ./internal/bootstrap | grep 'github\.com/wailsapp/wails' >&2
+  exit 1
+fi
+
 echo "check-arch: architecture rules passed"

@@ -36,12 +36,17 @@ type socksProxy struct {
 	driver *socksDriver
 }
 
+type rportfwdKey struct {
+	sessionID string
+	id        uint64
+}
+
 type Service struct {
 	rpc   *rpc.Client
 	mu    sync.RWMutex
 	socks map[uint64]*socksProxy
 	pfwd  map[uint64]*portfwdProxy
-	rpfwd map[uint64]*rportfwdInfo // keyed by implant-assigned listener ID
+	rpfwd map[rportfwdKey]*rportfwdInfo
 }
 
 func New(rpc *rpc.Client) *Service {
@@ -49,7 +54,7 @@ func New(rpc *rpc.Client) *Service {
 		rpc:   rpc,
 		socks: make(map[uint64]*socksProxy),
 		pfwd:  make(map[uint64]*portfwdProxy),
-		rpfwd: make(map[uint64]*rportfwdInfo),
+		rpfwd: make(map[rportfwdKey]*rportfwdInfo),
 	}
 }
 
@@ -122,13 +127,13 @@ func (s *Service) Close() {
 	for _, pp := range s.pfwd {
 		pfwds = append(pfwds, pp)
 	}
-	rpfwds := make(map[uint64]string, len(s.rpfwd))
-	for id, e := range s.rpfwd {
-		rpfwds[id] = e.sessionID
+	rpfwds := make([]rportfwdKey, 0, len(s.rpfwd))
+	for key := range s.rpfwd {
+		rpfwds = append(rpfwds, key)
 	}
 	s.socks = map[uint64]*socksProxy{}
 	s.pfwd = map[uint64]*portfwdProxy{}
-	s.rpfwd = map[uint64]*rportfwdInfo{}
+	s.rpfwd = map[rportfwdKey]*rportfwdInfo{}
 	s.mu.Unlock()
 
 	for id, driver := range socks {
@@ -142,32 +147,32 @@ func (s *Service) Close() {
 		pp.listener.Close()
 	}
 	if s.rpc.Connected() {
-		for id, sessionID := range rpfwds {
+		for _, key := range rpfwds {
 			req := &sliverpb.RportFwdStopListenerReq{
-				ID:      uint32(id),
-				Request: &commonpb.Request{SessionID: sessionID},
+				ID:      uint32(key.id),
+				Request: &commonpb.Request{SessionID: key.sessionID},
 			}
 			_, _ = s.rpc.RPC.StopRportFwdListener(context.Background(), req)
 		}
 	}
 }
 
-// List returns every active SOCKS + port-forward known to the client, whether
-// created via the GUI or via the console (right-click / `socks start` /
-// `portfwd add`). Sliver's core registries are the source of truth for what's
-// live; our local maps only carry GUI-side metadata (StartedAt) we merge in.
+// List returns every active SOCKS + port-forward known to the parent client.
+// Routed console commands and GUI actions live in the local maps; the Sliver
+// registries cover proxies created by other in-process integrations.
 func (s *Service) List() []ProxyInfo {
 	s.mu.RLock()
-	local := make(map[uint64]ProxyInfo, len(s.socks)+len(s.pfwd))
+	localSocks := make(map[uint64]ProxyInfo, len(s.socks))
 	for id, p := range s.socks {
-		local[id] = p.info
+		localSocks[id] = p.info
 	}
+	localPortfwds := make(map[uint64]ProxyInfo, len(s.pfwd))
 	for id, p := range s.pfwd {
-		local[id] = p.info
+		localPortfwds[id] = p.info
 	}
 	s.mu.RUnlock()
 
-	out := make([]ProxyInfo, 0, len(local))
+	out := make([]ProxyInfo, 0, len(localSocks)+len(localPortfwds))
 	for _, meta := range core.SocksProxies.List() {
 		info := ProxyInfo{
 			ID: meta.ID, Kind: "socks",
@@ -176,7 +181,7 @@ func (s *Service) List() []ProxyInfo {
 			Username:  meta.Username,
 			Password:  meta.Password,
 		}
-		if prev, ok := local[meta.ID]; ok {
+		if prev, ok := localSocks[meta.ID]; ok {
 			info.StartedAt = prev.StartedAt
 		}
 		out = append(out, info)
@@ -188,15 +193,15 @@ func (s *Service) List() []ProxyInfo {
 			BindAddr:   meta.BindAddr,
 			RemoteAddr: meta.RemoteAddr,
 		}
-		if prev, ok := local[uint64(meta.ID)]; ok {
+		if prev, ok := localPortfwds[uint64(meta.ID)]; ok {
 			info.StartedAt = prev.StartedAt
 		}
 		out = append(out, info)
 	}
 	// GUI-created portfwds live in s.pfwd (we hand-rolled portfwd instead of
 	// using core.Portfwds), so append those too.
-	for _, p := range s.pfwd {
-		out = append(out, p.info)
+	for _, info := range localPortfwds {
+		out = append(out, info)
 	}
 	return out
 }

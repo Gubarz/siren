@@ -26,6 +26,10 @@ var BeaconTaskNoticePattern = regexp.MustCompile(`(?i)Tasked beacon .*\(([0-9a-f
 
 const commandTimeout = 90 * time.Second
 
+type Emitter interface {
+	Emit(name string, payload any)
+}
+
 type Service struct {
 	rpc *rpc.Client
 
@@ -38,17 +42,14 @@ type Service struct {
 	consoleOnce sync.Once
 	consoleErr  error
 
-	// ctx carries the wails runtime context. Held here so services within
-	// this package (subproc.go) can emit wails events for their own jobs
-	// without threading ctx through every method call.
-	ctx     context.Context
+	emitter Emitter
 	subproc subprocMgr
 
 	routedCommand RoutedCommandHandler
 }
 
-func (s *Service) SetCtx(ctx context.Context) {
-	s.ctx = ctx
+func (s *Service) SetEmitter(e Emitter) {
+	s.emitter = e
 }
 
 type RoutedCommandResult struct {

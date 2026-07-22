@@ -52,6 +52,12 @@ func pinSliverTargetCommands(base reefconsole.Commands, sessionID string, con *s
 		if socksCmd := findTopLevelCommand(root, "socks5"); socksCmd != nil {
 			pinSocksCommand(socksCmd)
 		}
+		if portfwdCmd := findTopLevelCommand(root, "portfwd"); portfwdCmd != nil {
+			pinPortfwdCommand(portfwdCmd)
+		}
+		if rportfwdCmd := findTopLevelCommand(root, "rportfwd"); rportfwdCmd != nil {
+			pinRportfwdCommand(rportfwdCmd)
+		}
 		return root
 	}
 }
@@ -63,6 +69,26 @@ func pinSocksCommand(cmd *cobra.Command) {
 	}, func() {})
 	for _, child := range cmd.Commands() {
 		pinSocksCommand(child)
+	}
+}
+
+func pinPortfwdCommand(cmd *cobra.Command) {
+	wrapCommandRun(cmd, func(command *cobra.Command, args []string) bool {
+		emitConsoleCommandFrame(portfwdCommandLine(command, args))
+		return false
+	}, func() {})
+	for _, child := range cmd.Commands() {
+		pinPortfwdCommand(child)
+	}
+}
+
+func pinRportfwdCommand(cmd *cobra.Command) {
+	wrapCommandRun(cmd, func(command *cobra.Command, args []string) bool {
+		emitConsoleCommandFrame(rportfwdCommandLine(command, args))
+		return false
+	}, func() {})
+	for _, child := range cmd.Commands() {
+		pinRportfwdCommand(child)
 	}
 }
 
@@ -184,6 +210,40 @@ func socksCommandLine(cmd *cobra.Command, args []string) string {
 			return shellquote.Join(append([]string{"socks5"}, args...)...)
 		}
 		return "socks5"
+	}
+}
+
+func portfwdCommandLine(cmd *cobra.Command, args []string) string {
+	switch commandPath(cmd) {
+	case "portfwd add":
+		bind, _ := cmd.Flags().GetString("bind")
+		remote, _ := cmd.Flags().GetString("remote")
+		return shellquote.Join("portfwd", "add", "--bind", bind, "--remote", remote)
+	case "portfwd rm":
+		id, _ := cmd.Flags().GetInt("id")
+		return shellquote.Join("portfwd", "rm", "--id", strconv.Itoa(id))
+	default:
+		if len(args) > 0 {
+			return shellquote.Join(append([]string{"portfwd"}, args...)...)
+		}
+		return "portfwd"
+	}
+}
+
+func rportfwdCommandLine(cmd *cobra.Command, args []string) string {
+	switch commandPath(cmd) {
+	case "rportfwd add":
+		bind, _ := cmd.Flags().GetString("bind")
+		remote, _ := cmd.Flags().GetString("remote")
+		return shellquote.Join("rportfwd", "add", "--bind", bind, "--remote", remote)
+	case "rportfwd rm":
+		id, _ := cmd.Flags().GetUint32("id")
+		return shellquote.Join("rportfwd", "rm", "--id", strconv.FormatUint(uint64(id), 10))
+	default:
+		if len(args) > 0 {
+			return shellquote.Join(append([]string{"rportfwd"}, args...)...)
+		}
+		return "rportfwd"
 	}
 }
 

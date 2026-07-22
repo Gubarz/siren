@@ -55,6 +55,10 @@ func New(deps Dependencies) *Engine {
 	return e
 }
 
+func (e *Engine) SetEmitter(emitter Emitter) {
+	e.emitter = emitter
+}
+
 func (e *Engine) Start(ctx context.Context) {
 	e.ctx = ctx
 	e.events.Start(ctx, func(trigger string, target Target) {
@@ -158,7 +162,9 @@ func (e *Engine) pollBeaconCheckins() {
 }
 
 func (e *Engine) emit(name string, payload any) {
-	e.emitter.Emit(name, payload)
+	if e.emitter != nil {
+		e.emitter.Emit(name, payload)
+	}
 }
 
 func (e *Engine) ruleByIDLocked(id string) *AutomationRule {

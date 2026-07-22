@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -169,14 +167,16 @@ func (s *Service) routeConsoleInput(job *subprocJob, data []byte) ([]byte, []str
 
 func isRoutedConsoleCommand(line string) bool {
 	line = strings.TrimSpace(line)
-	return line == "socks5" || strings.HasPrefix(line, "socks5 ")
+	return line == "socks5" || strings.HasPrefix(line, "socks5 ") ||
+		line == "portfwd" || strings.HasPrefix(line, "portfwd ") ||
+		line == "rportfwd" || strings.HasPrefix(line, "rportfwd ")
 }
 
 func (s *Service) emitTunnelsChanged() {
-	if s.ctx == nil {
+	if s.emitter == nil {
 		return
 	}
-	wailsruntime.EventsEmit(s.ctx, "tunnels-changed", map[string]any{})
+	s.emitter.Emit("tunnels-changed", map[string]any{})
 }
 
 func (s *Service) writeConsoleRaw(jobID string, data []byte) error {
@@ -288,30 +288,30 @@ func readPTYChunks(ptyFile consolePTY, chunks chan<- []byte) {
 }
 
 func (s *Service) emitConsoleOutput(jobID string, data []byte) {
-	if s.ctx == nil {
+	if s.emitter == nil {
 		return
 	}
-	wailsruntime.EventsEmit(s.ctx, "console-output", map[string]any{
+	s.emitter.Emit("console-output", map[string]any{
 		"jobID": jobID,
 		"data":  base64.StdEncoding.EncodeToString(data),
 	})
 }
 
 func (s *Service) emitConsoleExit(jobID string, exitCode int) {
-	if s.ctx == nil {
+	if s.emitter == nil {
 		return
 	}
-	wailsruntime.EventsEmit(s.ctx, "console-exit", map[string]any{
+	s.emitter.Emit("console-exit", map[string]any{
 		"jobID":    jobID,
 		"exitCode": exitCode,
 	})
 }
 
 func (s *Service) emitConsoleOpenShell(jobID, sessionID, tail string) {
-	if s.ctx == nil {
+	if s.emitter == nil {
 		return
 	}
-	wailsruntime.EventsEmit(s.ctx, "console-open-shell", map[string]any{
+	s.emitter.Emit("console-open-shell", map[string]any{
 		"jobID":     jobID,
 		"sessionID": sessionID,
 		"tail":      tail,

@@ -64,8 +64,8 @@ func (s *Service) StopPortfwd(id uint64) error {
 		return nil
 	}
 	s.mu.Unlock()
-	// Not one of ours — try Sliver's core registry (portfwds started via the
-	// console/right-click).
+	// Not one of ours: try Sliver's core registry for forwards created by
+	// another in-process integration.
 	if core.Portfwds.Remove(int(id)) {
 		return nil
 	}

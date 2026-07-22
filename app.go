@@ -20,6 +20,7 @@ import (
 	"sliver-gui/internal/armory"
 	"sliver-gui/internal/automation"
 	"sliver-gui/internal/beacons"
+	"sliver-gui/internal/bootstrap"
 	"sliver-gui/internal/builders"
 	"sliver-gui/internal/buildinfo"
 	"sliver-gui/internal/casefile"
@@ -37,7 +38,6 @@ import (
 	"sliver-gui/internal/hosts"
 	"sliver-gui/internal/implants"
 	"sliver-gui/internal/listeners"
-	automationstate "sliver-gui/internal/localstate/automation"
 	"sliver-gui/internal/loot"
 	"sliver-gui/internal/memfiles"
 	"sliver-gui/internal/monitor"
@@ -49,9 +49,7 @@ import (
 	"sliver-gui/internal/services"
 	uishellcode "sliver-gui/internal/shellcode"
 	"sliver-gui/internal/shells"
-	automationexec "sliver-gui/internal/sliver/automationexec"
 	"sliver-gui/internal/staging"
-	"sliver-gui/internal/tags"
 	"sliver-gui/internal/theme"
 	"sliver-gui/internal/tunneling"
 	"sliver-gui/internal/wailsadapter"
@@ -62,93 +60,82 @@ import (
 type App struct {
 	ctx    context.Context
 	cancel context.CancelFunc
+	*bootstrap.SharedStack
 
-	RPC              *rpc.Client
-	Console          *console.Service
-	Catalog          *catalog.Service
-	Agents           *agents.Service
-	Armory           *armory.Service
-	Beacons          *beacons.Service
-	Implants         *implants.Service
-	Listeners        *listeners.Service
-	Files            *files.Service
-	Procs            *procs.Service
-	Registry         *registry.Service
-	Shells           *shells.Service
-	Pivots           *pivots.Service
-	Services         *services.Service
-	Tunneling        *tunneling.Service
-	Loot             *loot.Service
-	Server           *server.Service
-	Monitor          *monitor.Service
-	Extensions       *extensions.Service
-	Memfiles         *memfiles.Service
-	WireGuard        *wireguard.Service
-	Crack            *crack.Service
-	Builders         *builders.Service
-	Automation       *automation.Engine
-	AutomationEvents *automationexec.EventSource
-	Discovery        *discovery.Service
-	Events           *events.Store
-	ClientLog        *clientlog.Service
-	Websites         *websites.Service
-	Staging          *staging.Service
-	Hosts            *hosts.Service
-	Tags             *tags.Service
-	Cases            *casefile.Service
-	Comments         *comments.Service
-	Health           *health.Service
+	Catalog    *catalog.Service
+	Agents     *agents.Service
+	Armory     *armory.Service
+	Implants   *implants.Service
+	Listeners  *listeners.Service
+	Files      *files.Service
+	Procs      *procs.Service
+	Registry   *registry.Service
+	Shells     *shells.Service
+	Pivots     *pivots.Service
+	Services   *services.Service
+	Tunneling  *tunneling.Service
+	Loot       *loot.Service
+	Server     *server.Service
+	Monitor    *monitor.Service
+	Extensions *extensions.Service
+	Memfiles   *memfiles.Service
+	WireGuard  *wireguard.Service
+	Crack      *crack.Service
+	Builders   *builders.Service
+	Discovery  *discovery.Service
+	ClientLog  *clientlog.Service
+	Websites   *websites.Service
+	Staging    *staging.Service
+	Hosts      *hosts.Service
+	Cases      *casefile.Service
+	Health     *health.Service
 }
 
 func NewApp() *App {
 	configureDefaultArmory()
-	rpcClient := rpc.NewClient()
-	con := console.New(rpcClient)
-	beac := beacons.New(rpcClient, con)
-	tun := tunneling.New(rpcClient)
+	shared := bootstrap.NewShared(bootstrap.Dependencies{
+		DataDir: assets.GetRootAppDir(),
+	})
+
+	tun := tunneling.New(shared.RPC)
 	app := &App{
-		RPC:        rpcClient,
-		Console:    con,
-		Catalog:    catalog.New(con),
-		Agents:     agents.New(rpcClient, con),
-		Armory:     armory.New(con),
-		Beacons:    beac,
-		Implants:   implants.New(rpcClient),
-		Listeners:  listeners.New(rpcClient),
-		Files:      files.New(rpcClient),
-		Procs:      procs.New(rpcClient),
-		Registry:   registry.New(rpcClient),
-		Shells:     shells.New(rpcClient, con),
-		Pivots:     pivots.New(rpcClient),
-		Services:   services.New(rpcClient),
-		Tunneling:  tun,
-		Loot:       loot.New(rpcClient),
-		Server:     server.New(rpcClient),
-		Discovery:  discovery.New(con, beac),
-		Events:     events.New(),
-		ClientLog:  clientlog.New(rpcClient),
-		Websites:   websites.New(rpcClient),
-		Staging:    staging.New(rpcClient),
-		Hosts:      hosts.New(rpcClient),
-		Tags:       tags.New(),
-		Cases:      casefile.New(),
-		Comments:   comments.New(),
-		Monitor:    monitor.New(rpcClient),
-		Extensions: extensions.New(rpcClient),
-		Memfiles:   memfiles.New(rpcClient),
-		WireGuard:  wireguard.New(rpcClient),
-		Crack:      crack.New(rpcClient),
-		Builders:   builders.New(rpcClient),
+		SharedStack: shared,
+		Catalog:     catalog.New(shared.Console),
+		Agents:      agents.New(shared.RPC, shared.Console),
+		Armory:      armory.New(shared.Console),
+		Implants:    implants.New(shared.RPC),
+		Listeners:   listeners.New(shared.RPC),
+		Files:       files.New(shared.RPC),
+		Procs:       procs.New(shared.RPC),
+		Registry:    registry.New(shared.RPC),
+		Shells:      shells.New(shared.RPC, shared.Console),
+		Pivots:      pivots.New(shared.RPC),
+		Services:    services.New(shared.RPC),
+		Tunneling:   tun,
+		Loot:        loot.New(shared.RPC),
+		Server:      server.New(shared.RPC),
+		Discovery:   discovery.New(shared.Console, shared.Beacons),
+		ClientLog:   clientlog.New(shared.RPC),
+		Websites:    websites.New(shared.RPC),
+		Staging:     staging.New(shared.RPC),
+		Hosts:       hosts.New(shared.RPC),
+		Cases:       casefile.New(),
+		Monitor:     monitor.New(shared.RPC),
+		Extensions:  extensions.New(shared.RPC),
+		Memfiles:    memfiles.New(shared.RPC),
+		WireGuard:   wireguard.New(shared.RPC),
+		Crack:       crack.New(shared.RPC),
+		Builders:    builders.New(shared.RPC),
 	}
 	app.Console.SetRoutedCommandHandler(func(sessionID, line string) console.RoutedCommandResult {
-		result := app.Tunneling.HandleConsoleSocksCommand(sessionID, line)
+		result := app.Tunneling.HandleConsoleTunnelCommand(sessionID, line)
 		return console.RoutedCommandResult{
 			Handled: result.Handled,
 			Output:  result.Output,
 			Refresh: result.Refresh,
 		}
 	})
-	app.Health = health.New(rpcClient, tun)
+	app.Health = health.New(shared.RPC, tun)
 	return app
 }
 
@@ -175,7 +162,10 @@ func configureDefaultArmory() {
 func (a *App) startup(ctx context.Context) {
 	a.ctx, a.cancel = context.WithCancel(ctx)
 
-	a.Console.SetCtx(ctx)
+	emitter := wailsadapter.New(ctx)
+	a.Console.SetEmitter(emitter)
+	a.Automation.SetEmitter(emitter)
+
 	a.Implants.SetCtx(ctx)
 	a.Files.SetCtx(ctx)
 	a.Loot.SetCtx(ctx)
@@ -183,21 +173,6 @@ func (a *App) startup(ctx context.Context) {
 	a.Discovery.SetCtx(ctx)
 	a.Staging.SetCtx(ctx)
 
-	store := automationstate.New(assets.GetRootAppDir())
-	emitter := wailsadapter.New(ctx)
-	executor := automationexec.NewExecutor(a.Console, a.Beacons)
-	targets := automationexec.NewTargetProvider(a.RPC)
-	events := automationexec.NewEventSource()
-
-	a.Automation = automation.New(automation.Dependencies{
-		Store:    store,
-		Emitter:  emitter,
-		Executor: executor,
-		Targets:  targets,
-		Events:   events,
-		Tags:     a.Tags,
-	})
-	a.AutomationEvents = events
 	a.Automation.Start(ctx)
 
 	go func() {
