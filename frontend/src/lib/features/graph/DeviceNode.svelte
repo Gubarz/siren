@@ -1,14 +1,22 @@
 <script>
   import Icon from '$components/ui/Icon.svelte'
   import Badge from '$components/ui/Badge.svelte'
+  import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import { Handle, Position } from '@xyflow/svelte'
+  import { AGENT_COLOR_BG } from '../../utils/agentColors.js'
 
   let { data, selected = false } = $props()
   let horizontal = $derived(data.direction === 'LR')
+  let tint = $derived(AGENT_COLOR_BG[data.color] || null)
+  let nodeStyle = $derived(
+    (selected ? 'border-color: var(--color-brand);' : '') +
+    (tint ? ` background-image: linear-gradient(${tint}, ${tint});` : '')
+  )
 </script>
 
 <div
-  class="node w-64 h-28 py-2 px-3 border-l-4 border-l-device-500 cursor-default {selected ? 'node--selected-device' : ''}"
+  class="node w-64 h-36 py-2 px-3 border-l-4 border-l-device-500 cursor-default {selected ? 'node--selected-device' : ''}"
+  style={nodeStyle}
 >
   <Handle type="target" position={horizontal ? Position.Left : Position.Top} class="handle" />
   <div class="flex items-center gap-2">
@@ -26,4 +34,5 @@
     <Badge variant="discovered" size="graph">{(data.method || 'discovered').toUpperCase()}</Badge>
     <span class="text-3xs truncate text-fg-muted" title={data.mac || 'MAC unavailable'}>{data.mac || 'MAC unavailable'}</span>
   </div>
+  <EntityTagBadges entityType="device" entityID={data.entityID} compact class="mt-2 max-h-8 max-w-full overflow-hidden border-t border-line/60 pt-2" />
 </div>

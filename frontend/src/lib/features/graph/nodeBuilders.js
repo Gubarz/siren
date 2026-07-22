@@ -19,9 +19,9 @@ export const SERVER_H = 44
 const LISTENER_W = 288
 const LISTENER_H = 40
 const NODE_W = 256
-const NODE_H = 112
+const NODE_H = 144
 const DEVICE_W = 256
-const DEVICE_H = 112
+const DEVICE_H = 144
 
 export function collectAgents({ sessions, beacons }) {
   return [
@@ -56,11 +56,12 @@ function osIcon(os) {
 }
 
 export function agentNode(impl, ctx) {
-  const { parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent } = ctx
+  const { parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent, tagsByAgent } = ctx
   return {
     id: impl.ID, w: NODE_W, h: NODE_H,
     data: {
       variant: 'agent', kind: impl._kind, icon: osIcon(impl.OS),
+      entityID: impl.ID,
       agentID: shortAgentID(impl.ID),
       implantName: impl.Name || '-',
       user: impl.Username || '?', host: impl.Hostname || '?',
@@ -68,6 +69,7 @@ export function agentNode(impl, ctx) {
       dead: !isAgentOnline(impl, now),
       priv: isHighPrivilege(impl.Username) ? 'high' : 'normal',
       color: colorsByAgent?.[impl.ID] || '',
+      tags: tagsByAgent?.[impl.ID] || [],
       direction,
     },
     selected: selectedAgentIDs.includes(impl.ID),
@@ -147,21 +149,24 @@ function c2Edge(sourceId, targetID, kind, parentID) {
 }
 
 export function addDiscoveryNodes(rawNodes, rawEdges, ctx) {
-  const { allAgentIds, discoveries, direction, selectedDiscoveryKeys } = ctx
+  const { allAgentIds, discoveries, direction, selectedDiscoveryKeys, colorsByEntity } = ctx
   for (const device of discoveries || []) {
     const observerIDs = (device.observerIDs || [device.agentID]).filter((id) => allAgentIds.has(id))
     if (observerIDs.length === 0) continue
     const key = device.key || `${device.agentID}|${device.ip}`
     const deviceID = `d_${key}`
+    const entityID = device.ip || device.agentID
     rawNodes.push({
       id: deviceID, w: DEVICE_W, h: DEVICE_H,
       data: {
         variant: 'device',
+        entityID,
         ip: device.ip, mac: device.mac || '',
         hostname: device.hostname || '', vendor: device.vendor || '',
         osHint: device.osHint || '', ttl: device.ttl || 0,
         method: device.method || 'discovery', lastSeen: device.lastSeen || 0,
         agentID: observerIDs[0], observerIDs, key, direction,
+        color: colorsByEntity?.[`device:${entityID}`] || '',
       },
       selected: selectedDiscoveryKeys.includes(key),
     })

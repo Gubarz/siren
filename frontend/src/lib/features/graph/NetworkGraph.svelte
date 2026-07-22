@@ -6,6 +6,8 @@
   import Panel from '$components/patterns/Panel.svelte';
   import { config } from '$stores/config.svelte.js';
   import { agentColors } from '$stores/resources/agentColors.svelte.js';
+  import { agentTags } from '$stores/resources/agentTags.svelte.js';
+  import { entityColors } from '$stores/resources/entityColors.svelte.js';
   import { useResource } from '$stores/lib/createResource.svelte.js';
   import { pivotParentMap } from '../../utils/agents.js';
   import { layoutGraph, preservePositions, layoutSignature, topologySignature } from './layout.js';
@@ -41,9 +43,15 @@
 
   const nodeTypes = { box: GraphNode };
 
-  useResource(agentColors)
+  useResource(agentColors, agentTags, entityColors)
   let colorsByAgent = $derived(
     agentColors?.data && typeof agentColors.data === 'object' ? agentColors.data : {},
+  )
+  let tagsByAgent = $derived(
+    agentTags?.data && typeof agentTags.data === 'object' ? agentTags.data : {},
+  )
+  let colorsByEntity = $derived(
+    entityColors?.data && typeof entityColors.data === 'object' ? entityColors.data : {},
   )
 
   let nodes = $state.raw([]);
@@ -78,14 +86,14 @@
 
     for (const impl of allAgents) {
       rawNodes.push(agentNode(impl, {
-        parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent,
+        parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent, tagsByAgent,
       }));
     }
     addC2Links(rawNodes, rawEdges, {
       allAgents, index, parentBySession, direction, pivotListeners,
     });
     addDiscoveryNodes(rawNodes, rawEdges, {
-      allAgentIds: index.allAgentIds, discoveries, direction, selectedDiscoveryKeys,
+      allAgentIds: index.allAgentIds, discoveries, direction, selectedDiscoveryKeys, colorsByEntity,
     });
 
     const nextLayoutSig = layoutSignature(rawNodes, rawEdges);
@@ -98,7 +106,10 @@
   }
 
   $effect(() => {
-    const sig = topologySignature({ sessions, beacons, pivotGraph, pivotListeners, discoveries, now, colors: colorsByAgent });
+    const sig = topologySignature({
+      sessions, beacons, pivotGraph, pivotListeners, discoveries, now,
+      colors: colorsByAgent, tags: tagsByAgent, entityColors: colorsByEntity,
+    });
     if (sig === lastSig) return;
     lastSig = sig;
     build();

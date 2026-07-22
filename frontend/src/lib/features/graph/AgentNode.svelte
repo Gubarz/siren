@@ -1,6 +1,7 @@
 <script>
   import Icon from '$components/ui/Icon.svelte'
   import Badge from '$components/ui/Badge.svelte'
+  import TagBadge from '$components/ui/TagBadge.svelte'
   import { Handle, Position } from '@xyflow/svelte'
   import { AGENT_COLOR_BG } from '../../utils/agentColors.js'
 
@@ -20,7 +21,7 @@
 </script>
 
 <div
-  class={`node agent ${data.kind} h-28 w-64 border-l-4 px-2 py-2 ${selected ? 'node--selected-agent' : ''} ${data.dead ? 'opacity-60' : ''}`}
+  class={`node agent ${data.kind} h-36 w-64 border-l-4 px-2 py-2 ${selected ? 'node--selected-agent' : ''} ${data.dead ? 'opacity-60' : ''}`}
   style={nodeStyle}
 >
   <Handle type="target" position={horizontal ? Position.Left : Position.Top} class="handle" />
@@ -35,5 +36,15 @@
     <Badge variant={data.kind} size="graph">{data.kind}</Badge>
     <span class="overflow-hidden text-ellipsis whitespace-nowrap text-3xs text-fg-muted">{data.addr || ''}</span>
   </div>
+  {#if data.tags?.length > 0}
+    <div class="mt-2 flex max-h-8 max-w-full flex-wrap items-center gap-1 overflow-hidden border-t border-line/60 pt-2">
+      {#each data.tags.slice(0, 2) as tag}
+        <TagBadge {tag} />
+      {/each}
+      {#if data.tags.length > 2}
+        <span class="text-3xs text-fg-muted">+{data.tags.length - 2}</span>
+      {/if}
+    </div>
+  {/if}
   <Handle type="source" position={horizontal ? Position.Right : Position.Bottom} class="handle" />
 </div>
