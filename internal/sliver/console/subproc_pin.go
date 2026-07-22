@@ -247,11 +247,6 @@ func rportfwdCommandLine(cmd *cobra.Command, args []string) string {
 	}
 }
 
-func filterShellOpenFrames(carry, chunk []byte) ([]byte, []string, []byte) {
-	visible, shells, _, nextCarry := filterConsoleControlFrames(carry, chunk)
-	return visible, shells, nextCarry
-}
-
 func filterConsoleControlFrames(carry, chunk []byte) ([]byte, []string, []string, []byte) {
 	buf := make([]byte, 0, len(carry)+len(chunk))
 	buf = append(buf, carry...)

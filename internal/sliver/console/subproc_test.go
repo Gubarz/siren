@@ -47,43 +47,6 @@ func TestShellCommandTail(t *testing.T) {
 	}
 }
 
-func TestFilterShellOpenFrames(t *testing.T) {
-	payload := base64.StdEncoding.EncodeToString([]byte("/bin/bash"))
-	frame := []byte(shellOpenFramePrefix + payload + shellOpenFrameSuffix)
-
-	visible, tails, carry := filterShellOpenFrames(nil, append([]byte("before"), append(frame, []byte("after")...)...))
-	if string(visible) != "beforeafter" {
-		t.Fatalf("visible = %q, want beforeafter", visible)
-	}
-	if len(tails) != 1 || tails[0] != "/bin/bash" {
-		t.Fatalf("tails = %#v, want /bin/bash", tails)
-	}
-	if len(carry) != 0 {
-		t.Fatalf("carry = %q, want empty", carry)
-	}
-}
-
-func TestFilterShellOpenFramesAcrossChunks(t *testing.T) {
-	payload := base64.StdEncoding.EncodeToString([]byte("pwsh"))
-	frame := []byte(shellOpenFramePrefix + payload + shellOpenFrameSuffix)
-
-	visible, tails, carry := filterShellOpenFrames(nil, append([]byte("before"), frame[:10]...))
-	if string(visible) != "before" || len(tails) != 0 || len(carry) == 0 {
-		t.Fatalf("first chunk visible=%q tails=%#v carry=%q", visible, tails, carry)
-	}
-
-	visible, tails, carry = filterShellOpenFrames(carry, append(frame[10:], []byte("after")...))
-	if string(visible) != "after" {
-		t.Fatalf("second chunk visible = %q, want after", visible)
-	}
-	if len(tails) != 1 || tails[0] != "pwsh" {
-		t.Fatalf("second chunk tails = %#v, want pwsh", tails)
-	}
-	if len(carry) != 0 {
-		t.Fatalf("second chunk carry = %q, want empty", carry)
-	}
-}
-
 func TestFilterConsoleCommandFrames(t *testing.T) {
 	payload := base64.StdEncoding.EncodeToString([]byte("socks5 start --host 127.0.0.1 --port 1081"))
 	frame := []byte(consoleCommandFramePrefix + payload + controlFrameSuffix)

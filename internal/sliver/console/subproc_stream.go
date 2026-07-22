@@ -179,15 +179,6 @@ func (s *Service) emitTunnelsChanged() {
 	s.emitter.Emit("tunnels-changed", map[string]any{})
 }
 
-func (s *Service) writeConsoleRaw(jobID string, data []byte) error {
-	job := s.subproc.get(jobID)
-	if job == nil {
-		return os.ErrClosed
-	}
-	_, err := job.pty.Write(data)
-	return err
-}
-
 func (s *Service) StopConsole(jobID string) error {
 	job := s.subproc.get(jobID)
 	if job == nil {
