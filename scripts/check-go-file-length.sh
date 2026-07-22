@@ -8,7 +8,7 @@
 set -euo pipefail
 
 MAX_LINES=350
-EXEMPT=("./app.go")
+EXEMPT=("./app.go" "./cmd/gui/app.go")
 
 fail=0
 

@@ -2,7 +2,7 @@ import {
   AddTrafficEncoder,
   GetTrafficEncoderMap,
   RemoveTrafficEncoder,
-} from '../../../wailsjs/go/main/App.js'
+} from '../../../wailsjs/go/gui/App.js'
 import { responseField } from './normalize.js'
 
 export { AddTrafficEncoder, RemoveTrafficEncoder }

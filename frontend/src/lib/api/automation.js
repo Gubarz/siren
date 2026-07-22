@@ -10,4 +10,4 @@ export {
   RunAutomationRule,
   SaveAutomationRule,
   SetAutomationRuleEnabled,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';

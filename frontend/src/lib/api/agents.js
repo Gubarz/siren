@@ -4,7 +4,7 @@ import {
   GetFileList,
   GetProcessList,
   GetSessions,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';
 import { responseField } from './normalize.js';
 
 export {
@@ -45,7 +45,7 @@ export {
   RemoveService,
   ViewRemoteFile,
   UploadFiles,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';
 
 export async function listBeacons() {
   return responseField(await GetBeacons(), 'Beacons', []);
@@ -77,4 +77,4 @@ export {
   ListRegistryValues,
   ReadRegistryValue,
   WriteRegistryValue,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';

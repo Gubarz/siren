@@ -3,7 +3,7 @@ import {
   GetAllComments,
   AddEntityComment,
   DeleteEntityComment,
-} from '../../../wailsjs/go/main/App.js'
+} from '../../../wailsjs/go/gui/App.js'
 
 export {
   GetEntityComments,

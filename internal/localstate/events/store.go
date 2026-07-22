@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/bishopfox/sliver/client/assets"
 )
 
 const maxStored = 10000
@@ -34,9 +32,9 @@ type Store struct {
 	nextSeq int64
 }
 
-func New() *Store {
+func New(rootDir string) *Store {
 	s := &Store{
-		path: filepath.Join(assets.GetRootAppDir(), "gui-events.json"),
+		path: filepath.Join(rootDir, "gui-events.json"),
 	}
 	s.load()
 	return s

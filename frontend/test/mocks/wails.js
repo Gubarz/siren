@@ -9,7 +9,7 @@ export function installWailsApp(methods = {}) {
   })
   globalThis.window = {
     ...(globalThis.window || {}),
-    go: { main: { App: app } },
+    go: { gui: { App: app } },
   }
   return app
 }

@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"context"
@@ -119,7 +119,7 @@ func NewApp() *App {
 		Websites:    websites.New(shared.RPC),
 		Staging:     staging.New(shared.RPC),
 		Hosts:       hosts.New(shared.RPC),
-		Cases:       casefile.New(),
+		Cases:       casefile.New(assets.GetRootAppDir()),
 		Monitor:     monitor.New(shared.RPC),
 		Extensions:  extensions.New(shared.RPC),
 		Memfiles:    memfiles.New(shared.RPC),

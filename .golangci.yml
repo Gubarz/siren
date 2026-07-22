@@ -36,3 +36,6 @@ issues:
     - path: ^app\.go$
       linters:
         - funlen
+    - path: ^cmd/gui/app\.go$
+      linters:
+        - funlen

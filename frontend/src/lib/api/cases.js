@@ -11,7 +11,7 @@ import {
   AddToCase,
   RemoveFromCase,
   GenerateCaseReport,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';
 
 export {
   ListCases,
@@ -25,5 +25,5 @@ export {
 };
 
 export function ExportCaseReport(caseID) {
-  return window.go.main.App.ExportCaseReport(caseID)
+  return window.go.gui.App.ExportCaseReport(caseID)
 }

@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bishopfox/sliver/client/assets"
 	"github.com/google/uuid"
 )
 
@@ -38,15 +37,17 @@ type Record struct {
 }
 
 type Service struct {
-	mu    sync.RWMutex
-	root  string
-	cases map[string]*Record
+	mu      sync.RWMutex
+	rootDir string
+	root    string
+	cases   map[string]*Record
 }
 
-func New() *Service {
+func New(rootDir string) *Service {
 	s := &Service{
-		root:  filepath.Join(assets.GetRootAppDir(), casesDir),
-		cases: map[string]*Record{},
+		rootDir: rootDir,
+		root:    filepath.Join(rootDir, casesDir),
+		cases:   map[string]*Record{},
 	}
 	_ = os.MkdirAll(s.root, 0o700)
 	_ = s.loadAll()
@@ -58,7 +59,7 @@ func (s *Service) Close() {}
 func (s *Service) SetServer(host string, port uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.root = filepath.Join(assets.GetRootAppDir(), fmt.Sprintf("%s-%s_%d", casesDir, host, port))
+	s.root = filepath.Join(s.rootDir, fmt.Sprintf("%s-%s_%d", casesDir, host, port))
 	_ = os.MkdirAll(s.root, 0o700)
 	s.cases = map[string]*Record{}
 	_ = s.loadAllLocked()

@@ -4,7 +4,7 @@ export const THEME_STORAGE_KEY = 'sliver-theme'
 const FALLBACK_THEME = 'dark'
 
 function hasNativeSystemThemeProvider() {
-  return typeof window !== 'undefined' && typeof window.go?.main?.App?.GetSystemTheme === 'function'
+  return typeof window !== 'undefined' && typeof window.go?.gui?.App?.GetSystemTheme === 'function'
 }
 
 export function getBrowserSystemTheme() {
@@ -23,7 +23,7 @@ export function getSystemTheme() {
 
 async function getNativeSystemTheme() {
   try {
-    const t = await window.go.main.App.GetSystemTheme()
+    const t = await window.go.gui.App.GetSystemTheme()
     return t === 'dark' || t === 'light' ? t : ''
   } catch {
     return ''

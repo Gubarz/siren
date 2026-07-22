@@ -8,13 +8,13 @@ export {
   RunSessionCommand,
   StartShell,
   WriteShell,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';
 
 // Subprocess-console methods aren't in the generated wailsjs bindings
 // until the next `wails dev`/`build`. Route through the runtime global
 // so a static import doesn't break the build.
 function app() {
-  return globalThis.go?.main?.App;
+  return globalThis.go?.gui?.App;
 }
 
 export function StartConsole(sessionID) {

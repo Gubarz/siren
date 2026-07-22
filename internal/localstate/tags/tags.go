@@ -13,15 +13,14 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/bishopfox/sliver/client/assets"
 )
 
 const persistFilename = "gui-agent-tags.json"
 
 type Service struct {
-	mu   sync.RWMutex
-	path string
+	mu      sync.RWMutex
+	rootDir string
+	path    string
 	// tags maps entity key -> sorted+dedup'd tag list. A missing key means
 	// the entity has no operator tags. colors maps entity key -> color from
 	// the closed RowColorNames palette.
@@ -66,11 +65,12 @@ func isAgentEntityKey(key string) (string, bool) {
 	return agentID, ok && agentID != ""
 }
 
-func New() *Service {
+func New(rootDir string) *Service {
 	s := &Service{
-		path:   filepath.Join(assets.GetRootAppDir(), persistFilename),
-		tags:   map[string][]string{},
-		colors: map[string]string{},
+		rootDir: rootDir,
+		path:    filepath.Join(rootDir, persistFilename),
+		tags:    map[string][]string{},
+		colors:  map[string]string{},
 	}
 	if err := s.load(); err != nil {
 		// Startup shouldn't fatal on a missing/corrupt file — treat as empty.
@@ -87,7 +87,7 @@ func (s *Service) Close() {}
 func (s *Service) SetServer(host string, port uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.path = filepath.Join(assets.GetRootAppDir(), fmt.Sprintf("gui-agent-tags-%s_%d.json", host, port))
+	s.path = filepath.Join(s.rootDir, fmt.Sprintf("gui-agent-tags-%s_%d.json", host, port))
 	s.tags = map[string][]string{}
 	s.colors = map[string]string{}
 	_ = s.loadLocked()

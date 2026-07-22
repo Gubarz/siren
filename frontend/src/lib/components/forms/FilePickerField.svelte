@@ -16,8 +16,8 @@
   }))
 
   function handleBrowse() {
-    if (typeof window.go?.main?.App?.OpenFileDialog === 'function') {
-      window.go.main.App.OpenFileDialog(label || 'Select file').then((path) => {
+    if (typeof window.go?.gui?.App?.OpenFileDialog === 'function') {
+      window.go.gui.App.OpenFileDialog(label || 'Select file').then((path) => {
         if (path) value = path
       })
     }
@@ -32,7 +32,7 @@
   }
 
   function handleClick() {
-    if (typeof window.go?.main?.App?.OpenFileDialog === 'function') {
+    if (typeof window.go?.gui?.App?.OpenFileDialog === 'function') {
       handleBrowse()
       return
     }

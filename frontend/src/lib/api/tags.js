@@ -14,7 +14,7 @@ import {
   GetEntityColor,
   SetAgentColor,
   SetEntityColor,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';
 
 export {
   GetAgentTags,

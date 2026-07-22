@@ -6,7 +6,7 @@ import {
   WindowMinimise,
   WindowToggleMaximise,
 } from '../../../wailsjs/runtime/runtime.js';
-import { OpenFileDialog as WailsOpenFileDialog } from '../../../wailsjs/go/main/App.js';
+import { OpenFileDialog as WailsOpenFileDialog } from '../../../wailsjs/go/gui/App.js';
 
 // Compatibility alias — matches the original App-binding name so callers
 // swapping from `import { OpenFileDialog } from wailsjs` only change the

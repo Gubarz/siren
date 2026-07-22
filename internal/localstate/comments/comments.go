@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bishopfox/sliver/client/assets"
 	"github.com/google/uuid"
 )
 
@@ -28,6 +27,7 @@ type Comment struct {
 
 type Service struct {
 	mu       sync.RWMutex
+	rootDir  string
 	path     string
 	comments map[string][]Comment
 }
@@ -36,9 +36,10 @@ type persisted struct {
 	Comments map[string][]Comment `json:"comments"`
 }
 
-func New() *Service {
+func New(rootDir string) *Service {
 	s := &Service{
-		path:     filepath.Join(assets.GetRootAppDir(), persistFilename),
+		rootDir:  rootDir,
+		path:     filepath.Join(rootDir, persistFilename),
 		comments: map[string][]Comment{},
 	}
 	if err := s.load(); err != nil {
@@ -50,7 +51,7 @@ func New() *Service {
 func (s *Service) SetServer(host string, port uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.path = filepath.Join(assets.GetRootAppDir(), fmt.Sprintf("gui-entity-comments-%s_%d.json", host, port))
+	s.path = filepath.Join(s.rootDir, fmt.Sprintf("gui-entity-comments-%s_%d.json", host, port))
 	s.comments = map[string][]Comment{}
 	_ = s.loadLocked()
 }

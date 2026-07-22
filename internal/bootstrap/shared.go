@@ -1,12 +1,12 @@
 package bootstrap
 
 import (
-	automationstate "sliver-gui/internal/localstate/automation"
-
 	"sliver-gui/internal/automation"
+	automationstate "sliver-gui/internal/localstate/automation"
 	"sliver-gui/internal/localstate/comments"
 	"sliver-gui/internal/localstate/events"
 	"sliver-gui/internal/localstate/tags"
+
 	automationexec "sliver-gui/internal/sliver/automationexec"
 	"sliver-gui/internal/sliver/beacons"
 	"sliver-gui/internal/sliver/console"
@@ -14,8 +14,9 @@ import (
 )
 
 type Dependencies struct {
-	DataDir string
-	Emitter automation.Emitter
+	DataDir     string
+	Emitter     automation.Emitter
+	StartEvents bool
 }
 
 type SharedStack struct {
@@ -33,14 +34,20 @@ func NewShared(deps Dependencies) *SharedStack {
 	rpcClient := rpc.NewClient()
 	con := console.New(rpcClient)
 	beac := beacons.New(rpcClient, con)
-	tagsSvc := tags.New()
-	commentsSvc := comments.New()
-	eventsStore := events.New()
+	tagsSvc := tags.New(deps.DataDir)
+	commentsSvc := comments.New(deps.DataDir)
+	eventsStore := events.New(deps.DataDir)
 
 	store := automationstate.New(deps.DataDir)
 	executor := automationexec.NewExecutor(con, beac)
 	targets := automationexec.NewTargetProvider(rpcClient)
-	automationEvents := automationexec.NewEventSource()
+
+	var automationEvents *automationexec.EventSource
+	if deps.StartEvents {
+		automationEvents = automationexec.NewEventSource(rpcClient)
+	} else {
+		automationEvents = automationexec.NewEventSource(nil)
+	}
 
 	eng := automation.New(automation.Dependencies{
 		Store:    store,

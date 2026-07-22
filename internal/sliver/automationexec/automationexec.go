@@ -100,19 +100,37 @@ func (p *TargetProvider) FindTarget(ctx context.Context, targetID string) (autom
 }
 
 type EventSource struct {
+	rpc     *rpc.Client
 	handler automation.EventHandler
+	cancel  context.CancelFunc
 }
 
-func NewEventSource() *EventSource {
-	return &EventSource{}
+func NewEventSource(rpcClient *rpc.Client) *EventSource {
+	return &EventSource{rpc: rpcClient}
 }
 
-func (s *EventSource) Start(_ context.Context, handler automation.EventHandler) {
+func (s *EventSource) Start(ctx context.Context, handler automation.EventHandler) {
 	s.handler = handler
+	if s.rpc != nil {
+		s.stop()
+		streamCtx, cancel := context.WithCancel(ctx)
+		s.cancel = cancel
+		s.rpc.StartEventStream(streamCtx, func(ev *clientpb.Event) {
+			s.HandleSliverEvent(ev)
+		})
+	}
 }
 
 func (s *EventSource) Stop() {
 	s.handler = nil
+	s.stop()
+}
+
+func (s *EventSource) stop() {
+	if s.cancel != nil {
+		s.cancel()
+		s.cancel = nil
+	}
 }
 
 func (s *EventSource) HandleSliverEvent(ev *clientpb.Event) {

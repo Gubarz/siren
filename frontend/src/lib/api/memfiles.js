@@ -2,7 +2,7 @@ import {
   MemfilesList,
   MemfilesAdd,
   MemfilesRemove,
-} from '../../../wailsjs/go/main/App.js';
+} from '../../../wailsjs/go/gui/App.js';
 import { responseField } from './normalize.js';
 
 export { MemfilesAdd, MemfilesRemove };
