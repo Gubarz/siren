@@ -1,6 +1,6 @@
 <script>
   let {
-    size = $bindable(30),
+    size = $bindable(50),
     minSize = 10,
     maxSize = 90,
     orientation = 'horizontal',
