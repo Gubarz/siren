@@ -6,6 +6,7 @@
 // reads, no side effects at import time.
 
 import { matchesAutomationTarget } from '../../../utils/automation.js'
+import { ROW_COLORS, colorHex } from '../../../utils/agentColors.js'
 import { TAB_META } from '../../../stores/agentTabs.svelte.js'
 
 function isWindowsAgent(agent) {
@@ -35,24 +36,11 @@ function tabAction(agentTabs, agents, type, count) {
 // Color palette
 // ---------------------------------------------------------------------------
 
-const ROW_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'gray']
-
-const COLOR_HEX_MAP = {
-  red:    '#ef4444',
-  orange: '#f97316',
-  yellow: '#eab308',
-  green:  '#22c55e',
-  blue:   '#3b82f6',
-  purple: '#a855f7',
-  pink:   '#ec4899',
-  gray:   '#9ca3af',
-}
-
 function buildColorPalette({ agent, targetAgents, setAgentRowColor }) {
   const targets = targetAgents.length > 0 ? targetAgents : [agent]
   const items = ROW_COLORS.map((name) => ({
     label: name[0].toUpperCase() + name.slice(1),
-    color: COLOR_HEX_MAP[name],
+    color: colorHex(name),
     on: () => setAgentRowColor(targets, name),
   }))
   return items

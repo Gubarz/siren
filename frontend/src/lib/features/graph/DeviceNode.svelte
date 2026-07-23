@@ -4,11 +4,11 @@
   import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import GraphCommentButton from './GraphCommentButton.svelte'
   import { Handle, Position } from '@xyflow/svelte'
-  import { AGENT_COLOR_BG } from '../../utils/agentColors.js'
+  import { colorTint } from '../../utils/agentColors.js'
 
   let { data, selected = false } = $props()
   let horizontal = $derived(data.direction === 'LR')
-  let tint = $derived(AGENT_COLOR_BG[data.color] || null)
+  let tint = $derived(colorTint(data.color))
   let nodeStyle = $derived(
     (selected ? 'border-color: var(--color-brand);' : '') +
     (tint ? ` background-image: linear-gradient(${tint}, ${tint});` : '')

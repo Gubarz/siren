@@ -15,13 +15,12 @@
     SetAgentColor,
   } from '../../api/tags.js'
   import { errorMessage } from '../../utils/errors.js'
-  import { AGENT_COLOR_BG } from '../../utils/agentColors.js'
+  import { ROW_COLORS, colorTint } from '../../utils/agentColors.js'
   import { entityTags } from '../../stores/resources/entityTags.svelte.js'
   import { entityColors } from '../../stores/resources/entityColors.svelte.js'
   import { agentTags } from '../../stores/resources/agentTags.svelte.js'
   import { agentColors } from '../../stores/resources/agentColors.svelte.js'
 
-  const ROW_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'gray']
   const TAG_PREFIXES = ['env:', 'role:', 'status:', 'prio:', 'owner:', 'group:']
 
   let {
@@ -245,7 +244,7 @@
               title={name}
               aria-label={`Set ${name} color`}
               class="h-7! w-7! p-0! rounded border border-line transition-transform hover:scale-105 focus:outline-hidden focus:ring-2 focus:ring-brand/60 {color === name ? 'ring-2 ring-brand' : ''}"
-              style={`background-color: ${AGENT_COLOR_BG[name]};`}
+              style={`background-color: ${colorTint(name)};`}
               onclick={() => { color = name; colorTouched = true }}
             />
           {/each}

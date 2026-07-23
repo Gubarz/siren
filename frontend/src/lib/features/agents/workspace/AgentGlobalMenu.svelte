@@ -15,6 +15,7 @@
   import { addToCase } from '$stores/ui/addToCase.svelte.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
   import { agentColors } from '$stores/resources/agentColors.svelte.js'
+  import { TAB_META } from '$stores/agentTabs.svelte.js'
   import { sessions } from '$stores/resources/sessions.svelte.js'
   import { beacons } from '$stores/resources/beacons.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
@@ -22,6 +23,7 @@
   import { RenameAgent } from '../../../api/agents.js'
   import { errorMessage } from '../../../utils/errors.js'
   import { runGuiAction } from '../../palette/GuiActions.js'
+  import { ROW_COLORS, colorHex } from '../../../utils/agentColors.js'
 
   useResource(sessions, beacons, agentColors)
 
@@ -31,12 +33,6 @@
   let workspaceOpen = $state(false)
   let guiCommands = $derived((categories.find((category) => category.category === 'GUI')?.commands || []).filter(isAgentWorkspaceCommand))
   let commandCategories = $derived(categories.filter((category) => category.category !== 'GUI' && category.category !== 'Generic'))
-
-  const COLOR_HEX_MAP = {
-    red: '#ef4444', orange: '#f97316', yellow: '#eab308', green: '#22c55e',
-    blue: '#3b82f6', purple: '#a855f7', pink: '#ec4899', gray: '#9ca3af',
-  }
-  const ROW_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'gray']
 
   let agentMap = $derived(() => {
     const map = new Map()
@@ -52,6 +48,12 @@
 
   function openTabForSelected(type) {
     for (const id of selectedAgents) agentTabs.openTab(id, type)
+  }
+
+  function tabItem(type) {
+    const meta = TAB_META[type]
+    const disabled = selectedAgents.size === 0
+    return { icon: meta?.icon ?? 'info', label: meta?.label ?? type, disabled, on: () => openTabForSelected(type) }
   }
 
   function newShellForSelected() {
@@ -137,21 +139,22 @@
       y: rect.bottom + 4,
       sections: [{
         items: [
-          { icon: 'terminal', label: 'Console', disabled, on: () => openTabForSelected('console') },
+          tabItem('console'),
           { icon: 'terminal-square', label: 'New Shell', disabled, on: newShellForSelected },
-          { icon: 'folder', label: 'File Browser', disabled, on: () => openTabForSelected('fileBrowser') },
-          { icon: 'shuffle', label: 'Tunnels', disabled, on: () => openTabForSelected('tunneling') },
-          { icon: 'cpu', label: 'Process Explorer', disabled, on: () => openTabForSelected('processExplorer') },
-          { icon: 'cog', label: 'Services', disabled, on: () => openTabForSelected('services') },
+          tabItem('fileBrowser'),
+          tabItem('tunneling'),
+          tabItem('processExplorer'),
+          tabItem('services'),
           {
             icon: 'ellipsis-vertical', label: 'More',
             children: [
-              { icon: 'monitor', label: 'Take Screenshot', disabled, on: () => openTabForSelected('screenshot') },
-              { icon: 'search', label: 'Grep', disabled, on: () => openTabForSelected('grep') },
-              { icon: 'database', label: 'Registry', disabled, on: () => openTabForSelected('registryBrowser') },
-              { icon: 'list', label: 'Netstat', disabled, on: () => openTabForSelected('netstat') },
-              { icon: 'network-wired', label: 'Ifconfig', disabled, on: () => openTabForSelected('ifconfig') },
-              { icon: 'key', label: 'Privileges', disabled, on: () => openTabForSelected('privileges') },
+              tabItem('screenshot'),
+              tabItem('grep'),
+              tabItem('env'),
+              tabItem('registryBrowser'),
+              tabItem('netstat'),
+              tabItem('ifconfig'),
+              tabItem('privileges'),
             ],
           },
         ],
@@ -190,7 +193,7 @@
     const disabled = selectedAgents.size === 0
     const paletteItems = ROW_COLORS.map((name) => ({
       label: name[0].toUpperCase() + name.slice(1),
-      color: COLOR_HEX_MAP[name],
+      color: colorHex(name),
       on: () => setColorForSelected(name),
     }))
     contextMenu.open({
