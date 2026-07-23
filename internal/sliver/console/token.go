@@ -11,13 +11,6 @@ import (
 )
 
 func (s *Service) GetTokenPrivs(sessionID string) (*sliverpb.GetPrivs, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if err := s.init(); err != nil {
-		return nil, err
-	}
-
 	sess, beacon, err := s.FindTarget(sessionID)
 	if err != nil {
 		return nil, err
@@ -36,13 +29,6 @@ func (s *Service) GetTokenPrivs(sessionID string) (*sliverpb.GetPrivs, error) {
 }
 
 func (s *Service) RevToSelfToken(sessionID string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if err := s.init(); err != nil {
-		return err
-	}
-
 	sess, beacon, err := s.FindTarget(sessionID)
 	if err != nil {
 		return err

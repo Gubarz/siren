@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -52,6 +53,7 @@ type CommandFlag struct {
 }
 
 type Service struct {
+	mu      sync.Mutex
 	console *console.Service
 }
 
@@ -60,11 +62,17 @@ func New(con *console.Service) *Service {
 }
 
 func (s *Service) GetCommandCatalog(scope string) (*CommandCatalog, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	root, err := s.console.GetCommandRoot(scope)
 	if err != nil {
 		return nil, err
 	}
+	return BuildFromRoot(scope, root)
+}
 
+func BuildFromRoot(scope string, root *cobra.Command) (*CommandCatalog, error) {
 	titles := make(map[string]string)
 	for _, group := range root.Groups() {
 		titles[group.ID] = group.Title
