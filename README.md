@@ -124,6 +124,10 @@ wails dev -tags webkit2_41 -ldflags "$(make print-ldflags)"
 wails build -tags webkit2_41 -ldflags "$(make print-ldflags)"
 ```
 
+The macOS archive is currently unsigned and not notarized. Until signing is
+configured, open it using Finder's **Open** context-menu action or remove its
+quarantine attribute with `xattr -d com.apple.quarantine`.
+
 ## Quality Checks
 
 Run the full project analysis with:

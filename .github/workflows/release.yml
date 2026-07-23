@@ -17,18 +17,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: linux-amd64
+          - name: linux-amd64-webkit4.1
+            os: ubuntu-24.04
+            output: dist/sliver-gui
+            asset: sliver-gui-linux-amd64-webkit4.1.tar.gz
+            build_tags: webkit2_41
+            webkit: "4.1"
+          - name: linux-amd64-webkit4.0
             os: ubuntu-22.04
             output: dist/sliver-gui
-            asset: sliver-gui-linux-amd64.tar.gz
+            asset: sliver-gui-linux-amd64-webkit4.0.tar.gz
+            build_tags: ""
+            webkit: "4.0"
           - name: windows-amd64
             os: windows-latest
             output: dist/sliver-gui.exe
             asset: sliver-gui-windows-amd64.zip
+            build_tags: ""
+            webkit: ""
           - name: macos-arm64
             os: macos-latest
             output: dist/sliver-gui
             asset: sliver-gui-macos-arm64.tar.gz
+            build_tags: ""
+            webkit: ""
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,9 +56,14 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # ubuntu-22.04 ships WebKitGTK 4.0, matching the default build.
-      - name: Install WebKitGTK headers (Linux)
-        if: runner.os == 'Linux'
+      - name: Install WebKitGTK 4.1 headers
+        if: matrix.webkit == '4.1'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Install WebKitGTK 4.0 headers
+        if: matrix.webkit == '4.0'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
@@ -58,7 +75,7 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Generate Wails bindings
-        run: wails generate module
+        run: wails generate module -tags "${{ matrix.build_tags }}"
 
       - run: npm --prefix frontend ci
       - run: npm --prefix frontend run build
@@ -68,7 +85,13 @@ jobs:
         run: |
           COMMIT=$(git rev-parse --short=12 HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TAGS="${{ matrix.build_tags }}"
+          TAG_ARGS=()
+          if [ -n "$TAGS" ]; then
+            TAG_ARGS=(-tags "$TAGS")
+          fi
           go build \
+            "${TAG_ARGS[@]}" \
             -ldflags "-X sliver-gui/internal/buildinfo.Version=${GITHUB_REF_NAME} -X sliver-gui/internal/buildinfo.Commit=${COMMIT} -X sliver-gui/internal/buildinfo.Date=${DATE}" \
             -o "${{ matrix.output }}" .
 
@@ -96,5 +119,4 @@ jobs:
           prerelease: true
           body: |
             **Notes**
-            - Linux builds require WebKitGTK 4.0 (`libwebkit2gtk-4.0`). On distros that only ship 4.1, build from source with `BUILD_TAGS=webkit2_41 make build`.
             - macOS builds are unsigned: right-click → Open, or run `xattr -d com.apple.quarantine` on the binary.
