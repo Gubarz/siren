@@ -19,6 +19,7 @@ export const TAB_META = {
   extensions: { icon: 'package', label: 'Extensions' },
   memfiles: { icon: 'hard-drive', label: 'Memfiles' },
   privileges: { icon: 'key', label: 'Privileges' },
+  env: { icon: 'braces', label: 'Env' },
   'wg-tunnels': { icon: 'shield', label: 'WG Tunnels' },
 }
 

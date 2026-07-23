@@ -33,6 +33,7 @@ import (
 	"sliver-gui/internal/sliver/console"
 	"sliver-gui/internal/sliver/crack"
 	"sliver-gui/internal/sliver/discovery"
+	"sliver-gui/internal/sliver/env"
 	"sliver-gui/internal/sliver/extensions"
 	"sliver-gui/internal/sliver/files"
 	"sliver-gui/internal/sliver/health"
@@ -91,6 +92,7 @@ type App struct {
 	Hosts      *hosts.Service
 	Cases      *casefile.Service
 	Health     *health.Service
+	Env        *env.Service
 }
 
 func NewApp() *App {
@@ -128,6 +130,7 @@ func NewApp() *App {
 		WireGuard:   wireguard.New(shared.RPC),
 		Crack:       crack.New(shared.RPC),
 		Builders:    builders.New(shared.RPC),
+		Env:         env.New(shared.RPC),
 	}
 	app.Console.SetRoutedCommandHandler(func(sessionID, line string) console.RoutedCommandResult {
 		result := app.Tunneling.HandleConsoleTunnelCommand(sessionID, line)
@@ -615,6 +618,18 @@ func (a *App) GetTokenPrivs(sessionID string) (*sliverpb.GetPrivs, error) {
 
 func (a *App) RevToSelfToken(sessionID string) error {
 	return a.Console.RevToSelfToken(sessionID)
+}
+
+func (a *App) GetEnv(sessionID string) (*sliverpb.EnvInfo, error) {
+	return a.Env.GetEnv(sessionID)
+}
+
+func (a *App) SetEnv(sessionID, key, value string) error {
+	return a.Env.SetEnv(sessionID, key, value)
+}
+
+func (a *App) UnsetEnv(sessionID, name string) error {
+	return a.Env.UnsetEnv(sessionID, name)
 }
 
 // ---- Tunneling ----

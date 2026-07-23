@@ -6,6 +6,7 @@
 // reads, no side effects at import time.
 
 import { matchesAutomationTarget } from '../../../utils/automation.js'
+import { TAB_META } from '../../../stores/agentTabs.svelte.js'
 
 function isWindowsAgent(agent) {
   return (agent.OS || '').toLowerCase() === 'windows'
@@ -19,6 +20,15 @@ function openTabs(agentTabs, agents, type) {
 
 function bulkLabel(label, count) {
   return count > 1 ? `${label} (${count})` : label
+}
+
+function tabAction(agentTabs, agents, type, count) {
+  const meta = TAB_META[type]
+  return {
+    icon: meta?.icon ?? 'info',
+    label: bulkLabel(meta?.label ?? type, count),
+    on: () => openTabs(agentTabs, agents, type),
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -77,8 +87,8 @@ function buildCoreActions({
     const taskTargets = beaconAgents.length > 0 ? beaconAgents : [agent]
     return {
       topLevel: [
-        { icon: 'terminal', label: bulkLabel('Console', compatibleAgents.length), on: () => openTabs(agentTabs, compatibleAgents, 'console') },
-        { icon: 'list', label: bulkLabel('Tasks', taskTargets.length), on: () => openTabs(agentTabs, taskTargets, 'tasks') },
+        tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
+        tabAction(agentTabs, taskTargets, 'tasks', taskTargets.length),
         { icon: 'info', label: 'Beacon Detail…', on: () => openBeaconDetail(agent) },
         { icon: 'terminal', label: 'Open Interactive Session', on: () => promoteBeacon(agent) },
         { icon: 'x', label: 'Close Interactive Session', on: () => demoteSession(agent) },
@@ -88,32 +98,33 @@ function buildCoreActions({
   }
 
   const topLevel = [
-    { icon: 'terminal', label: bulkLabel('Console', compatibleAgents.length), on: () => openTabs(agentTabs, compatibleAgents, 'console') },
+    tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
     { icon: 'terminal', label: bulkLabel('New Shell', sessionAgents.length), on: () => sessionAgents.forEach(newShell) },
-    { icon: 'folder', label: bulkLabel('File Browser', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'fileBrowser') },
-    { icon: 'network-wired', label: bulkLabel('Tunnels', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'tunneling') },
-    { icon: 'cpu', label: bulkLabel('Process Explorer', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'processExplorer') },
+    tabAction(agentTabs, sessionAgents, 'fileBrowser', sessionAgents.length),
+    tabAction(agentTabs, sessionAgents, 'tunneling', sessionAgents.length),
+    tabAction(agentTabs, sessionAgents, 'processExplorer', sessionAgents.length),
   ]
 
   if (isWindows || windowsSessions.length > 0) {
     const serviceTargets = windowsSessions.length > 0 ? windowsSessions : [agent]
-    topLevel.push({ icon: 'cog', label: bulkLabel('Services', serviceTargets.length), on: () => openTabs(agentTabs, serviceTargets, 'services') })
+    topLevel.push(tabAction(agentTabs, serviceTargets, 'services', serviceTargets.length))
   }
 
   const moreItems = [
-    { icon: 'monitor', label: bulkLabel('Take Screenshot', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'screenshot') },
-    { icon: 'search', label: bulkLabel('Grep', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'grep') },
+    tabAction(agentTabs, sessionAgents, 'screenshot', sessionAgents.length),
+    tabAction(agentTabs, sessionAgents, 'grep', sessionAgents.length),
+    tabAction(agentTabs, sessionAgents, 'env', sessionAgents.length),
   ]
   if (isWindows || windowsSessions.length > 0) {
     const registryTargets = windowsSessions.length > 0 ? windowsSessions : [agent]
-    moreItems.push({ icon: 'database', label: bulkLabel('Registry', registryTargets.length), on: () => openTabs(agentTabs, registryTargets, 'registryBrowser') })
+    moreItems.push(tabAction(agentTabs, registryTargets, 'registryBrowser', registryTargets.length))
   }
   moreItems.push(
-    { icon: 'list', label: bulkLabel('Netstat', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'netstat') },
-    { icon: 'network-wired', label: bulkLabel('Ifconfig', sessionAgents.length), on: () => openTabs(agentTabs, sessionAgents, 'ifconfig') },
+    tabAction(agentTabs, sessionAgents, 'netstat', sessionAgents.length),
+    tabAction(agentTabs, sessionAgents, 'ifconfig', sessionAgents.length),
   )
   if (isWindows || windowsSessions.length > 0) {
-    moreItems.push({ icon: 'key', label: bulkLabel('Privileges', windowsSessions.length || 1), on: () => openTabs(agentTabs, windowsSessions.length > 0 ? windowsSessions : [agent], 'privileges') })
+    moreItems.push(tabAction(agentTabs, windowsSessions.length > 0 ? windowsSessions : [agent], 'privileges', windowsSessions.length || 1))
   }
 
   return { topLevel, moreItems }

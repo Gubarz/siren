@@ -73,6 +73,7 @@ import HardDrive from '@lucide/svelte/icons/hard-drive'
 import Wifi from '@lucide/svelte/icons/wifi'
 import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical'
 import MessageSquare from '@lucide/svelte/icons/message-square'
+import Braces from '@lucide/svelte/icons/braces'
 
 export const icons = {
   terminal: Terminal,
@@ -151,4 +152,5 @@ export const icons = {
   wifi: Wifi,
   'ellipsis-vertical': EllipsisVertical,
   'message-square': MessageSquare,
+  braces: Braces,
 }

@@ -22,6 +22,7 @@ import ServicesTab from '../ServicesTab.svelte'
 import TunnelsPanel from '../TunnelsPanel.svelte'
 import ExtensionsTab from '../ExtensionsTab.svelte'
 import MemfilesTab from '../MemfilesTab.svelte'
+import EnvTab from '../EnvTab.svelte'
 import NetworkCommandTab from '../NetworkCommandTab.svelte'
 import WireGuardTunnelsTab from '../WireGuardTunnelsTab.svelte'
 import PrivilegesTab from '../PrivilegesTab.svelte'
@@ -61,6 +62,7 @@ const TabRegistry = {
   tunneling:       { component: TunnelsPanel,      props: bySessionID },
   extensions:      { component: ExtensionsTab,     props: bySessionID },
   memfiles:        { component: MemfilesTab,       props: bySessionID },
+  env:             { component: EnvTab,            props: bySessionID },
   privileges:       { component: PrivilegesTab,      props: bySessionID },
   'wg-tunnels':    { component: WireGuardTunnelsTab, props: bySessionID },
 }
