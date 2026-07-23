@@ -121,6 +121,42 @@
     {#each menuState.sections as section}
       {#if section.divider}
         <Divider />
+      {:else if section.palette}
+        <div class="px-3 py-1.5">
+          {#if section.title}
+            <div class="text-xs font-medium text-fg-muted mb-1">{section.title}</div>
+          {/if}
+          <div class="flex items-center gap-1">
+            {#each section.items as item}
+              {#if item.label}
+                <button
+                  type="button"
+                  class="w-5 h-5 rounded-full border border-panel-border hover:scale-125 transition-transform cursor-pointer"
+                  class:ring-1={item.active}
+                  class:ring-fg={item.active}
+                  style="background-color: {item.color || 'transparent'}"
+                  title={item.label}
+                  role="menuitem"
+                  onmousedown={(e) => activateItem(e, item)}
+                  onclick={(e) => activateItem(e, item)}
+                ></button>
+              {/if}
+            {/each}
+            {#if section.clearItem}
+              <span class="w-px h-4 bg-panel-border mx-0.5"></span>
+              <button
+                type="button"
+                class="w-5 h-5 rounded-full border border-panel-border flex items-center justify-center hover:bg-surface-hover text-fg-muted cursor-pointer"
+                title={section.clearItem.label}
+                role="menuitem"
+                onmousedown={(e) => activateItem(e, section.clearItem)}
+                onclick={(e) => activateItem(e, section.clearItem)}
+              >
+                <Icon name="x" size={10} />
+              </button>
+            {/if}
+          </div>
+        </div>
       {:else}
         {#if section.title}
           <div class="px-3 py-1 text-xs font-medium text-fg-muted uppercase tracking-wider">{section.title}</div>
@@ -164,7 +200,6 @@
                         class="w-full flex items-center gap-2 px-3 py-2 text-sm text-fg hover:bg-brand hover:text-white text-left disabled:opacity-50"
                         role="menuitem"
                         disabled={child.disabled}
-                        title={child.description || ''}
                         onmousedown={(e) => activateItem(e, child)}
                         onclick={(e) => activateItem(e, child)}
                       >
