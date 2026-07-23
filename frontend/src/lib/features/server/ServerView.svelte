@@ -17,6 +17,7 @@
   import CrackingPanel from './CrackingPanel.svelte';
   import BuildFarmPanel from './BuildFarmPanel.svelte';
   import CasesPanel from './CasesPanel.svelte';
+  import AliasesPanel from './AliasesPanel.svelte';
   import Console from '$components/patterns/Console/Console.svelte';
   import Button from '$components/ui/Button.svelte';
   import Icon from '$components/ui/Icon.svelte';
@@ -34,6 +35,7 @@
     { id: 'loot', label: 'Loot', icon: 'database' },
     { id: 'creds', label: 'Credentials', icon: 'key' },
     { id: 'operators', label: 'Operators', icon: 'users' },
+    { id: 'aliases', label: 'Aliases', icon: 'package' },
     { id: 'cases', label: 'Cases', icon: 'folder' },
     { id: 'websites', label: 'Websites', icon: 'globe' },
     { id: 'http-c2', label: 'HTTP C2 Profiles', icon: 'network' },
@@ -53,7 +55,7 @@
       id: 'ops',
       label: 'Operations',
       icon: 'users',
-      tabs: tabs.filter((tab) => ['operators', 'cases', 'hosts', 'canaries', 'monitors'].includes(tab.id)),
+      tabs: tabs.filter((tab) => ['operators', 'aliases', 'cases', 'hosts', 'canaries', 'monitors'].includes(tab.id)),
     },
     {
       id: 'assets',
@@ -182,6 +184,8 @@
       <CredentialsPanel embedded />
     {:else if active === 'operators'}
       <OperatorsPanel embedded />
+    {:else if active === 'aliases'}
+      <AliasesPanel embedded />
     {:else if active === 'cases'}
       <CasesPanel embedded />
     {:else if active === 'websites'}
