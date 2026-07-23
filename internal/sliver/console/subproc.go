@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"syscall"
 
+	"sliver-gui/internal/envvars"
+
 	"github.com/creack/pty"
 )
 
@@ -38,7 +40,7 @@ func (s *Service) StartConsole(sessionID string) (string, error) {
 	// then shows up on the prompt line as garbage like "11;rgb:0b0b/…".
 	// COLORFGBG stops the bg-color probe; the rest keeps color detection
 	// on without a round-trip.
-	cmd.Env = append(os.Environ(),
+	cmd.Env = envvars.BuildPassthroughEnv(
 		"TERM=xterm-256color",
 		"COLORTERM=truecolor",
 		"COLORFGBG=15;0",

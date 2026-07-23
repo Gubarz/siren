@@ -8,11 +8,11 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
-	"github.com/bishopfox/sliver/client/assets"
-
 	"sliver-gui/internal/bootstrap"
+	"sliver-gui/internal/envvars"
 )
 
 type headlessEmitter struct{}
@@ -29,10 +29,16 @@ func main() {
 	profile := flag.String("profile", "", "sliver client profile name")
 	flag.Parse()
 
+	dataDir, err := envvars.ResolveDataDir(nil)
+	if err != nil {
+		dataDir = filepath.Join(os.TempDir(), fmt.Sprintf("sliver-gui-%d", os.Getpid()))
+		_ = os.MkdirAll(dataDir, 0o700)
+	}
+
 	emitter := headlessEmitter{}
 	shared := bootstrap.NewShared(bootstrap.Dependencies{
 		Emitter:     emitter,
-		DataDir:     assets.GetRootAppDir(),
+		DataDir:     dataDir,
 		StartEvents: true,
 	})
 

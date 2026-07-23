@@ -11,6 +11,7 @@ export default defineConfig({
       $features: path.resolve('src/lib/features'),
       $stores: path.resolve('src/lib/stores'),
       $utils: path.resolve('src/lib/utils'),
+      $api: path.resolve('src/lib/api'),
     },
   },
 })

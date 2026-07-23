@@ -6,6 +6,7 @@
   import { getStoredThemePreference, SYSTEM_THEME, theme } from '$stores/ui/theme.svelte.js'
   import NotificationSettings from './NotificationSettings.svelte'
   import HealthPanel from './HealthPanel.svelte'
+  import EnvSettings from './EnvSettings.svelte'
 
   const themes = [
     { id: SYSTEM_THEME, name: 'System', bg: '#2a2a2a', accent: '#e0e0e0', text: '#eee' },
@@ -94,5 +95,6 @@
     </div>
 
     <NotificationSettings />
+    <EnvSettings />
   </div>
 </div>

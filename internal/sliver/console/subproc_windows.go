@@ -7,7 +7,10 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"unsafe"
+
+	"sliver-gui/internal/envvars"
 
 	"golang.org/x/sys/windows"
 )
@@ -167,12 +170,22 @@ func (c *winConPTY) spawn(cmdLine string) error {
 		return fmt.Errorf("conpty command line: %w", err)
 	}
 	var pi windows.ProcessInformation
-	// env=nil inherits the parent environment; the pseudoconsole
-	// attribute supplies the child's console and standard handles.
+	passthrough := envvars.BuildPassthroughEnv()
+	windowsSystemVars := []string{
+		"SystemRoot", "TEMP", "TMP", "COMSPEC", "USERPROFILE",
+		"ALLUSERSPROFILE", "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS",
+		"OS", "PATHEXT", "WINDIR",
+	}
+	for _, name := range windowsSystemVars {
+		if v, ok := os.LookupEnv(name); ok {
+			passthrough = append(passthrough, name+"="+v)
+		}
+	}
+	envBlock := syscall.StringToUTF16Ptr(strings.Join(passthrough, "\x00") + "\x00")
 	err = windows.CreateProcess(
 		nil, cmdLinePtr, nil, nil, false,
 		windows.EXTENDED_STARTUPINFO_PRESENT,
-		nil, nil, &siEx.StartupInfo, &pi,
+		envBlock, nil, &siEx.StartupInfo, &pi,
 	)
 	if err != nil {
 		return fmt.Errorf("spawn console subprocess: %w", err)
