@@ -1,7 +1,8 @@
 <script>
   import Icon from '$components/ui/Icon.svelte'
   import Badge from '$components/ui/Badge.svelte'
-  import TagBadge from '$components/ui/TagBadge.svelte'
+  import FittedTagBadges from '$components/ui/FittedTagBadges.svelte'
+  import GraphCommentButton from './GraphCommentButton.svelte'
   import { Handle, Position } from '@xyflow/svelte'
   import { AGENT_COLOR_BG } from '../../utils/agentColors.js'
 
@@ -36,15 +37,17 @@
     <Badge variant={data.kind} size="graph">{data.kind}</Badge>
     <span class="overflow-hidden text-ellipsis whitespace-nowrap text-3xs text-fg-muted">{data.addr || ''}</span>
   </div>
-  {#if data.tags?.length > 0}
-    <div class="mt-2 flex max-h-8 max-w-full flex-wrap items-center gap-1 overflow-hidden border-t border-line/60 pt-2">
-      {#each data.tags.slice(0, 2) as tag}
-        <TagBadge {tag} />
-      {/each}
-      {#if data.tags.length > 2}
-        <span class="text-3xs text-fg-muted">+{data.tags.length - 2}</span>
-      {/if}
-    </div>
-  {/if}
+  <div class="mt-2 flex max-h-8 max-w-full items-center gap-1 overflow-hidden border-t border-line/60 pt-2">
+    <FittedTagBadges
+      tags={data.tags || []}
+      class="min-w-0 flex-1 overflow-hidden"
+    />
+    <GraphCommentButton
+      entityType="agent"
+      entityID={data.entityID}
+      entityLabel={data.implantName || data.host || data.agentID}
+      hasComments={data.hasComments}
+    />
+  </div>
   <Handle type="source" position={horizontal ? Position.Right : Position.Bottom} class="handle" />
 </div>

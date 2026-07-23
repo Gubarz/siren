@@ -4,12 +4,8 @@
   const { fitView } = useSvelteFlow()
   const store = useStore()
 
-  let { fitKey = '' } = $props()
-  let lastFitKey = ''
-
-  function graphKey() {
-    return store.nodes.map((node) => node.id).sort().join('|')
-  }
+  let { fitKey = 0 } = $props()
+  let lastFitKey
 
   $effect(() => {
     const ready = store.nodesInitialized
@@ -18,9 +14,8 @@
     const height = store.height
     if (!ready || count === 0 || width < 80 || height < 80) return
 
-    const key = `${fitKey}:${graphKey()}@${Math.round(width)}x${Math.round(height)}`
-    if (key === lastFitKey) return
-    lastFitKey = key
+    if (fitKey === lastFitKey) return
+    lastFitKey = fitKey
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => fitView({ padding: 0.18 }))

@@ -14,14 +14,23 @@ import {
   endpointPort,
 } from './layout.js'
 
-export const SERVER_W = 224
+export const SERVER_W = 192
 export const SERVER_H = 44
-const LISTENER_W = 288
-const LISTENER_H = 40
+const LISTENER_MIN_W = 176
+const LISTENER_H = 32
+const LISTENER_LABEL_CH_W = 7.25
+const LISTENER_CHROME_W = 42
 const NODE_W = 256
 const NODE_H = 144
 const DEVICE_W = 256
 const DEVICE_H = 144
+
+function listenerWidth(label) {
+  return Math.max(
+    LISTENER_MIN_W,
+    Math.ceil(String(label || '').length * LISTENER_LABEL_CH_W + LISTENER_CHROME_W),
+  )
+}
 
 export function collectAgents({ sessions, beacons }) {
   return [
@@ -56,7 +65,10 @@ function osIcon(os) {
 }
 
 export function agentNode(impl, ctx) {
-  const { parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent, tagsByAgent } = ctx
+  const {
+    parentBySession, allAgents, now, direction, selectedAgentIDs,
+    colorsByAgent, tagsByAgent, commentsByEntity,
+  } = ctx
   return {
     id: impl.ID, w: NODE_W, h: NODE_H,
     data: {
@@ -70,6 +82,7 @@ export function agentNode(impl, ctx) {
       priv: isHighPrivilege(impl.Username) ? 'high' : 'normal',
       color: colorsByAgent?.[impl.ID] || '',
       tags: tagsByAgent?.[impl.ID] || [],
+      hasComments: (commentsByEntity?.[`agent:${impl.ID}`]?.length || 0) > 0,
       direction,
     },
     selected: selectedAgentIDs.includes(impl.ID),
@@ -120,7 +133,13 @@ function pushC2Node(rawNodes, rawEdges, opts) {
     const pivot = pivotDetails(parentID, c2, pivotListeners)
     if (!seenPivotListeners.has(pivot.id)) {
       seenPivotListeners.add(pivot.id)
-      rawNodes.push({ id: pivot.id, w: LISTENER_W, h: LISTENER_H, data: { variant: 'listener', label: pivot.label, direction } })
+      const width = listenerWidth(pivot.label)
+      rawNodes.push({
+        id: pivot.id,
+        w: width,
+        h: LISTENER_H,
+        data: { variant: 'listener', label: pivot.label, width, direction },
+      })
       rawEdges.push({
         id: `e_${parentID}_${pivot.id}`, source: parentID, target: pivot.id,
         style: 'stroke:var(--color-success-500);stroke-width:3', animated: false,
@@ -131,7 +150,13 @@ function pushC2Node(rawNodes, rawEdges, opts) {
   const listenerID = `l_${c2.key}`
   if (!seenListeners.has(listenerID)) {
     seenListeners.add(listenerID)
-    rawNodes.push({ id: listenerID, w: LISTENER_W, h: LISTENER_H, data: { variant: 'listener', label: c2.label, direction } })
+    const width = listenerWidth(c2.label)
+    rawNodes.push({
+      id: listenerID,
+      w: width,
+      h: LISTENER_H,
+      data: { variant: 'listener', label: c2.label, width, direction },
+    })
     rawEdges.push({
       id: `e_ts_${listenerID}`, source: 'ts', target: listenerID,
       style: 'stroke:var(--color-line);stroke-dasharray:4', animated: false,
@@ -149,7 +174,10 @@ function c2Edge(sourceId, targetID, kind, parentID) {
 }
 
 export function addDiscoveryNodes(rawNodes, rawEdges, ctx) {
-  const { allAgentIds, discoveries, direction, selectedDiscoveryKeys, colorsByEntity } = ctx
+  const {
+    allAgentIds, discoveries, direction, selectedDiscoveryKeys,
+    colorsByEntity, commentsByEntity,
+  } = ctx
   for (const device of discoveries || []) {
     const observerIDs = (device.observerIDs || [device.agentID]).filter((id) => allAgentIds.has(id))
     if (observerIDs.length === 0) continue
@@ -167,6 +195,7 @@ export function addDiscoveryNodes(rawNodes, rawEdges, ctx) {
         method: device.method || 'discovery', lastSeen: device.lastSeen || 0,
         agentID: observerIDs[0], observerIDs, key, direction,
         color: colorsByEntity?.[`device:${entityID}`] || '',
+        hasComments: (commentsByEntity?.[`device:${entityID}`]?.length || 0) > 0,
       },
       selected: selectedDiscoveryKeys.includes(key),
     })

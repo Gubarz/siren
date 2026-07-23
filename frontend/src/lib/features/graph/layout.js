@@ -108,7 +108,10 @@ export function preservePositions(previousNodes, nextNodes, nextEdges) {
 // (agent count, C2 addresses, pivots, discoveries). If it hasn't changed,
 // we don't need to rebuild — the ticker `now` update alone shouldn't
 // re-run layout.
-export function topologySignature({ sessions, beacons, pivotGraph, pivotListeners, discoveries, now, colors, tags, entityColors }) {
+export function topologySignature({
+  sessions, beacons, pivotGraph, pivotListeners, discoveries, now,
+  colors, tags, entityColors, comments,
+}) {
   const pivotRelations = [...pivotParentMap(pivotGraph).entries()]
     .map(([child, parent]) => `${parent}>${child}`)
     .sort()
@@ -122,6 +125,7 @@ export function topologySignature({ sessions, beacons, pivotGraph, pivotListener
     ...Object.entries(colors || {}).map(([id, color]) => `c_${id}:${color}`),
     ...Object.entries(tags || {}).map(([id, values]) => `t_${id}:${(values || []).join(',')}`),
     ...Object.entries(entityColors || {}).map(([id, color]) => `ec_${id}:${color}`),
+    ...Object.entries(comments || {}).map(([id, values]) => `cm_${id}:${values?.length || 0}`),
   ].sort().join('|')
 }
 

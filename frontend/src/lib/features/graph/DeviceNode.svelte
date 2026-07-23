@@ -2,6 +2,7 @@
   import Icon from '$components/ui/Icon.svelte'
   import Badge from '$components/ui/Badge.svelte'
   import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
+  import GraphCommentButton from './GraphCommentButton.svelte'
   import { Handle, Position } from '@xyflow/svelte'
   import { AGENT_COLOR_BG } from '../../utils/agentColors.js'
 
@@ -34,5 +35,18 @@
     <Badge variant="discovered" size="graph">{(data.method || 'discovered').toUpperCase()}</Badge>
     <span class="text-3xs truncate text-fg-muted" title={data.mac || 'MAC unavailable'}>{data.mac || 'MAC unavailable'}</span>
   </div>
-  <EntityTagBadges entityType="device" entityID={data.entityID} compact class="mt-2 max-h-8 max-w-full overflow-hidden border-t border-line/60 pt-2" />
+  <div class="mt-2 flex max-h-8 max-w-full items-center gap-1 overflow-hidden border-t border-line/60 pt-2">
+    <EntityTagBadges
+      entityType="device"
+      entityID={data.entityID}
+      compact
+      class="min-w-0 flex-1 overflow-hidden"
+    />
+    <GraphCommentButton
+      entityType="device"
+      entityID={data.entityID}
+      entityLabel={data.hostname || data.ip || data.entityID}
+      hasComments={data.hasComments}
+    />
+  </div>
 </div>

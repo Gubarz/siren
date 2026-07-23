@@ -1,5 +1,7 @@
 <script>
-  import { SvelteFlow, Background, Controls, MiniMap } from '@xyflow/svelte';
+  import { untrack } from 'svelte';
+  import { SvelteFlow, Background, Controls, ControlButton, MiniMap } from '@xyflow/svelte';
+  import { RotateCcw } from '@lucide/svelte';
   import '@xyflow/svelte/dist/style.css';
   import GraphNode from './GraphNode.svelte';
   import GraphAutoFit from './GraphAutoFit.svelte';
@@ -8,6 +10,7 @@
   import { agentColors } from '$stores/resources/agentColors.svelte.js';
   import { agentTags } from '$stores/resources/agentTags.svelte.js';
   import { entityColors } from '$stores/resources/entityColors.svelte.js';
+  import { entityComments } from '$stores/resources/entityComments.svelte.js';
   import { useResource } from '$stores/lib/createResource.svelte.js';
   import { pivotParentMap } from '../../utils/agents.js';
   import { layoutGraph, preservePositions, layoutSignature, topologySignature } from './layout.js';
@@ -37,13 +40,12 @@
   $effect(() => {
     // Rebuild layout whenever the parent flips the direction.
     void direction;
-    lastLayoutSig = '';
-    build();
+    untrack(() => build({ reset: true }));
   });
 
   const nodeTypes = { box: GraphNode };
 
-  useResource(agentColors, agentTags, entityColors)
+  useResource(agentColors, agentTags, entityColors, entityComments)
   let colorsByAgent = $derived(
     agentColors?.data && typeof agentColors.data === 'object' ? agentColors.data : {},
   )
@@ -53,12 +55,16 @@
   let colorsByEntity = $derived(
     entityColors?.data && typeof entityColors.data === 'object' ? entityColors.data : {},
   )
+  let commentsByEntity = $derived(
+    entityComments?.data && typeof entityComments.data === 'object' ? entityComments.data : {},
+  )
 
   let nodes = $state.raw([]);
   let edges = $state.raw([]);
   let lastSig = '';
   let lastLayoutSig = '';
-  let fitKey = $state('');
+  let layoutCustomized = false;
+  let fitKey = $state(0);
   let now = $state(Math.floor(Date.now() / 1000));
   let appZoom = $derived.by(() => {
     const zoom = Number(config?.zoom);
@@ -73,7 +79,7 @@
     return () => clearInterval(timer);
   });
 
-  function build() {
+  function build({ reset = false } = {}) {
     const rawNodes = [{
       id: 'ts', w: SERVER_W, h: SERVER_H,
       data: { variant: 'server', label: 'Sliver Teamserver', direction },
@@ -86,22 +92,26 @@
 
     for (const impl of allAgents) {
       rawNodes.push(agentNode(impl, {
-        parentBySession, allAgents, now, direction, selectedAgentIDs, colorsByAgent, tagsByAgent,
+        parentBySession, allAgents, now, direction, selectedAgentIDs,
+        colorsByAgent, tagsByAgent, commentsByEntity,
       }));
     }
     addC2Links(rawNodes, rawEdges, {
       allAgents, index, parentBySession, direction, pivotListeners,
     });
     addDiscoveryNodes(rawNodes, rawEdges, {
-      allAgentIds: index.allAgentIds, discoveries, direction, selectedDiscoveryKeys, colorsByEntity,
+      allAgentIds: index.allAgentIds, discoveries, direction, selectedDiscoveryKeys,
+      colorsByEntity, commentsByEntity,
     });
 
     const nextLayoutSig = layoutSignature(rawNodes, rawEdges);
     const laidOut = layoutGraph(rawNodes, rawEdges, direction);
-    const preserve = nextLayoutSig === lastLayoutSig;
-    nodes = preserve ? preservePositions(nodes, laidOut, rawEdges) : laidOut;
+    const structureChanged = nextLayoutSig !== lastLayoutSig;
+    const shouldReset = reset || nodes.length === 0 || (!layoutCustomized && structureChanged);
+    nodes = shouldReset ? laidOut : preservePositions(nodes, laidOut, rawEdges);
     edges = rawEdges;
-    if (!preserve) fitKey = nextLayoutSig;
+    if (shouldReset) fitKey += 1;
+    if (reset) layoutCustomized = false;
     lastLayoutSig = nextLayoutSig;
   }
 
@@ -109,10 +119,11 @@
     const sig = topologySignature({
       sessions, beacons, pivotGraph, pivotListeners, discoveries, now,
       colors: colorsByAgent, tags: tagsByAgent, entityColors: colorsByEntity,
+      comments: commentsByEntity,
     });
     if (sig === lastSig) return;
     lastSig = sig;
-    build();
+    untrack(() => build());
   });
 
   function handleSelectionChange(selection) {
@@ -124,6 +135,25 @@
         .filter((node) => node.data?.variant === 'device')
         .map((node) => node.data.key),
     });
+  }
+
+  function handleNodeDragStop(evt) {
+    const movedNodes = evt?.nodes || evt?.detail?.nodes || [];
+    if (movedNodes.length === 0) return;
+
+    const movedPositions = new Map(
+      movedNodes.map((node) => [node.id, { ...node.position }]),
+    );
+    nodes = nodes.map((node) => (
+      movedPositions.has(node.id)
+        ? { ...node, position: movedPositions.get(node.id) }
+        : node
+    ));
+    layoutCustomized = true;
+  }
+
+  function resetLayout() {
+    build({ reset: true });
   }
 
   function handleNodeClick(evt) {
@@ -173,13 +203,22 @@
         selectionOnDrag={false}
         onnodeclick={handleNodeClick}
         onnodecontextmenu={handleNodeContextMenu}
+        onnodedragstop={handleNodeDragStop}
         onselectionchange={handleSelectionChange}
         multiSelectionKey={['Control', 'Meta']}
         proOptions={{ hideAttribution: true }}
       >
         <GraphAutoFit {fitKey} />
         <Background gap={18} />
-        <Controls />
+        <Controls>
+          <ControlButton
+            onclick={resetLayout}
+            title="Reset layout"
+            aria-label="Reset layout"
+          >
+            <RotateCcw style="fill: none;" />
+          </ControlButton>
+        </Controls>
         <MiniMap pannable zoomable />
       </SvelteFlow>
     </div>
