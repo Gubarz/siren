@@ -22,13 +22,24 @@ func (c *Client) StartEventStream(ctx context.Context, onEvent func(*clientpb.Ev
 
 		stream, err := c.RPC.Events(streamCtx, &commonpb.Empty{})
 		if err != nil {
+			if streamCtx.Err() != nil {
+				return
+			}
+			c.connected.Store(false)
 			log.Printf("failed to open event stream: %v", err)
+			if onEvent != nil {
+				onEvent(&clientpb.Event{EventType: "stream-closed"})
+			}
 			return
 		}
 
 		for {
 			ev, err := stream.Recv()
 			if err != nil {
+				if streamCtx.Err() != nil {
+					return
+				}
+				c.connected.Store(false)
 				if onEvent != nil {
 					onEvent(&clientpb.Event{EventType: "stream-closed"})
 				}

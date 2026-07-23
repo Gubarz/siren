@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bishopfox/sliver/client/assets"
@@ -58,8 +59,9 @@ import (
 )
 
 type App struct {
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx          context.Context
+	cancel       context.CancelFunc
+	connectionMu sync.Mutex
 	*bootstrap.SharedStack
 
 	Catalog    *catalog.Service
@@ -335,6 +337,9 @@ func (a *App) DeleteClientConfig(name string) error {
 }
 
 func (a *App) Disconnect() error {
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
+
 	if a.Tunneling != nil {
 		a.Tunneling.Close()
 	}
@@ -346,6 +351,18 @@ func (a *App) Disconnect() error {
 }
 
 func (a *App) Connect(profileName string) error {
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
+
+	// Wails dev mode can host the desktop webview and one or more browser
+	// clients at the same time. They share this App instance, so a second UI
+	// connecting to the active profile must not replace the live connection.
+	if a.RPC.IsConnectedTo(profileName) {
+		return nil
+	}
+	if a.ClientLog != nil {
+		a.ClientLog.Close()
+	}
 	if !a.Console.TryResetConsole() {
 		log.Printf("connect: console is busy; skipping connect-time console reset")
 	}

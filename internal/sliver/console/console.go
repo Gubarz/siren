@@ -175,6 +175,9 @@ func (s *Service) TryResetConsole() bool {
 }
 
 func (s *Service) resetConsoleLocked() {
+	if s.sliverCon != nil {
+		_ = s.sliverCon.CloseConnection()
+	}
 	s.consoleInit = false
 	s.sliverCon = nil
 	s.sliverCmds = nil

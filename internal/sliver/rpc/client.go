@@ -54,8 +54,8 @@ func selectClientConfig(profileName string) (*assets.ClientConfig, error) {
 		return cfg, nil
 	}
 
-	for _, c := range configs {
-		return c, nil
+	for _, config := range configs {
+		return config, nil
 	}
 	return nil, fmt.Errorf("no configs found")
 }
@@ -76,6 +76,9 @@ func (c *Client) Connect(profileName string) error {
 		return err
 	}
 
+	// Stop the old stream before closing its connection. Its cancellation is
+	// intentional and must not be surfaced to the UI as a server outage.
+	c.stopEventStream()
 	oldConn := c.Conn
 	c.Config = config
 	c.RPC = rpcClient
@@ -124,16 +127,42 @@ func dialWithTimeout(config *assets.ClientConfig) (rpcpb.SliverRPCClient, *grpc.
 }
 
 func (c *Client) Disconnect() {
+	c.connectMu.Lock()
+	defer c.connectMu.Unlock()
+
+	c.stopEventStream()
+	if c.Conn != nil {
+		_ = c.Conn.Close()
+	}
+	c.connected.Store(false)
+}
+
+func (c *Client) IsConnectedTo(profileName string) bool {
+	c.connectMu.Lock()
+	defer c.connectMu.Unlock()
+
+	if !c.connected.Load() {
+		return false
+	}
+	if profileName == "" {
+		return true
+	}
+	config, err := selectClientConfig(profileName)
+	if err != nil || c.Config == nil {
+		return false
+	}
+	return c.Config.LHost == config.LHost &&
+		c.Config.LPort == config.LPort &&
+		c.Config.Certificate == config.Certificate
+}
+
+func (c *Client) stopEventStream() {
 	c.streamMu.Lock()
+	defer c.streamMu.Unlock()
 	if c.streamCancel != nil {
 		c.streamCancel()
 		c.streamCancel = nil
 	}
-	c.streamMu.Unlock()
-	if c.Conn != nil {
-		c.Conn.Close()
-	}
-	c.connected.Store(false)
 }
 
 func (c *Client) Connected() bool {
