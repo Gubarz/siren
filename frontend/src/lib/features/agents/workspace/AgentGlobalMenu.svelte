@@ -31,7 +31,6 @@
   let workspaceOpen = $state(false)
   let guiCommands = $derived((categories.find((category) => category.category === 'GUI')?.commands || []).filter(isAgentWorkspaceCommand))
   let commandCategories = $derived(categories.filter((category) => category.category !== 'GUI' && category.category !== 'Generic'))
-  let commandCount = $derived(commandCategories.reduce((total, category) => total + category.commands.length, 0))
 
   const COLOR_HEX_MAP = {
     red: '#ef4444', orange: '#f97316', yellow: '#eab308', green: '#22c55e',

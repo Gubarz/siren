@@ -122,7 +122,7 @@
       {#if section.divider}
         <Divider />
       {:else if section.palette}
-        <div class="px-3 py-1.5">
+        <div class="px-3 py-2">
           {#if section.title}
             <div class="text-xs font-medium text-fg-muted mb-1">{section.title}</div>
           {/if}
@@ -143,7 +143,7 @@
               {/if}
             {/each}
             {#if section.clearItem}
-              <span class="w-px h-4 bg-panel-border mx-0.5"></span>
+              <span class="w-px h-4 bg-panel-border mx-1"></span>
               <button
                 type="button"
                 class="w-5 h-5 rounded-full border border-panel-border flex items-center justify-center hover:bg-surface-hover text-fg-muted cursor-pointer"
