@@ -76,7 +76,7 @@ func (je *jsExecution) appendLog(values ...interface{}) {
 		if index > 0 {
 			je.output.WriteByte(' ')
 		}
-		je.output.WriteString(fmt.Sprint(value))
+		fmt.Fprint(&je.output, value)
 	}
 }
 

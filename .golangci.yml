@@ -1,3 +1,5 @@
+version: "2"
+
 # See CONTRIBUTING.md for the 350-line file / 45-line function budget.
 # funlen enforces the per-function line cap. File length has no built-in
 # linter — see scripts/check-go-file-length.sh (wired into `make analyze-go`).
@@ -6,36 +8,40 @@ run:
   timeout: 5m
 
 linters:
-  disable-all: true
+  default: none
   enable:
+    - errcheck
     - funlen
-
-linters-settings:
-  funlen:
-    lines: 45
-    # -1 disables the statement-count check — line count is the rule we
-    # actually care about, and mixing the two produces confusing failures.
-    statements: -1
-    ignore-comments: true
+    - govet
+    - ineffassign
+    - staticcheck
+  settings:
+    funlen:
+      lines: 45
+      statements: -1
+      ignore-comments: true
+  exclusions:
+    paths:
+      - node_modules
+      - frontend
+      - build
+      - dist
+      - scripts
+    rules:
+      - path: _test\.go$
+        linters:
+          - errcheck
+      - path: ^app\.go$
+        linters:
+          - funlen
+      - path: ^cmd/gui/app\.go$
+        linters:
+          - funlen
+      - path: ^vendor/
+        linters:
+          - errcheck
 
 issues:
-  # golangci-lint walks the repo, not just Go modules — exclude non-Go trees
-  # that happen to ship vendored .go files (e.g., npm packages).
-  exclude-dirs:
-    - node_modules
-    - frontend
-    - build
-    - dist
-  # Report every violation, not just the first N per file/linter.
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  # Don't auto-exclude common false positives — we want explicit signal.
-  exclude-use-default: false
-  exclude-rules:
-    # app.go is the sanctioned exception to both budgets.
-    - path: ^app\.go$
-      linters:
-        - funlen
-    - path: ^cmd/gui/app\.go$
-      linters:
-        - funlen
+  max: 0
+  max-per-issue: 0
+  uniq-by-line: true

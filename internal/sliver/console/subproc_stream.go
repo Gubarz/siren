@@ -221,7 +221,6 @@ func (s *Service) pumpSubproc(job *subprocJob) {
 			if !ok {
 				if len(controlCarry) > 0 {
 					pending = append(pending, controlCarry...)
-					controlCarry = nil
 				}
 				flush()
 				return

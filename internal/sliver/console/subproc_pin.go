@@ -275,9 +275,10 @@ func filterConsoleControlFrames(carry, chunk []byte) ([]byte, []string, []string
 
 		payload := rest[:end]
 		if decoded, err := base64.StdEncoding.DecodeString(string(payload)); err == nil {
-			if kind == "shell" {
+			switch kind {
+			case "shell":
 				shellTails = append(shellTails, string(decoded))
-			} else if kind == "command" {
+			case "command":
 				commands = append(commands, string(decoded))
 			}
 		}

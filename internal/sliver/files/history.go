@@ -142,7 +142,7 @@ func (s *HistoryStore) ClearHistory(sessionID, remotePath string) {
 		matchSession := sessionID == "" || rec.SessionID == sessionID
 		matchRemote := remotePath == "" || cleanPathForCompare(rec.RemotePath) == cleanRemote
 
-		if !(matchSession && matchRemote) {
+		if !matchSession || !matchRemote {
 			kept = append(kept, rec)
 		}
 	}

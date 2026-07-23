@@ -22,7 +22,7 @@ func addDirToTar(tw *tar.Writer, baseName string, r io.Reader) error {
 		if err := tw.WriteHeader(hdr); err != nil {
 			return fmt.Errorf("failed to write header for %s: %w", hdr.Name, err)
 		}
-		if hdr.Typeflag == tar.TypeReg || hdr.Typeflag == tar.TypeRegA {
+		if hdr.Typeflag == tar.TypeReg {
 			if _, err := io.Copy(tw, tr); err != nil {
 				return fmt.Errorf("failed to write body for %s: %w", hdr.Name, err)
 			}

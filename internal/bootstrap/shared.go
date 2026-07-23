@@ -39,19 +39,24 @@ type SharedStack struct {
 	Events           *events.Store
 }
 
-func NewShared(deps Dependencies) *SharedStack {
+func resolveDataDir(deps Dependencies) string {
+	if deps.DataDir != "" {
+		return deps.DataDir
+	}
 	guiCfg := deps.GUIConfig
 	if guiCfg == nil {
 		guiCfg, _ = envvars.LoadGUIConfig(assets.GetRootAppDir())
 	}
-	if deps.DataDir == "" {
-		dataDir, err := envvars.ResolveDataDir(guiCfg)
-		if err != nil {
-			dataDir = filepath.Join(os.TempDir(), fmt.Sprintf("sliver-gui-%d", os.Getpid()))
-			_ = os.MkdirAll(dataDir, 0o700)
-		}
-		deps.DataDir = dataDir
+	dataDir, err := envvars.ResolveDataDir(guiCfg)
+	if err != nil {
+		dataDir = filepath.Join(os.TempDir(), fmt.Sprintf("sliver-gui-%d", os.Getpid()))
+		_ = os.MkdirAll(dataDir, 0o700)
 	}
+	return dataDir
+}
+
+func NewShared(deps Dependencies) *SharedStack {
+	deps.DataDir = resolveDataDir(deps)
 
 	rpcClient := rpc.NewClient()
 	con := console.New(rpcClient)

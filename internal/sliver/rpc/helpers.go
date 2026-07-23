@@ -18,7 +18,7 @@ type ResponseWithError interface {
 
 // CheckResponse inspects the embedded response field for errors.
 func CheckResponse(resp ResponseWithError) error {
-	if resp == nil || (reflect.ValueOf(resp).Kind() == reflect.Ptr && reflect.ValueOf(resp).IsNil()) {
+	if resp == nil || (reflect.ValueOf(resp).Kind() == reflect.Ptr && reflect.ValueOf(resp).IsNil()) { //nolint:govet
 		return nil
 	}
 	if r := resp.GetResponse(); r != nil && r.Err != "" {
