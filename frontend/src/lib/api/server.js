@@ -19,6 +19,7 @@ export {
   SaveProfileAdvanced,
   GetPivots,
   GetPivotListeners,
+  PivotStopListener,
   GetScreenshotData,
   KillJob,
   RegenerateImplant,
