@@ -1,5 +1,5 @@
 const GUI_VIEWS = [
-  { id: 'view-agents', name: 'Agents', label: 'Switch to Agents', icon: 'bullseye', section: 'Views', view: 'agents' },
+  { id: 'view-agents', name: 'Table', label: 'Switch to Table', icon: 'list', section: 'Views', view: 'agents', config: { agentViewMode: 'table' } },
   { id: 'view-network-graph', name: 'Network Graph', label: 'Open Network Graph', icon: 'network', section: 'Views', view: 'agents', config: { agentViewMode: 'graph' } },
   { id: 'view-server', name: 'Server', label: 'Switch to Server', icon: 'server', section: 'Views', view: 'server' },
   { id: 'view-automation', name: 'Automation', label: 'Switch to Automation', icon: 'bolt', section: 'Views', view: 'automation' },

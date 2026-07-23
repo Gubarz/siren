@@ -10,15 +10,19 @@
   import AgentGlobalMenu from './AgentGlobalMenu.svelte'
   import SplitPane from '$components/patterns/SplitPane.svelte'
   import CommandFormV2 from '../modals/CommandFormV2.svelte'
-  
+  import ReconfigureAgentModal from '../modals/ReconfigureAgentModal.svelte'
+
   import { modalFor } from '../modals/registry.js'
   import { config } from '$stores/config.svelte.js'
   import { workspaceState } from '$stores/workspaceState.svelte.js'
   import { dispatchCommand } from '$stores/console.svelte.js'
   import { commandModal } from '$stores/ui/commandModal.svelte.js'
+  import { Modal } from '$stores/ui/Modal.svelte.js'
 
   let serverCategories = $state([])
   let categories = $derived([...GuiActionGroups, ...serverCategories])
+
+  const reconfigure = new Modal()
 
   let command = $derived(commandModal.command)
   let ActiveModal = $derived(command ? (modalFor(command.name) || CommandFormV2) : null)
@@ -64,7 +68,7 @@
   }
 </script>
 
-<AgentGlobalMenu {categories} />
+<AgentGlobalMenu {categories} onReconfigure={(a) => reconfigure.show(a)} />
 
 <SplitPane
   orientation="vertical"
@@ -91,3 +95,5 @@
     onclose={() => commandModal.close()}
   />
 {/if}
+
+<ReconfigureAgentModal bind:open={reconfigure.open} agent={reconfigure.data} />
