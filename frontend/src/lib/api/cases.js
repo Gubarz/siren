@@ -10,7 +10,6 @@ import {
   DeleteCase,
   AddToCase,
   RemoveFromCase,
-  GenerateCaseReport,
 } from '../../../wailsjs/go/gui/App.js';
 
 export {
@@ -21,7 +20,6 @@ export {
   DeleteCase,
   AddToCase,
   RemoveFromCase,
-  GenerateCaseReport,
 };
 
 export function ExportCaseReport(caseID) {

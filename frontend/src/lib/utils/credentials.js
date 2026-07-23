@@ -6,15 +6,15 @@ export function credentialKey(credential, index = 0) {
   return credential?.ID || credential?.id || `${credentialUsername(credential)}:${index}`
 }
 
-export function credentialUsername(credential) {
+function credentialUsername(credential) {
   return stringField(credential, 'Username', 'username')
 }
 
-export function credentialPlaintext(credential) {
+function credentialPlaintext(credential) {
   return stringField(credential, 'Plaintext', 'plaintext')
 }
 
-export function credentialCollection(credential) {
+function credentialCollection(credential) {
   return stringField(credential, 'Collection', 'collection')
 }
 
@@ -25,7 +25,7 @@ export function credentialPickerOptions(items = []) {
   }))
 }
 
-export function credentialLabel(credential) {
+function credentialLabel(credential) {
   const username = credentialUsername(credential) || 'credential'
   const collection = credentialCollection(credential)
   return collection ? `${username} (${collection})` : username

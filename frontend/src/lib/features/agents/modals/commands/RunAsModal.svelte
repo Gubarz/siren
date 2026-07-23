@@ -5,18 +5,8 @@
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
   import CheckboxField from '../../../../components/forms/CheckboxField.svelte'
-  import SelectField from '../../../../components/forms/SelectField.svelte'
   import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
-  import { credentials } from '../../../../stores/resources/credentials.svelte.js'
-  import { useResource } from '../../../../stores/lib/createResource.svelte.js'
-  import {
-    credentialKey,
-    credentialLoginFields,
-    credentialPickerOptions,
-    plaintextCredentials,
-  } from '../../../../utils/credentials.js'
-
-  useResource(credentials)
+  import CredentialPicker from '../CredentialPicker.svelte'
 
   let {
     open = $bindable(false),
@@ -28,15 +18,11 @@
   let username = $state('')
   let password = $state('')
   let domain = $state('')
-  let selectedCredential = $state('')
+  let timeout = $state('')
   let program = $state('')
   let programArgs = $state('')
   let netonly = $state(true)
   let showWindow = $state(false)
-  let timeout = $state('')
-
-  let usableCredentials = $derived(plaintextCredentials(credentials.data || []))
-  let credentialOptions = $derived(credentialPickerOptions(credentials.data || []))
 
   $effect.pre(() => {
     resetForm(initialValues)
@@ -46,22 +32,11 @@
     username = values['username'] || ''
     password = values['password'] || ''
     domain = values['domain'] || ''
-    selectedCredential = ''
     program = values['program'] || ''
     programArgs = values['args'] || ''
     netonly = values['net-only'] ?? true
     showWindow = values['show-window'] || false
     timeout = values['timeout'] || ''
-  }
-
-  function applyCredential(id) {
-    selectedCredential = id
-    const credential = usableCredentials.find((item, index) => credentialKey(item, index) === id)
-    if (!credential) return
-    const fields = credentialLoginFields(credential)
-    username = fields.username
-    password = fields.password
-    domain = fields.domain
   }
 
   let cmdPreview = $derived.by(() => {
@@ -83,88 +58,37 @@
 </script>
 
 <Modal bind:open title="Run As User" size="2xl" {onclose}>
-  
-    <p class="text-fg-muted text-sm mb-4">
-      Launch a program under a different user's credentials. Similar to Windows <code>runas.exe</code>. The spawned process runs with its own token — the parent implant identity is unchanged.
-    </p>
+  <p class="text-fg-muted text-sm mb-4">
+    Launch a program under a different user's credentials. Similar to Windows <code>runas.exe</code>. The spawned process runs with its own token — the parent implant identity is unchanged.
+  </p>
 
-    <CollapsibleGroup title="Credentials" open={true}>
-      <SelectField
-        bind:value={selectedCredential}
-        label="Stored credential"
-        options={credentialOptions}
-        placeholder={credentials.loading ? 'Loading credentials...' : 'Choose plaintext credential'}
-        disabled={credentialOptions.length === 0}
-        onchange={applyCredential}
-        description={credentialOptions.length === 0 ? 'No plaintext credentials are available in the credential store.' : 'Selecting one fills username, password, and domain.'}
-      />
-      <TextField bind:value={username} label="Username" placeholder="Administrator" />
-      <TextField bind:value={password} label="Password" type="password" placeholder="Password" />
-      <TextField
-        bind:value={domain}
-        label="Domain"
-        placeholder="CORP or . for local"
-        description="Blank/dot = local account, otherwise a domain name"
-      />
-      <CheckboxField
-        bind:checked={netonly}
-        label="Net-only (don't validate credentials locally)"
-        description="Uses these creds only for network resource access. Quieter — no local logon event."
-      />
-    </CollapsibleGroup>
+  <CredentialPicker bind:username bind:password bind:domain bind:timeout />
 
-    <CollapsibleGroup title="Program to launch" open={true}>
-      <TextField
-        bind:value={program}
-        label="Program"
-        placeholder="cmd.exe, powershell.exe, C:\\Windows\\System32\\net.exe"
-      />
-      <TextField
-        bind:value={programArgs}
-        label="Arguments"
-        placeholder="/c whoami /all"
-      />
-      <CheckboxField
-        bind:checked={showWindow}
-        label="Show window"
-        description="Otherwise the child process is spawned hidden (default)"
-      />
-    </CollapsibleGroup>
+  <CollapsibleGroup title="Program to launch" open={true}>
+    <TextField bind:value={program} label="Program" placeholder="cmd.exe, powershell.exe, C:\\Windows\\System32\\net.exe" />
+    <TextField bind:value={programArgs} label="Arguments" placeholder="/c whoami /all" />
+    <CheckboxField bind:checked={showWindow} label="Show window" description="Otherwise the child process is spawned hidden (default)" />
+    <CheckboxField bind:checked={netonly} label="Net-only (don't validate credentials locally)" description="Uses these creds only for network resource access. Quieter — no local logon event." />
+  </CollapsibleGroup>
 
-    <CollapsibleGroup title="Advanced" open={false}>
-      <TextField bind:value={timeout} label="Timeout (seconds)" type="number" />
-    </CollapsibleGroup>
-
-    <div class="mb-4">
-      <span class="block text-sm font-semibold text-fg mb-1">Command preview</span>
-      <code class="block p-2 border border-line rounded bg-chrome text-fg break-all">{cmdPreview.replace(/--password "[^"]*"/, '--password "***"')}</code>
-    </div>
-  
   {#snippet footer()}
     <div class="flex justify-between items-center">
-    <PresetPicker
-      commandPath="runas"
-      currentValues={{
-        'username': username,
-        'domain': domain,
-        'program': program,
-        'args': programArgs,
-        'net-only': netonly,
-        'show-window': showWindow,
-      }}
-      onapply={(values) => {
-        if (values['username'] != null) username = values['username']
-        if (values['domain'] != null) domain = values['domain']
-        if (values['program'] != null) program = values['program']
-        if (values['args'] != null) programArgs = values['args']
-        if (values['net-only'] != null) netonly = values['net-only']
-        if (values['show-window'] != null) showWindow = values['show-window']
-      }}
-    />
-    <div class="flex gap-2">
-      <Button color="dark" onclick={() => open = false}>Cancel</Button>
-      <Button color="primary" onclick={execute} disabled={!username || !password || !program}>Run</Button>
+      <PresetPicker
+        commandPath="runas"
+        currentValues={{ username, domain, program, 'args': programArgs, 'net-only': netonly, 'show-window': showWindow }}
+        onapply={(values) => {
+          if (values['username'] != null) username = values['username']
+          if (values['domain'] != null) domain = values['domain']
+          if (values['program'] != null) program = values['program']
+          if (values['args'] != null) programArgs = values['args']
+          if (values['net-only'] != null) netonly = values['net-only']
+          if (values['show-window'] != null) showWindow = values['show-window']
+        }}
+      />
+      <div class="flex gap-2">
+        <Button color="dark" onclick={() => open = false}>Cancel</Button>
+        <Button color="primary" onclick={execute} disabled={!username || !password || !program}>Run</Button>
+      </div>
     </div>
-  </div>
   {/snippet}
 </Modal>

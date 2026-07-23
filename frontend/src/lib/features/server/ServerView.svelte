@@ -101,6 +101,17 @@
 </script>
 
 <div class="flex flex-col h-full bg-canvas">
+  {#snippet menuItems(grp)}
+    {#each grp.tabs as tab (tab.id)}
+      <MenuItem
+        onclick={() => selectTab(tab.id, grp.id)}
+        class={active === tab.id ? '!bg-brand/10 !text-brand' : ''}
+      >
+        <Icon name={tab.icon} size={14} />
+        <span>{tab.label}</span>
+      </MenuItem>
+    {/each}
+  {/snippet}
   <div class="flex min-w-0 items-center gap-1 border-b border-line bg-chrome px-2" role="tablist" tabindex="-1">
     {#each primaryTabs as tab (tab.id)}
       <Button
@@ -131,41 +142,11 @@
           <Icon name="chevron-down" size={12} />
         </Button>
         {#if group.id === 'ops'}
-          <Menu bind:isOpen={opsOpen} minWidth="13rem">
-            {#each group.tabs as tab (tab.id)}
-              <MenuItem
-                onclick={() => selectTab(tab.id, group.id)}
-                class={active === tab.id ? '!bg-brand/10 !text-brand' : ''}
-              >
-                <Icon name={tab.icon} size={14} />
-                <span>{tab.label}</span>
-              </MenuItem>
-            {/each}
-          </Menu>
+          <Menu bind:isOpen={opsOpen} minWidth="13rem">{@render menuItems(group)}</Menu>
         {:else if group.id === 'assets'}
-          <Menu bind:isOpen={assetsOpen} minWidth="13rem">
-            {#each group.tabs as tab (tab.id)}
-              <MenuItem
-                onclick={() => selectTab(tab.id, group.id)}
-                class={active === tab.id ? '!bg-brand/10 !text-brand' : ''}
-              >
-                <Icon name={tab.icon} size={14} />
-                <span>{tab.label}</span>
-              </MenuItem>
-            {/each}
-          </Menu>
+          <Menu bind:isOpen={assetsOpen} minWidth="13rem">{@render menuItems(group)}</Menu>
         {:else if group.id === 'advanced'}
-          <Menu bind:isOpen={advancedOpen} minWidth="13rem">
-            {#each group.tabs as tab (tab.id)}
-              <MenuItem
-                onclick={() => selectTab(tab.id, group.id)}
-                class={active === tab.id ? '!bg-brand/10 !text-brand' : ''}
-              >
-                <Icon name={tab.icon} size={14} />
-                <span>{tab.label}</span>
-              </MenuItem>
-            {/each}
-          </Menu>
+          <Menu bind:isOpen={advancedOpen} minWidth="13rem">{@render menuItems(group)}</Menu>
         {/if}
       </div>
     {/each}
