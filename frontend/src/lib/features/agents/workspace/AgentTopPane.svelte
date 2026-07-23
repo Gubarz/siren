@@ -202,6 +202,16 @@
   function openAgentContextMenu(nativeEvent, agent) {
     const isBeacon = agent._kind === 'beacon'
     const isWindows = (agent.OS || '').toLowerCase() === 'windows'
+
+    // If the right-clicked agent isn't in the current selection and no modifier
+    // key is held, replace the selection with just this agent.
+    const isAdditive = nativeEvent.ctrlKey || nativeEvent.metaKey || nativeEvent.shiftKey
+    if (!isAdditive && !selected.agents.has(agent.ID)) {
+      selection.replace({ agents: [agent.ID] })
+    } else if (!selected.agents.has(agent.ID)) {
+      selection.select('agent', agent.ID, true)
+    }
+
     contextMenu.open({
       x: nativeEvent.clientX,
       y: nativeEvent.clientY,
