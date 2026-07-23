@@ -139,6 +139,10 @@ export const flagOverrides = {
     args: [],
     flags: {},
   },
+  'getprivs': {
+    args: [],
+    flags: {},
+  },
   'socks5 start': {
     args: [],
     flags: {

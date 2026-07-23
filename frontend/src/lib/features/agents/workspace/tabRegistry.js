@@ -24,6 +24,7 @@ import ExtensionsTab from '../ExtensionsTab.svelte'
 import MemfilesTab from '../MemfilesTab.svelte'
 import NetworkCommandTab from '../NetworkCommandTab.svelte'
 import WireGuardTunnelsTab from '../WireGuardTunnelsTab.svelte'
+import PrivilegesTab from '../PrivilegesTab.svelte'
 import Console from '$components/patterns/Console/Console.svelte'
 
 const bySessionID = (tab) => ({ sessionID: tab.sessionId })
@@ -60,6 +61,7 @@ const TabRegistry = {
   tunneling:       { component: TunnelsPanel,      props: bySessionID },
   extensions:      { component: ExtensionsTab,     props: bySessionID },
   memfiles:        { component: MemfilesTab,       props: bySessionID },
+  privileges:       { component: PrivilegesTab,      props: bySessionID },
   'wg-tunnels':    { component: WireGuardTunnelsTab, props: bySessionID },
 }
 

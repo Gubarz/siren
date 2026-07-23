@@ -62,6 +62,7 @@ function buildCoreActions({
   if (isWindows || windowsSessions.length > 0) {
     const serviceTargets = windowsSessions.length > 0 ? windowsSessions : [agent]
     items.push({ icon: 'cog', label: bulkLabel('Services', serviceTargets.length), on: () => openTabs(agentTabs, serviceTargets, 'services') })
+    items.push({ icon: 'key', label: bulkLabel('Privileges', serviceTargets.length), on: () => openTabs(agentTabs, serviceTargets, 'privileges') })
   }
   return items
 }

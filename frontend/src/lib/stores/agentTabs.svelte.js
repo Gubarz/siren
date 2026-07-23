@@ -18,6 +18,7 @@ export const TAB_META = {
   tunneling: { icon: 'network-wired', label: 'Tunnels' },
   extensions: { icon: 'package', label: 'Extensions' },
   memfiles: { icon: 'hard-drive', label: 'Memfiles' },
+  privileges: { icon: 'key', label: 'Privileges' },
   'wg-tunnels': { icon: 'shield', label: 'WG Tunnels' },
 }
 

@@ -9,6 +9,8 @@ import GetSystemModal from './commands/GetSystemModal.svelte'
 import ImpersonateModal from './commands/ImpersonateModal.svelte'
 import MakeTokenModal from './commands/MakeTokenModal.svelte'
 import RunAsModal from './commands/RunAsModal.svelte'
+import RevToSelfModal from './commands/RevToSelfModal.svelte'
+import GetPrivsModal from './commands/GetPrivsModal.svelte'
 import Socks5StartModal from './commands/Socks5StartModal.svelte'
 import PortfwdAddModal from './commands/PortfwdAddModal.svelte'
 import RportfwdAddModal from './commands/RportfwdAddModal.svelte'
@@ -28,6 +30,8 @@ const OVERRIDES = {
   'impersonate': ImpersonateModal,
   'make-token': MakeTokenModal,
   'runas': RunAsModal,
+  'rev2self': RevToSelfModal,
+  'getprivs': GetPrivsModal,
   'socks5 start': Socks5StartModal,
   'portfwd add': PortfwdAddModal,
   'rportfwd add': RportfwdAddModal,

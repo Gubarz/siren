@@ -592,6 +592,14 @@ func (a *App) RemoveService(sessionID, name string) error {
 	return a.Services.RemoveService(sessionID, name)
 }
 
+func (a *App) GetTokenPrivs(sessionID string) (*sliverpb.GetPrivs, error) {
+	return a.Console.GetTokenPrivs(sessionID)
+}
+
+func (a *App) RevToSelfToken(sessionID string) error {
+	return a.Console.RevToSelfToken(sessionID)
+}
+
 // ---- Tunneling ----
 
 func (a *App) StartSocks(sessionID, bindAddr, username, password string) (uint64, error) {
