@@ -153,6 +153,8 @@
   // Merges the snippet's structural style (virtualization offsets) with any
   // per-row style the caller provides (e.g., agent row colors).
   function mergedRowStyle(item, baseStyle) {
+    const isSelected = selected.has(item[keyField])
+    if (isSelected) return baseStyle
     const extra = rowStyle ? rowStyle(item) : ''
     if (!extra) return baseStyle
     if (!baseStyle) return extra
