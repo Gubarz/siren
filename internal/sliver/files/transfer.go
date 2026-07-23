@@ -163,10 +163,10 @@ func (s *Service) DownloadMultipleTar(sessionID string, items []BulkDownloadItem
 	if err != nil {
 		return fmt.Errorf("failed to create archive file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	tw := tar.NewWriter(outFile)
-	defer tw.Close()
+	defer func() { _ = tw.Close() }()
 
 	for _, item := range items {
 		if err := s.downloadMultipleItem(sessionID, item, localPath, tw, emit); err != nil {
@@ -186,8 +186,8 @@ func (s *Service) downloadMultipleItem(
 		s.finalizeDownloadHistory(recordID, "failed", 0, err.Error())
 		return fmt.Errorf("temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 
 	written, err := s.downloadItemToFile(sessionID, item, tmpFile.Name(), emit)
 	if err != nil {

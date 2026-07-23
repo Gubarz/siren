@@ -60,7 +60,7 @@ func (s *Service) StopPortfwd(id uint64) error {
 		delete(s.pfwd, id)
 		s.mu.Unlock()
 		close(pp.quit)
-		pp.listener.Close()
+		_ = pp.listener.Close()
 		return nil
 	}
 	s.mu.Unlock()
@@ -73,7 +73,7 @@ func (s *Service) StopPortfwd(id uint64) error {
 }
 
 func (pp *portfwdProxy) acceptLoop(sessionID, remoteAddr string) {
-	defer pp.listener.Close()
+	defer func() { _ = pp.listener.Close() }()
 	for {
 		conn, err := pp.listener.Accept()
 		if err != nil {
@@ -81,7 +81,7 @@ func (pp *portfwdProxy) acceptLoop(sessionID, remoteAddr string) {
 		}
 		select {
 		case <-pp.quit:
-			conn.Close()
+			_ = conn.Close()
 			return
 		default:
 		}
@@ -90,7 +90,7 @@ func (pp *portfwdProxy) acceptLoop(sessionID, remoteAddr string) {
 }
 
 func (pp *portfwdProxy) handleConn(conn net.Conn, sessionID, remoteAddr string) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	host, portStr, err := net.SplitHostPort(remoteAddr)
 	if err != nil {

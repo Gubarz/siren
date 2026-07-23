@@ -59,7 +59,7 @@ func (s *Service) uploadLocalFile(sessionID string, remotePath string, localPath
 	if err != nil {
 		return fmt.Errorf("failed to open local file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	info, err := f.Stat()
 	if err != nil {
@@ -117,7 +117,7 @@ func (s *Service) compressFileGzip(f *os.File, totalSize int64, localPath string
 
 	go func() {
 		_, copyErr := io.Copy(gw, f)
-		gw.Close()
+		_ = gw.Close()
 		if copyErr != nil {
 			_ = pw.CloseWithError(fmt.Errorf("gzip: %w", copyErr))
 		} else {

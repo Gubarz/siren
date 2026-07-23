@@ -22,7 +22,7 @@ func (s *Service) downloadToFile(
 	if err != nil {
 		return 0, fmt.Errorf("failed to create file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	offset := int64(0)
 	totalWritten := int64(0)
@@ -85,7 +85,7 @@ func gzipWriteTo(w io.Writer, data []byte) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer gzr.Close()
+	defer func() { _ = gzr.Close() }()
 	return io.Copy(w, gzr)
 }
 
@@ -128,7 +128,7 @@ func decompressGzip(data []byte, compressedSize int64, emit func(string, int64, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer gzipReader.Close()
+	defer func() { _ = gzipReader.Close() }()
 
 	var buf bytes.Buffer
 	chunk := make([]byte, 32*1024)

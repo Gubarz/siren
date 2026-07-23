@@ -59,7 +59,7 @@ func decompressGzipBytes(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	var buf bytes.Buffer
 	_, err = io.Copy(&buf, reader)
 	if err != nil {

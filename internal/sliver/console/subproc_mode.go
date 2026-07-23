@@ -40,7 +40,7 @@ func RunConsoleSubprocess(configPath, sessionID string) error {
 	if err != nil {
 		return err
 	}
-	defer grpcConn.Close()
+	defer func() { _ = grpcConn.Close() }()
 
 	// rcScript is the script *body*, not a path (sliver reads it directly
 	// via bufio.NewScanner(strings.NewReader(...))). Passing `use <id>`

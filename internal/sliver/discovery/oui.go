@@ -38,7 +38,7 @@ func loadOUIRegistry() {
 	if err != nil {
 		return
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {

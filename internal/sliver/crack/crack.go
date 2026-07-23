@@ -129,7 +129,7 @@ func (s *Service) UploadFromPath(localPath string, fileType clientpb.CrackFileTy
 	if err != nil {
 		return nil, err
 	}
-	defer source.Close()
+	defer func() { _ = source.Close() }()
 
 	ctx := context.Background()
 	name := filepath.Base(localPath)
@@ -209,7 +209,7 @@ func compressCrackUpload(source *os.File) (*os.File, string, error) {
 		return nil, "", err
 	}
 	if _, err = io.Copy(compressor, io.TeeReader(source, digest)); err != nil {
-		compressor.Close()
+		_ = compressor.Close()
 		return nil, "", err
 	}
 	if err = compressor.Close(); err != nil {

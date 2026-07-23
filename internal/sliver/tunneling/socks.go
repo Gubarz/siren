@@ -70,7 +70,7 @@ func (d *socksDriver) start() error {
 func (d *socksDriver) stop() {
 	d.cancel()
 	if d.listener != nil {
-		d.listener.Close()
+		_ = d.listener.Close()
 	}
 	if d.stream != nil {
 		_ = d.stream.CloseSend()
@@ -80,7 +80,7 @@ func (d *socksDriver) stop() {
 	d.conns = map[uint64]net.Conn{}
 	d.mu.Unlock()
 	for _, c := range conns {
-		c.Close()
+		_ = c.Close()
 	}
 }
 
@@ -95,7 +95,7 @@ func (d *socksDriver) acceptLoop() {
 		}
 		created, err := d.rpc.CreateSocks(d.ctx, &sliverpb.Socks{SessionID: d.sessionID})
 		if err != nil {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
 		d.mu.Lock()
@@ -112,7 +112,7 @@ func (d *socksDriver) pumpToImplant(conn net.Conn, tunnelID uint64, sessionID st
 		d.mu.Lock()
 		delete(d.conns, tunnelID)
 		d.mu.Unlock()
-		conn.Close()
+		_ = conn.Close()
 	}()
 
 	buf := make([]byte, socksBufSize)
@@ -198,14 +198,14 @@ func (d *socksDriver) recvLoop() {
 			continue
 		}
 		if data.CloseConn {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
 		if _, err := conn.Write(data.Data); err != nil {
 			d.mu.Lock()
 			delete(d.conns, data.TunnelID)
 			d.mu.Unlock()
-			conn.Close()
+			_ = conn.Close()
 		}
 	}
 }

@@ -128,7 +128,7 @@ func writeConfigForSubproc(cfg *assets.ClientConfig) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := os.Chmod(f.Name(), 0o600); err != nil {
 		return "", err
 	}

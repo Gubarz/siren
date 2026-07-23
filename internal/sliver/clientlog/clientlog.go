@@ -92,7 +92,7 @@ func (s *Service) Close() {
 // pump reads from the queue and writes to the stream. A ticker flushes
 // nothing itself but keeps the loop responsive for shutdown.
 func (s *Service) pump(ctx context.Context, stream rpcpb.SliverRPC_ClientLogClient) {
-	defer stream.CloseSend()
+	defer func() { _ = stream.CloseSend() }()
 	ticker := time.NewTicker(flushInterval)
 	defer ticker.Stop()
 	for {

@@ -83,7 +83,7 @@ func (s *Service) StartSocks(sessionID, bindAddr, username, password string) (ui
 	driver := newSocksDriver(s.rpc.RPC, sessionID, username, password, listener)
 	if err := driver.start(); err != nil {
 		core.SocksProxies.Remove(wrapper.ID)
-		listener.Close()
+		_ = listener.Close()
 		return 0, fmt.Errorf("start socks proxy: %w", err)
 	}
 	s.mu.Lock()
@@ -144,7 +144,7 @@ func (s *Service) Close() {
 	}
 	for _, pp := range pfwds {
 		close(pp.quit)
-		pp.listener.Close()
+		_ = pp.listener.Close()
 	}
 	if s.rpc.Connected() {
 		for _, key := range rpfwds {

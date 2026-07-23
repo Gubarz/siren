@@ -128,7 +128,7 @@ func gzipWasmExtension(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	if _, err := writer.Write(data); err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return nil, err
 	}
 	if err := writer.Close(); err != nil {
