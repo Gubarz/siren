@@ -1,7 +1,6 @@
 <script>
   import Button from '$components/ui/Button.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
-  import Icon from '$components/ui/Icon.svelte'
   import {
     getEnvInfo,
     setDataDirOverride,

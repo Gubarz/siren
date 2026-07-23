@@ -13,10 +13,6 @@ export async function getEnvInfo() {
   return cachedEnvInfo;
 }
 
-export function getCachedEnvInfo() {
-  return cachedEnvInfo;
-}
-
 export async function setDataDirOverride(dir) {
   await SetDataDirOverride(dir);
   cachedEnvInfo = await GetEnvInfo();
