@@ -5,13 +5,12 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"sliver-gui/internal/sliver/rpc"
 )
 
-const defaultRPCTimeout = 60 * time.Second
+const defaultRPCTimeout = 5 * time.Minute
 
 type Service struct {
 	rpc *rpc.Client
@@ -29,15 +28,22 @@ func (s *Service) GetProcessList(sessionID string, fullInfo bool) (*sliverpb.Ps,
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
 	defer cancel()
 
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return nil, err
+	}
 	req := &sliverpb.PsReq{
 		FullInfo: fullInfo,
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout - time.Nanosecond),
-		},
+		Request:  request,
 	}
-
-	return s.rpc.RPC.Ps(ctx, req)
+	resp, err := s.rpc.RPC.Ps(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *Service) KillProcess(sessionID string, pid int32) error {
@@ -48,17 +54,21 @@ func (s *Service) KillProcess(sessionID string, pid int32) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
 	defer cancel()
 
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return err
+	}
 	req := &sliverpb.TerminateReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout - time.Nanosecond),
-		},
-		Pid:   pid,
-		Force: true,
+		Request: request,
+		Pid:     pid,
+		Force:   true,
 	}
 
-	_, err := s.rpc.RPC.Terminate(ctx, req)
-	return err
+	resp, err := s.rpc.RPC.Terminate(ctx, req)
+	if err != nil {
+		return err
+	}
+	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
 }
 
 func (s *Service) TakeScreenshot(sessionID string) (string, error) {
@@ -69,15 +79,19 @@ func (s *Service) TakeScreenshot(sessionID string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
 	defer cancel()
 
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return "", err
+	}
 	req := &sliverpb.ScreenshotReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout - time.Nanosecond),
-		},
+		Request: request,
 	}
 
 	resp, err := s.rpc.RPC.Screenshot(ctx, req)
 	if err != nil {
+		return "", err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return "", err
 	}
 

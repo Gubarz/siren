@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"sliver-gui/internal/sliver/rpc"
@@ -23,6 +23,8 @@ type Service struct {
 	rpc *rpc.Client
 }
 
+const requestTimeout = 5 * time.Minute
+
 func New(rpc *rpc.Client) *Service {
 	return &Service{rpc: rpc}
 }
@@ -32,13 +34,26 @@ func (s *Service) ListSubKeys(sessionID, hive, path string) (*sliverpb.RegistryS
 		return nil, rpc.ErrNotConnected
 	}
 
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return nil, err
+	}
 	req := &sliverpb.RegistrySubKeyListReq{
-		Request: &commonpb.Request{SessionID: sessionID},
+		Request: request,
 		Hive:    hive,
 		Path:    path,
 	}
 
-	return s.rpc.RPC.RegistryListSubKeys(context.Background(), req)
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.RegistryListSubKeys(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *Service) ListValues(sessionID, hive, path string) (*sliverpb.RegistryValuesList, error) {
@@ -46,21 +61,40 @@ func (s *Service) ListValues(sessionID, hive, path string) (*sliverpb.RegistryVa
 		return nil, rpc.ErrNotConnected
 	}
 
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return nil, err
+	}
 	req := &sliverpb.RegistryListValuesReq{
-		Request: &commonpb.Request{SessionID: sessionID},
+		Request: request,
 		Hive:    hive,
 		Path:    path,
 	}
 
-	return s.rpc.RPC.RegistryListValues(context.Background(), req)
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.RegistryListValues(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *Service) ReadValue(sessionID, hive, path, key string) (*Value, error) {
 	if !s.rpc.Connected() {
 		return nil, rpc.ErrNotConnected
 	}
-	resp, err := s.rpc.RPC.RegistryRead(context.Background(), &sliverpb.RegistryReadReq{
-		Request: &commonpb.Request{SessionID: sessionID},
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.RegistryRead(ctx, &sliverpb.RegistryReadReq{
+		Request: request,
 		Hive:    strings.ToUpper(hive),
 		Path:    path,
 		Key:     key,
@@ -68,7 +102,7 @@ func (s *Service) ReadValue(sessionID, hive, path, key string) (*Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := rpc.CheckResponse(resp); err != nil {
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return nil, err
 	}
 	return &Value{Name: key, Type: "Value", Value: resp.Value}, nil
@@ -78,12 +112,31 @@ func (s *Service) WriteValue(sessionID, hive, path, key, valueType, value string
 	if !s.rpc.Connected() {
 		return rpc.ErrNotConnected
 	}
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return err
+	}
 	req := &sliverpb.RegistryWriteReq{
-		Request: &commonpb.Request{SessionID: sessionID},
+		Request: request,
 		Hive:    strings.ToUpper(hive),
 		Path:    path,
 		Key:     key,
 	}
+	if err := applyTypedValue(req, valueType, value); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.RegistryWrite(ctx, req)
+	if err != nil {
+		return err
+	}
+	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
+}
+
+// applyTypedValue sets the type and typed-value fields on req from the
+// operator-facing valueType ("string", "binary", "dword", "qword").
+func applyTypedValue(req *sliverpb.RegistryWriteReq, valueType, value string) error {
 	switch strings.ToLower(strings.TrimSpace(valueType)) {
 	case "string":
 		req.Type = sliverpb.RegistryTypeString
@@ -112,19 +165,21 @@ func (s *Service) WriteValue(sessionID, hive, path, key, valueType, value string
 	default:
 		return fmt.Errorf("unsupported registry value type %q", valueType)
 	}
-	resp, err := s.rpc.RPC.RegistryWrite(context.Background(), req)
-	if err != nil {
-		return err
-	}
-	return rpc.CheckResponse(resp)
+	return nil
 }
 
 func (s *Service) CreateKey(sessionID, hive, path, key string) error {
 	if !s.rpc.Connected() {
 		return rpc.ErrNotConnected
 	}
-	resp, err := s.rpc.RPC.RegistryCreateKey(context.Background(), &sliverpb.RegistryCreateKeyReq{
-		Request: &commonpb.Request{SessionID: sessionID},
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.RegistryCreateKey(ctx, &sliverpb.RegistryCreateKeyReq{
+		Request: request,
 		Hive:    strings.ToUpper(hive),
 		Path:    path,
 		Key:     key,
@@ -132,26 +187,45 @@ func (s *Service) CreateKey(sessionID, hive, path, key string) error {
 	if err != nil {
 		return err
 	}
-	return rpc.CheckResponse(resp)
+	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
 }
 
 func (s *Service) ReadHive(sessionID, rootHive, requestedHive string) (*sliverpb.RegistryReadHive, error) {
 	if !s.rpc.Connected() {
 		return nil, rpc.ErrNotConnected
 	}
-	return s.rpc.RPC.RegistryReadHive(context.Background(), &sliverpb.RegistryReadHiveReq{
-		Request:       &commonpb.Request{SessionID: sessionID},
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.RegistryReadHive(ctx, &sliverpb.RegistryReadHiveReq{
+		Request:       request,
 		RootHive:      rootHive,
 		RequestedHive: requestedHive,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *Service) DeleteEntry(sessionID, hive, path, key string) error {
 	if !s.rpc.Connected() {
 		return rpc.ErrNotConnected
 	}
-	resp, err := s.rpc.RPC.RegistryDeleteKey(context.Background(), &sliverpb.RegistryDeleteKeyReq{
-		Request: &commonpb.Request{SessionID: sessionID},
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.RegistryDeleteKey(ctx, &sliverpb.RegistryDeleteKeyReq{
+		Request: request,
 		Hive:    strings.ToUpper(hive),
 		Path:    path,
 		Key:     key,
@@ -159,5 +233,5 @@ func (s *Service) DeleteEntry(sessionID, hive, path, key string) error {
 	if err != nil {
 		return err
 	}
-	return rpc.CheckResponse(resp)
+	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
 }

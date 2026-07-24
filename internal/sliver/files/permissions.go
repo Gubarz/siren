@@ -5,14 +5,12 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-
-	"sliver-gui/internal/sliver/rpc"
 )
 
 func (s *Service) Chmod(sessionID, path, mode string, recursive bool) error {
-	return s.runVoidCommand(func() (rpc.ResponseWithError, error) {
-		return s.rpc.RPC.Chmod(context.Background(), &sliverpb.ChmodReq{
-			Request:   &commonpb.Request{SessionID: sessionID},
+	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
+		return s.rpc.RPC.Chmod(ctx, &sliverpb.ChmodReq{
+			Request:   req,
 			Path:      path,
 			FileMode:  mode,
 			Recursive: recursive,
@@ -21,9 +19,9 @@ func (s *Service) Chmod(sessionID, path, mode string, recursive bool) error {
 }
 
 func (s *Service) Chown(sessionID, path, uid, gid string, recursive bool) error {
-	return s.runVoidCommand(func() (rpc.ResponseWithError, error) {
-		return s.rpc.RPC.Chown(context.Background(), &sliverpb.ChownReq{
-			Request:   &commonpb.Request{SessionID: sessionID},
+	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
+		return s.rpc.RPC.Chown(ctx, &sliverpb.ChownReq{
+			Request:   req,
 			Path:      path,
 			Uid:       uid,
 			Gid:       gid,
@@ -33,9 +31,9 @@ func (s *Service) Chown(sessionID, path, uid, gid string, recursive bool) error 
 }
 
 func (s *Service) Chtimes(sessionID, path string, atimeUnix, mtimeUnix int64) error {
-	return s.runVoidCommand(func() (rpc.ResponseWithError, error) {
-		return s.rpc.RPC.Chtimes(context.Background(), &sliverpb.ChtimesReq{
-			Request: &commonpb.Request{SessionID: sessionID},
+	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
+		return s.rpc.RPC.Chtimes(ctx, &sliverpb.ChtimesReq{
+			Request: req,
 			Path:    path,
 			ATime:   atimeUnix,
 			MTime:   mtimeUnix,

@@ -13,17 +13,16 @@ export const useProcessList = createPerKeyStore((sessionID) => {
   function refresh(fullView) {
     const fv = fullView !== undefined ? fullView : state.isFullView
     state.loading = true
-    state.error = null
     state.isFullView = fv
     listProcesses(sessionID, fv)
       .then((processes) => {
         state.processes = processes
-        state.loading = false
         state.error = null
+        state.loading = false
       })
       .catch((err) => {
-        state.loading = false
         state.error = String(err)
+        state.loading = false
       })
   }
 

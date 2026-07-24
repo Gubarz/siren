@@ -15,6 +15,8 @@ type Service struct {
 	rpc *rpc.Client
 }
 
+const requestTimeout = 5 * time.Minute
+
 func New(rpc *rpc.Client) *Service {
 	return &Service{rpc: rpc}
 }
@@ -24,19 +26,21 @@ func (s *Service) GetEnv(sessionID string) (*sliverpb.EnvInfo, error) {
 		return nil, rpc.ErrNotConnected
 	}
 
-	req := &sliverpb.EnvReq{
-		Request: s.requestFor(sessionID),
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
+	if err != nil {
+		return nil, err
 	}
+	req := &sliverpb.EnvReq{Request: request}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	resp, err := s.rpc.RPC.GetEnv(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	if resp.Response != nil && resp.Response.Err != "" {
-		return nil, fmt.Errorf("implant: %s", resp.Response.Err)
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
+		return nil, fmt.Errorf("getenv: %w", err)
 	}
 	return resp, nil
 }
@@ -46,19 +50,22 @@ func (s *Service) SetEnv(sessionID, key, value string) error {
 		return rpc.ErrNotConnected
 	}
 
-	req := &sliverpb.SetEnvReq{
-		Variable: &commonpb.EnvVar{Key: key, Value: value},
-		Request:  s.requestFor(sessionID),
-	}
-
-	resp, err := s.rpc.RPC.SetEnv(context.Background(), req)
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
 	if err != nil {
 		return err
 	}
-	if resp.Response != nil && resp.Response.Err != "" {
-		return fmt.Errorf("implant: %s", resp.Response.Err)
+	req := &sliverpb.SetEnvReq{
+		Variable: &commonpb.EnvVar{Key: key, Value: value},
+		Request:  request,
 	}
-	return nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.SetEnv(ctx, req)
+	if err != nil {
+		return err
+	}
+	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
 }
 
 func (s *Service) UnsetEnv(sessionID, name string) error {
@@ -66,31 +73,20 @@ func (s *Service) UnsetEnv(sessionID, name string) error {
 		return rpc.ErrNotConnected
 	}
 
-	req := &sliverpb.UnsetEnvReq{
-		Name:    name,
-		Request: s.requestFor(sessionID),
-	}
-
-	resp, err := s.rpc.RPC.UnsetEnv(context.Background(), req)
+	request, err := s.rpc.TargetRequest(sessionID, requestTimeout)
 	if err != nil {
 		return err
 	}
-	if resp.Response != nil && resp.Response.Err != "" {
-		return fmt.Errorf("implant: %s", resp.Response.Err)
+	req := &sliverpb.UnsetEnvReq{
+		Name:    name,
+		Request: request,
 	}
-	return nil
-}
 
-func (s *Service) requestFor(sessionID string) *commonpb.Request {
-	req := &commonpb.Request{
-		SessionID: sessionID,
-		Timeout:   int64((60 * time.Second) / time.Second),
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	resp, err := s.rpc.RPC.UnsetEnv(ctx, req)
+	if err != nil {
+		return err
 	}
-	if sess := s.rpc.LookupSession(sessionID); sess == nil {
-		if beacon := s.rpc.LookupBeacon(sessionID); beacon != nil {
-			req.BeaconID = sessionID
-			req.Async = true
-		}
-	}
-	return req
+	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
 }

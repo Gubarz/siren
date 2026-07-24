@@ -8,15 +8,15 @@
   import { errorMessage } from '../../utils/errors.js'
   import { dialog } from '../../stores/ui/dialog.svelte.js'
 
-  let { sessionID = '' } = $props()
+  let { sessionID = '', staticData = null } = $props()
 
-  let variables = $state([])
+  let variables = $state(staticData || [])
   let loading = $state(false)
   let error = $state('')
   let saving = $state(null)
-  let drafts = $state({})
+  let drafts = $state(loadDrafts(staticData || []))
 
-  onMount(() => refresh())
+  onMount(() => { if (!staticData) refresh() })
 
   function loadDrafts(vars) {
     const next = {}
@@ -25,6 +25,7 @@
   }
 
   async function refresh() {
+    if (staticData) return
     loading = true
     error = ''
     try {
@@ -92,8 +93,12 @@
 
 <div class="flex flex-col h-full">
   <Toolbar class="justify-end gap-1">
-    <Button color="primary" size="xs" icon="plus" onclick={addVar}>Add Env Var</Button>
-    <Button color="dark" size="xs" onclick={refresh} disabled={loading}>Refresh</Button>
+    {#if staticData}
+      <span class="text-xs text-fg-muted font-semibold">Beacon Task Snapshot</span>
+    {:else}
+      <Button color="primary" size="xs" icon="plus" onclick={addVar}>Add Env Var</Button>
+      <Button color="dark" size="xs" onclick={refresh} disabled={loading}>Refresh</Button>
+    {/if}
   </Toolbar>
 
   <PanelBody {error} empty={!loading && !error && variables.length === 0} emptyIcon="braces" emptyTitle="No env vars">
@@ -103,7 +108,9 @@
           <tr class="border-b border-line bg-table-header text-left text-fg-muted">
             <th class="px-3 py-2 font-medium w-1/3">Key</th>
             <th class="px-3 py-2 font-medium">Value</th>
-            <th class="px-3 py-2 text-right font-medium w-28">Actions</th>
+            {#if !staticData}
+              <th class="px-3 py-2 text-right font-medium w-28">Actions</th>
+            {/if}
           </tr>
         </thead>
         <tbody>
@@ -117,15 +124,17 @@
                   placeholder="value"
                   value={drafts[v.Key] ?? ''}
                   oninput={(e) => drafts[v.Key] = e.target.value}
-                  disabled={disabled}
+                  disabled={disabled || !!staticData}
                 />
               </td>
-              <td class="px-3 py-2 text-right">
-                <div class="flex gap-1 justify-end">
-                  <Button color="green" size="xs" onclick={() => saveVar(v)} disabled={disabled || !isDirty(v.Key)}>Save</Button>
-                  <Button color="red" size="xs" onclick={() => deleteVar(v)} disabled={disabled}>Del</Button>
-                </div>
-              </td>
+              {#if !staticData}
+                <td class="px-3 py-2 text-right">
+                  <div class="flex gap-1 justify-end">
+                    <Button color="green" size="xs" onclick={() => saveVar(v)} disabled={disabled || !isDirty(v.Key)}>Save</Button>
+                    <Button color="red" size="xs" onclick={() => deleteVar(v)} disabled={disabled}>Del</Button>
+                  </div>
+                </td>
+              {/if}
             </tr>
           {/each}
         </tbody>

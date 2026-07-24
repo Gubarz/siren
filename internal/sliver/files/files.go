@@ -6,11 +6,12 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"google.golang.org/protobuf/proto"
 
 	"sliver-gui/internal/sliver/rpc"
 )
 
-const defaultRPCTimeout = 60 * time.Second
+const defaultRPCTimeout = 5 * time.Minute
 
 type Service struct {
 	rpc     *rpc.Client
@@ -56,72 +57,96 @@ func (s *Service) ClearDownloadHistory(sessionID, remotePath string) error {
 }
 
 type PathResponse interface {
-	GetResponse() *commonpb.Response
+	rpc.ResponseWithError
+	proto.Message
 	GetPath() string
 }
 
-func (s *Service) runPathCommand(execute func() (PathResponse, error)) (string, error) {
+type protobufResponse interface {
+	rpc.ResponseWithError
+	proto.Message
+}
+
+func (s *Service) runPathCommand(
+	sessionID string,
+	execute func(context.Context, *commonpb.Request) (PathResponse, error),
+) (string, error) {
 	if !s.rpc.Connected() {
 		return "", rpc.ErrNotConnected
 	}
-	resp, err := execute()
+	req, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
 	if err != nil {
 		return "", err
 	}
-	if err := rpc.CheckResponse(resp); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
+	defer cancel()
+	resp, err := execute(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return "", err
 	}
 	return resp.GetPath(), nil
 }
 
-func (s *Service) runVoidCommand(execute func() (rpc.ResponseWithError, error)) error {
+func (s *Service) runVoidCommand(
+	sessionID string,
+	execute func(context.Context, *commonpb.Request) (protobufResponse, error),
+) error {
 	if !s.rpc.Connected() {
 		return rpc.ErrNotConnected
 	}
-	resp, err := execute()
+	req, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
 	if err != nil {
 		return err
 	}
-	return rpc.CheckResponse(resp)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
+	defer cancel()
+	resp, err := execute(ctx, req)
+	if err != nil {
+		return err
+	}
+	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
 }
 
 func (s *Service) MakeDir(sessionID, path string) error {
-	return s.runVoidCommand(func() (rpc.ResponseWithError, error) {
-		return s.rpc.RPC.Mkdir(context.Background(), &sliverpb.MkdirReq{
-			Request: &commonpb.Request{SessionID: sessionID}, Path: path,
+	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
+		return s.rpc.RPC.Mkdir(ctx, &sliverpb.MkdirReq{
+			Request: req, Path: path,
 		})
 	})
 }
 
 func (s *Service) RemovePath(sessionID, path string, recursive bool) error {
-	return s.runVoidCommand(func() (rpc.ResponseWithError, error) {
-		return s.rpc.RPC.Rm(context.Background(), &sliverpb.RmReq{
-			Request: &commonpb.Request{SessionID: sessionID}, Path: path, Recursive: recursive, Force: true,
+	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
+		return s.rpc.RPC.Rm(ctx, &sliverpb.RmReq{
+			Request: req, Path: path, Recursive: recursive, Force: true,
 		})
 	})
 }
 
 func (s *Service) RenamePath(sessionID, src, dst string) error {
-	return s.runVoidCommand(func() (rpc.ResponseWithError, error) {
-		return s.rpc.RPC.Mv(context.Background(), &sliverpb.MvReq{
-			Request: &commonpb.Request{SessionID: sessionID}, Src: src, Dst: dst,
+	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
+		return s.rpc.RPC.Mv(ctx, &sliverpb.MvReq{
+			Request: req, Src: src, Dst: dst,
 		})
 	})
 }
 
 func (s *Service) Cd(sessionID, path string) (string, error) {
-	return s.runPathCommand(func() (PathResponse, error) {
-		return s.rpc.RPC.Cd(context.Background(), &sliverpb.CdReq{
-			Request: &commonpb.Request{SessionID: sessionID},
+	return s.runPathCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (PathResponse, error) {
+		return s.rpc.RPC.Cd(ctx, &sliverpb.CdReq{
+			Request: req,
 			Path:    path,
 		})
 	})
 }
 
 func (s *Service) Pwd(sessionID string) (string, error) {
-	return s.runPathCommand(func() (PathResponse, error) {
-		return s.rpc.RPC.Pwd(context.Background(), &sliverpb.PwdReq{
-			Request: &commonpb.Request{SessionID: sessionID},
+	return s.runPathCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (PathResponse, error) {
+		return s.rpc.RPC.Pwd(ctx, &sliverpb.PwdReq{
+			Request: req,
 		})
 	})
 }
@@ -138,13 +163,21 @@ func (s *Service) GetFileList(sessionID string, path string) (*sliverpb.Ls, erro
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
 	defer cancel()
 
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return nil, err
+	}
 	req := &sliverpb.LsReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout / time.Second),
-		},
+		Request: request,
 		Path: path,
 	}
 
-	return s.rpc.RPC.Ls(ctx, req)
+	resp, err := s.rpc.RPC.Ls(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

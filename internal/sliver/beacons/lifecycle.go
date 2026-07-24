@@ -72,13 +72,24 @@ func (s *Service) CloseSession(beaconID, tunnelID string) error {
 	if strings.TrimSpace(beaconID) == "" {
 		return fmt.Errorf("beacon ID is required")
 	}
+
+	beacon := s.rpc.LookupBeacon(beaconID)
+	if beacon == nil {
+		return fmt.Errorf("beacon not found: %s", beaconID)
+	}
+
+	session := s.rpc.LookupSessionByBeaconName(beacon.Name)
+	if session == nil {
+		return fmt.Errorf("no active session for beacon %s", beacon.Name)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), lifecycleTimeout)
 	defer cancel()
 	req := &sliverpb.CloseSession{
 		Request: &commonpb.Request{
-			BeaconID: beaconID,
-			Async:    true,
-			Timeout:  int64(lifecycleTimeout / time.Second),
+			SessionID: session.ID,
+			Async:     true,
+			Timeout:   int64(lifecycleTimeout / time.Second),
 		},
 	}
 	_, err := s.rpc.RPC.CloseSession(ctx, req)

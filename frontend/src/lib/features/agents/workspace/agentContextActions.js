@@ -59,6 +59,7 @@ function buildCoreActions({
   agent,
   isBeacon,
   isWindows,
+  hasInteractiveSession,
   targetAgents,
   agentTabs,
   openBeaconDetail,
@@ -73,16 +74,33 @@ function buildCoreActions({
 
   if (isBeacon) {
     const taskTargets = beaconAgents.length > 0 ? beaconAgents : [agent]
-    return {
-      topLevel: [
-        tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
-        tabAction(agentTabs, taskTargets, 'tasks', taskTargets.length),
-        { icon: 'info', label: 'Beacon Detail…', on: () => openBeaconDetail(agent) },
-        { icon: 'terminal', label: 'Open Interactive Session', on: () => promoteBeacon(agent) },
-        { icon: 'x', label: 'Close Interactive Session', on: () => demoteSession(agent) },
-      ],
-      moreItems: [],
+    const topLevel = [
+      tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
+      tabAction(agentTabs, taskTargets, 'tasks', taskTargets.length),
+      tabAction(agentTabs, taskTargets, 'processExplorer', taskTargets.length),
+      { icon: 'info', label: 'Beacon Detail…', on: () => openBeaconDetail(agent) },
+      { icon: 'terminal', label: 'Open Interactive Session', on: () => promoteBeacon(agent) },
+      { icon: 'x', label: 'Close Interactive Session', disabled: !hasInteractiveSession, on: () => demoteSession(agent) },
+    ]
+
+    const moreItems = [
+      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'screenshot', beaconAgents.length || 1),
+      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'grep', beaconAgents.length || 1),
+      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'env', beaconAgents.length || 1),
+    ]
+    if (isWindows) {
+      moreItems.push(tabAction(agentTabs, [agent], 'registryBrowser', 1))
+      moreItems.push(tabAction(agentTabs, [agent], 'services', 1))
     }
+    moreItems.push(
+      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'netstat', beaconAgents.length || 1),
+      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'ifconfig', beaconAgents.length || 1),
+    )
+    if (isWindows) {
+      moreItems.push(tabAction(agentTabs, [agent], 'privileges', 1))
+    }
+
+    return { topLevel, moreItems }
   }
 
   const topLevel = [
@@ -222,6 +240,7 @@ export function buildAgentContextSections(ctx) {
     agent,
     isBeacon,
     isWindows,
+    hasInteractiveSession,
     catalog,
     targetIDs,
     targetAgents,
@@ -232,6 +251,7 @@ export function buildAgentContextSections(ctx) {
 
   const { topLevel, moreItems } = buildCoreActions({
     agent, isBeacon, isWindows,
+    hasInteractiveSession: hasInteractiveSession ?? false,
     targetAgents,
     agentTabs,
     openBeaconDetail: contextMenuHandlers.openBeaconDetail,

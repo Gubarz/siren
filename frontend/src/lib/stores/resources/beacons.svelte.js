@@ -5,4 +5,5 @@ export const beacons = createResource({
   name: 'beacons',
   fetch: () => listBeacons(),
   events: ['beacon-registered', 'beacon-checkin'],
+  pollInterval: 5000,
 })

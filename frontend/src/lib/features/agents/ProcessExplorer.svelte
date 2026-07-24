@@ -13,18 +13,22 @@
   import { buildProcessTree, buildProcessContextSections } from "./processExplorerHelpers.js";
   import { entityColorStyle } from "../../utils/entityTags.js";
 
-  let { sessionID = "", picker = false, onpick } = $props();
+  let { sessionID = "", picker = false, onpick, staticData = null } = $props();
 
   useResource(entityColors)
 
-  let store = $derived(useProcessList(sessionID));
+  let store = $derived(!staticData ? useProcessList(sessionID) : null);
 
   $effect(() => {
-    store.acquire();
-    return () => store.release();
+    if (store) {
+      store.acquire();
+      return () => store.release();
+    }
   });
-  let isTreeView = $derived(store.state.isTreeView);
-  let isFullView = $derived(store.state.isFullView);
+  let isTreeView = $derived(store?.state?.isTreeView ?? false);
+  let isFullView = $derived(store?.state?.isFullView ?? false);
+  let isSnapshotTreeView = $state(false);
+  let effectiveTreeView = $derived(staticData ? isSnapshotTreeView : isTreeView);
 
   const baseColumns = [
     { key: "PidStr", label: "PID", width: 120 },
@@ -41,26 +45,30 @@
   // Full View reveals deeper (and noisier) process detail.
   let tableColumns = $derived(isFullView ? fullColumns : baseColumns);
 
-  $effect(() => {
-    if (sessionID) {
-      store.refresh();
-    }
-  });
-
   let normalizedProcesses = $derived(
-    (store.state.processes || []).map((p) => ({
-      ...p,
-      PidStr: String(p.Pid ?? p.pid ?? 0),
-      PpidStr: String(p.Ppid ?? p.ppid ?? 0),
-      ExecutableStr: p.Executable ?? p.executable ?? "",
-      OwnerStr: p.Owner ?? p.owner ?? "",
-      ArchStr: p.Architecture ?? p.architecture ?? "",
-      SessionStr: String(p.SessionID ?? p.sessionID ?? ""),
-    })),
+    staticData
+      ? (staticData || []).map((p) => ({
+          ...p,
+          PidStr: String(p.Pid ?? p.pid ?? 0),
+          PpidStr: String(p.Ppid ?? p.ppid ?? 0),
+          ExecutableStr: p.Executable ?? p.executable ?? "",
+          OwnerStr: p.Owner ?? p.owner ?? "",
+          ArchStr: p.Architecture ?? p.architecture ?? "",
+          SessionStr: String(p.SessionID ?? p.sessionID ?? ""),
+        }))
+      : (store.state.processes || []).map((p) => ({
+          ...p,
+          PidStr: String(p.Pid ?? p.pid ?? 0),
+          PpidStr: String(p.Ppid ?? p.ppid ?? 0),
+          ExecutableStr: p.Executable ?? p.executable ?? "",
+          OwnerStr: p.Owner ?? p.owner ?? "",
+          ArchStr: p.Architecture ?? p.architecture ?? "",
+          SessionStr: String(p.SessionID ?? p.sessionID ?? ""),
+        })),
   );
 
   let displayProcesses = $derived(
-    isTreeView ? buildProcessTree(normalizedProcesses) : normalizedProcesses,
+    effectiveTreeView ? buildProcessTree(normalizedProcesses) : normalizedProcesses,
   );
 
   // Full View surfaces owner/arch/session — deeper enumeration that isn't
@@ -82,6 +90,7 @@
   }
 
   async function killProcess(pid) {
+    if (!store) return;
     if (
       !(await dialog.confirm(
         `Are you sure you want to kill PID ${pid}?`,
@@ -115,33 +124,43 @@
     const procName = proc.Executable || proc.executable || proc.ExecutableStr || "";
     contextMenu.open({
       x: event.clientX, y: event.clientY,
-      sections: buildProcessContextSections({ pid, procName, commandModal, killProcess }),
+      sections: buildProcessContextSections({
+        pid, procName, commandModal,
+        killProcess: staticData ? () => dialog.alert('Process kill unavailable for snapshot data.', 'Snapshot') : killProcess,
+      }),
     });
   }
 </script>
 
 <div class="rounded-sm">
-  <div class="tab-header flex justify-end gap-2">
-    <Button
-      size="xs"
-      color={isFullView ? "secondary" : "danger"}
-      title="Reveals owner/arch/session via deeper enumeration (not opsec-safe)"
-      onclick={toggleFullView}
-    >
-      {isFullView ? "Basic View" : "Full View"}
-    </Button>
-    <Button
-      size="xs"
-      color="dark"
-      onclick={() => store.setTreeView(!isTreeView)}
-    >
-      {isTreeView ? "List View" : "Tree View"}
-    </Button>
-    <Button
-      size="xs"
-      color="dark"
-      onclick={() => store.refresh()}>Refresh</Button
-    >
+  <div class="tab-header flex justify-between gap-2">
+    {#if staticData}
+      <span class="text-xs text-fg-muted font-semibold">Beacon Task Snapshot ({staticData.length} processes)</span>
+    {/if}
+    <div class="flex gap-2 {staticData ? '' : 'ml-auto'}">
+      {#if !staticData}
+        <Button
+          size="xs"
+          color={isFullView ? "secondary" : "danger"}
+          title="Reveals owner/arch/session via deeper enumeration (not opsec-safe)"
+          onclick={toggleFullView}
+        >
+          {isFullView ? "Basic View" : "Full View"}
+        </Button>
+      {/if}
+      {#if staticData}
+        <Button size="xs" color="dark" onclick={() => isSnapshotTreeView = !isSnapshotTreeView}>
+          {isSnapshotTreeView ? "List View" : "Tree View"}
+        </Button>
+      {:else}
+        <Button size="xs" color="dark" onclick={() => store.setTreeView(!isTreeView)}>
+          {isTreeView ? "List View" : "Tree View"}
+        </Button>
+      {/if}
+      {#if !staticData}
+        <Button size="xs" color="dark" onclick={() => store.refresh()}>Refresh</Button>
+      {/if}
+    </div>
   </div>
 
   <div>
@@ -149,8 +168,8 @@
       data={displayProcesses}
       columns={tableColumns}
       keyField="PidStr"
-      loading={store.state.loading}
-      error={store.state.error}
+      loading={store?.state?.loading ?? false}
+      error={store?.state?.error ?? null}
       emptyState={{ title: "No processes found." }}
       rowStyle={(item) => entityColorStyle(entityColors.data, 'process', item.PidStr)}
       onRowContextMenu={picker
@@ -160,7 +179,7 @@
     >
       {#snippet children(item, col)}
         {#if col.key === "PidStr"}
-          {#if isTreeView}
+          {#if effectiveTreeView}
             <span
               class="font-mono"
               style="display: inline-block; margin-left: {(item._depth || 0) *

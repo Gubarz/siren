@@ -1,25 +1,30 @@
 <script>
+  import InlineImage from '$components/ui/InlineImage.svelte';
   import { TakeScreenshot } from '../../api/agents.js';
   import { errorMessage } from '../../utils/errors.js';
   import Button from '$components/ui/Button.svelte';
 
-  let { sessionID = "" } = $props();
+  let { sessionID = "", staticBase64 = "" } = $props();
 
-  // Keep each session's last screenshot so switching tabs and coming back shows
-  // it again instead of a blank panel.
   const shotBySession = new Map();
 
   let screenshotBase64 = $state("");
   let loading = $state(false);
   let error = $state("");
 
-  // Restore this session's screenshot (if we have one) when switching to it.
   let lastSession = null;
   $effect(() => {
     if (sessionID !== lastSession) {
       lastSession = sessionID;
-      screenshotBase64 = shotBySession.get(sessionID) || "";
+      screenshotBase64 = staticBase64 || shotBySession.get(sessionID) || "";
       error = "";
+    }
+  });
+
+  $effect(() => {
+    if (staticBase64) {
+      screenshotBase64 = staticBase64;
+      shotBySession.set(sessionID, staticBase64);
     }
   });
 
@@ -43,13 +48,13 @@
     <Button color="dark" size="sm" onclick={takeScreenshot}>Retake</Button>
   </div>
   
-  <div class="tab-content text-center p-5">
+  <div class="tab-content p-2">
     {#if error}
-      <div class="text-danger-500">{error}</div>
+      <div class="text-danger-500 p-4">{error}</div>
     {:else if screenshotBase64}
-      <img src="data:image/png;base64,{screenshotBase64}" alt="Target Screenshot" class="border border-line shadow-lg" />
+      <InlineImage src={"data:image/png;base64," + screenshotBase64} alt="Target Screenshot" maxHeight="100%" />
     {:else}
-      <div class="mt-24">
+      <div class="flex items-center justify-center h-64">
         <Button color="primary" size="lg" onclick={takeScreenshot} disabled={loading}>Capture Screenshot</Button>
       </div>
     {/if}

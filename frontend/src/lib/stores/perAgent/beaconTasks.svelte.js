@@ -1,7 +1,7 @@
 import { listBeaconTasks } from '../../api/agents.js'
 import { createPerKeyStore } from '../lib/createPerKeyStore.svelte.js'
 
-const POLL_INTERVAL = 3000
+const POLL_INTERVAL = 5000
 
 export const useBeaconTasks = createPerKeyStore((beaconID) => {
   const state = $state({
@@ -14,15 +14,14 @@ export const useBeaconTasks = createPerKeyStore((beaconID) => {
 
   async function refresh() {
     state.loading = true
-    state.error = null
     try {
       const tasks = await listBeaconTasks(beaconID)
       state.tasks = tasks
-      state.loading = false
       state.error = null
     } catch (err) {
-      state.loading = false
       state.error = String(err)
+    } finally {
+      state.loading = false
     }
   }
 

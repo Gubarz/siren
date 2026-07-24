@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -43,13 +44,17 @@ func newImplantConfig(goos, goarch, format, c2url string, isBeacon bool, beaconI
 	}
 
 	return &clientpb.ImplantConfig{
-		GOOS:             strings.ToLower(goos),
-		GOARCH:           strings.ToLower(goarch),
-		Format:           outFmt,
-		IsBeacon:         isBeacon,
-		BeaconInterval:   beaconInterval,
-		C2:               []*clientpb.ImplantC2{{Priority: 0, URL: c2url}},
-		HTTPC2ConfigName: "default",
+		GOOS:               strings.ToLower(goos),
+		GOARCH:             strings.ToLower(goarch),
+		Format:             outFmt,
+		IsBeacon:           isBeacon,
+		BeaconInterval:     beaconInterval * int64(time.Second),
+		BeaconJitter:       30 * int64(time.Second),
+		ReconnectInterval:   60 * int64(time.Second),
+		PollTimeout:         360 * int64(time.Second),
+		MaxConnectionErrors: 1000,
+		C2:                 []*clientpb.ImplantC2{{Priority: 0, URL: c2url}},
+		HTTPC2ConfigName:   "default",
 	}, nil
 }
 

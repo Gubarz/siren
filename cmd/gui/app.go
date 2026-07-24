@@ -16,6 +16,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"google.golang.org/protobuf/proto"
 
 	"sliver-gui/internal/automation"
 	"sliver-gui/internal/bootstrap"
@@ -294,6 +295,15 @@ func (a *App) startEventStream() {
 			payload["job"] = ev.Job.Name
 		}
 		if len(ev.Data) > 0 {
+			switch ev.EventType {
+			case consts.BeaconRegisteredEvent, consts.BeaconTaskResultEvent:
+				b := &clientpb.Beacon{}
+				if proto.Unmarshal(ev.Data, b) == nil && b.ID != "" {
+					payload["beaconID"] = b.ID
+					payload["hostname"] = b.Hostname
+					payload["username"] = b.Username
+				}
+			}
 			payload["data"] = string(ev.Data)
 		}
 		se := events.StoredEvent{Type: ev.EventType, Data: string(ev.Data), Time: time.Now().UnixMilli()}
@@ -436,7 +446,19 @@ func (a *App) GetOperators() (*clientpb.Operators, error) {
 // ---- Console / Commands ----
 
 func (a *App) RunSessionCommand(sessionID, line string) (string, error) {
-	output, err := a.Console.RunLine(sessionID, line)
+	var output string
+	var err error
+	if sessionID != "" && a.RPC.LookupBeacon(sessionID) != nil {
+		var taskID string
+		output, taskID, err = a.Console.RunAutomationLine(sessionID, line)
+		if err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+			output, _, err = a.Beacons.AwaitBeaconTask(ctx, sessionID, output, taskID)
+		}
+	} else {
+		output, err = a.Console.RunLine(sessionID, line)
+	}
 	if err == nil && sessionID != "" && a.Console.CommandInvokesPing(line) {
 		a.Discovery.HandlePingOutput(sessionID, output)
 	}
@@ -495,7 +517,7 @@ func (a *App) GetBeaconTasks(beaconID string) (*clientpb.BeaconTasks, error) {
 	return a.Beacons.GetBeaconTasks(beaconID)
 }
 
-func (a *App) GetBeaconTaskOutput(taskID string) (string, error) {
+func (a *App) GetBeaconTaskOutput(taskID string) (*beacons.TaskOutput, error) {
 	return a.Beacons.GetBeaconTaskOutput(taskID)
 }
 

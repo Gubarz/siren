@@ -202,6 +202,7 @@
   function openAgentContextMenu(nativeEvent, agent) {
     const isBeacon = agent._kind === 'beacon'
     const isWindows = (agent.OS || '').toLowerCase() === 'windows'
+    const hasInteractiveSession = isBeacon && sessionData.some((s) => s.Name === agent.Name)
 
     // If the right-clicked agent isn't in the current selection and no modifier
     // key is held, replace the selection with just this agent.
@@ -218,6 +219,7 @@
       target: agent,
       sections: buildAgentContextSections({
         agent, isBeacon, isWindows,
+        hasInteractiveSession,
         catalog: isBeacon ? beaconCategories : sessionCategories,
         targetIDs: selectedAgentIDsIncluding(agent),
         targetAgents: selectedAgentsIncluding(agent),

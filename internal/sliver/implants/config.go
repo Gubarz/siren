@@ -3,6 +3,7 @@ package implants
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 )
@@ -76,10 +77,10 @@ func baseImplantConfig(req GenerateRequest, outFmt clientpb.OutputFormat) *clien
 		GOARCH:              strings.ToLower(req.GOARCH),
 		Format:              outFmt,
 		IsBeacon:            req.IsBeacon,
-		BeaconInterval:      req.BeaconInterval,
-		BeaconJitter:        req.BeaconJitter,
-		ReconnectInterval:   req.ReconnectInterval,
-		PollTimeout:         req.PollTimeout,
+		BeaconInterval:      req.BeaconInterval * int64(time.Second),
+		BeaconJitter:        req.BeaconJitter * int64(time.Second),
+		ReconnectInterval:   req.ReconnectInterval * int64(time.Second),
+		PollTimeout:         req.PollTimeout * int64(time.Second),
 		MaxConnectionErrors: uint32(req.MaxConnectionErrors),
 		ConnectionStrategy:  req.ConnectionStrategy,
 	}

@@ -8,9 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -84,11 +82,12 @@ func (s *Service) uploadLocalFile(sessionID string, remotePath string, localPath
 }
 
 func (s *Service) uploadRequest(sessionID, remotePath, fileName string, encodedData []byte) error {
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return err
+	}
 	req := &sliverpb.UploadReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout / time.Second),
-		},
+		Request:  request,
 		Path:     remotePath,
 		FileName: fileName,
 		Data:     encodedData,
@@ -102,7 +101,7 @@ func (s *Service) uploadRequest(sessionID, remotePath, fileName string, encodedD
 	if err != nil {
 		return err
 	}
-	if err := rpc.CheckResponse(resp); err != nil {
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return err
 	}
 	if resp.WrittenFiles == 0 {

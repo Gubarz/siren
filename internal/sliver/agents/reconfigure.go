@@ -22,6 +22,7 @@ type ReconfigureRequest struct {
 	ReconnectInterval int64  `json:"reconnectInterval,omitempty"`
 	BeaconInterval    int64  `json:"beaconInterval,omitempty"`
 	BeaconJitter      int64  `json:"beaconJitter,omitempty"`
+	C2URI             string `json:"c2Uri,omitempty"`
 }
 
 // Reconfigure asks the running implant to update its poll cadence live
@@ -43,6 +44,7 @@ func (s *Service) Reconfigure(req ReconfigureRequest) error {
 		ReconnectInterval: req.ReconnectInterval,
 		BeaconInterval:    req.BeaconInterval,
 		BeaconJitter:      req.BeaconJitter,
+		C2URI:             req.C2URI,
 		Request:           request,
 	})
 	return err

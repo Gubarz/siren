@@ -24,12 +24,10 @@
 
   let {
     sessionID = "",
-    // picker mode: false | 'file' | 'dir'
-    //   'file' — single-click a file to emit { path }
-    //   'dir'  — header shows "Select this folder" button that emits current path
     picker = false,
     onpick,
     startPath = '',
+    staticData = null,
   } = $props();
 
   let currentPath = $state('');
@@ -74,14 +72,17 @@
     await actions.downloadMultipleTar(fileObjs);
   }
 
-  let store = $derived(useFileBrowser(sessionID));
+  let store = $derived(!staticData ? useFileBrowser(sessionID) : null);
 
   $effect(() => {
-    store.acquire();
-    return () => store.release();
+    if (store) {
+      store.acquire();
+      return () => store.release();
+    }
   });
   $effect(() => {
-    currentPath = store.state.path;
+    if (!staticData) currentPath = store.state.path;
+    else currentPath = staticData.path || '';
     selected = new Set();
   });
 
@@ -89,7 +90,7 @@
   // previously-picked value), navigate there once on mount.
   let seeded = false;
   $effect(() => {
-    if (seeded || !picker || !startPath) return;
+    if (seeded || !picker || !startPath || staticData) return;
     seeded = true;
     store.refresh(startPath);
   });
@@ -109,7 +110,7 @@
     { key: "modTimeStr", label: "Last Modified", width: 250 }
   ];
 
-  let normalizedFiles = $derived((store.state.files || []).map(f => ({
+  let normalizedFiles = $derived((staticData ? (staticData.files || []) : (store.state.files || [])).map(f => ({
     ...f,
     rawFile: f,
     _name: f.Name || f.name,
@@ -152,6 +153,7 @@
   }
 
   function handleDoubleClick(file) {
+    if (staticData) return;
     const isDir = file.IsDir || file.isDir;
     const name = file.Name || file.name;
     if (isDir) {
@@ -205,7 +207,7 @@
 
   const actions = $derived(createFileBrowserActions({
     sessionID, dialog,
-    store: { refresh: (p) => store.refresh(p), get: () => store.state },
+    store: { refresh: (p) => staticData ? null : store.refresh(p), get: () => staticData ? { files: staticData.files || [], path: staticData.path || '' } : store.state },
     getCurrentPath: () => currentPath,
     setViewerData: (v) => { viewerData = v },
   }));
@@ -295,9 +297,15 @@
   <div class="absolute inset-0 hidden flex-col items-center justify-center z-50 bg-black/80 text-brand group-[.wails-drop-target-active]:flex">
     <Icon name="upload" size={32} />
     <h2 class="mt-5 text-white text-xl font-semibold">Drop files to upload to:</h2>
-    <span class="font-mono">{store.state.path}</span>
+    <span class="font-mono">{staticData ? (staticData.path || '') : store.state.path}</span>
   </div>
   <div class="flex items-center gap-2 px-3 py-2 border-b border-line bg-chrome text-sm">
+    {#if staticData}
+      <span class="text-xs text-fg-muted font-semibold">Snapshot of {staticData.path || ''} ({staticData.files?.length || 0} files)</span>
+      <div class="flex-1 min-w-0">
+        <TextInput size="sm" value={staticData.path || ''} class="font-mono" disabled />
+      </div>
+    {:else}
     <Button color="dark" size="sm" onclick={goUp} disabled={isAtRoot(currentPath)}>&uarr; Up</Button>
     <div class="flex-1 min-w-0">
       <TextInput size="sm" bind:value={currentPath} onkeydown={(e) => {if(e.key==='Enter') store.refresh(currentPath)}} class="font-mono" />
@@ -327,6 +335,7 @@
     {:else if picker === 'file'}
       <span class="text-xs text-fg-muted self-center">Single-click a file to select it</span>
     {/if}
+    {/if}
   </div>
   
   <div class="flex-1 min-h-0 overflow-auto">
@@ -336,8 +345,8 @@
       keyField="_name"
       selectable={picker ? 'none' : 'multiple'}
       bind:selected={selected}
-      loading={store.state.loading}
-      error={store.state.error}
+      loading={staticData ? false : (store?.state?.loading ?? false)}
+      error={staticData ? null : (store?.state?.error ?? null)}
       emptyState={{ title: 'No files found.' }}
       rowStyle={(item) => entityColorStyle(entityColors.data, 'file', fileEntityID(item.rawFile))}
       onRowDblClick={(item) => handleDoubleClick(item.rawFile)}

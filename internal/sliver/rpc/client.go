@@ -285,6 +285,17 @@ func (c *Client) LookupBeacon(id string) *clientpb.Beacon {
 	return nil
 }
 
+func (c *Client) LookupSessionByBeaconName(name string) *clientpb.Session {
+	c.cacheMu.RLock()
+	defer c.cacheMu.RUnlock()
+	for _, s := range c.cachedSessions {
+		if s.Name == name {
+			return s
+		}
+	}
+	return nil
+}
+
 func (c *Client) InvalidateAgentCache() {
 	c.cacheMu.Lock()
 	c.cachedSessions = nil

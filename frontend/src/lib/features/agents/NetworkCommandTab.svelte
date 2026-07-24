@@ -9,9 +9,9 @@
   import ErrorState from '$components/ui/ErrorState.svelte'
   import LoadingState from '$components/ui/LoadingState.svelte'
 
-  let { sessionID = '', command = 'ifconfig' } = $props()
+  let { sessionID = '', command = 'ifconfig', staticOutput = null } = $props()
 
-  let output = $state('')
+  let output = $state(staticOutput || '')
   let loading = $state(false)
   let error = $state('')
   let showAllInterfaces = $state(false)
@@ -40,10 +40,12 @@
     return parts.join(' ')
   })
 
-  onMount(() => refresh())
+  onMount(() => {
+    if (!staticOutput) refresh()
+  })
 
   async function refresh() {
-    if (!sessionID || loading) return
+    if (!sessionID || loading || staticOutput) return
     loading = true
     error = ''
     try {
@@ -66,15 +68,19 @@
       {commandLine}
     </code>
     <div class="ml-auto flex shrink-0 items-center gap-2">
-      {#if isIfconfig}
-        <Checkbox bind:checked={showAllInterfaces} label="All" onchange={refresh} onkeydown={handleEnter} />
+      {#if staticOutput}
+        <span class="text-xs text-fg-muted font-semibold">Beacon Task Snapshot</span>
       {:else}
-        <Checkbox bind:checked={includeUdp} label="UDP" onchange={refresh} onkeydown={handleEnter} />
-        <Checkbox bind:checked={listeningOnly} label="Listen" onchange={refresh} onkeydown={handleEnter} />
-        <Checkbox bind:checked={ip4Only} label="IPv4" disabled={ip6Only} onchange={refresh} onkeydown={handleEnter} />
-        <Checkbox bind:checked={ip6Only} label="IPv6" disabled={ip4Only} onchange={refresh} onkeydown={handleEnter} />
+        {#if isIfconfig}
+          <Checkbox bind:checked={showAllInterfaces} label="All" onchange={refresh} onkeydown={handleEnter} />
+        {:else}
+          <Checkbox bind:checked={includeUdp} label="UDP" onchange={refresh} onkeydown={handleEnter} />
+          <Checkbox bind:checked={listeningOnly} label="Listen" onchange={refresh} onkeydown={handleEnter} />
+          <Checkbox bind:checked={ip4Only} label="IPv4" disabled={ip6Only} onchange={refresh} onkeydown={handleEnter} />
+          <Checkbox bind:checked={ip6Only} label="IPv6" disabled={ip4Only} onchange={refresh} onkeydown={handleEnter} />
+        {/if}
+        <Button color="primary" size="xs" icon="refresh" loading={loading} onclick={refresh}>Refresh</Button>
       {/if}
-      <Button color="primary" size="xs" icon="refresh" loading={loading} onclick={refresh}>Refresh</Button>
     </div>
   </div>
 

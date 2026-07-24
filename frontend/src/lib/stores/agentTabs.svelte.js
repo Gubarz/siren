@@ -111,7 +111,7 @@ class AgentTabs {
     if (next !== undefined) this.#state = next
   }
 
-  openTab(sessionId, type, pane) {
+  openTab(sessionId, type, pane, meta = null) {
     if (!sessionId || !type) return
     const id = `${sessionId}-${type}`
     this.#update((s) => {
@@ -126,7 +126,49 @@ class AgentTabs {
         }
       }
       const label = tabLabel(sessionId, type)
-      const newTab = { id, sessionId, type, label }
+      const newTab = { id, sessionId, type, label, meta }
+      return normalizeState({
+        ...s,
+        panes: {
+          ...s.panes,
+          [targetPane]: { tabs: [...paneState.tabs, newTab], activeTabId: id },
+        },
+        focusPane: targetPane,
+      }, targetPane)
+    })
+  }
+
+  openOrUpdateTab(sessionId, type, meta = null) {
+    if (!sessionId || !type) return
+    const id = `${sessionId}-${type}`
+    this.#update((s) => {
+      let foundPane = null
+      let foundTab = null
+      for (const paneId of Object.keys(s.panes)) {
+        const pane = s.panes[paneId]
+        if (!pane) continue
+        const tab = pane.tabs.find((t) => t.id === id)
+        if (tab) { foundPane = paneId; foundTab = tab; break }
+      }
+      if (foundPane && foundTab) {
+        return {
+          ...s,
+          panes: {
+            ...s.panes,
+            [foundPane]: {
+              tabs: s.panes[foundPane].tabs.map((t) =>
+                t.id === id ? { ...t, meta } : t
+              ),
+              activeTabId: id,
+            },
+          },
+          focusPane: foundPane,
+        }
+      }
+      const targetPane = s.panes[s.focusPane] ? s.focusPane : 'left'
+      const paneState = s.panes[targetPane] || { tabs: [], activeTabId: '' }
+      const label = tabLabel(sessionId, type)
+      const newTab = { id, sessionId, type, label, meta }
       return normalizeState({
         ...s,
         panes: {

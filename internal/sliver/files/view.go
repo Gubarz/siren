@@ -7,9 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"sliver-gui/internal/sliver/rpc"
@@ -22,11 +20,12 @@ func (s *Service) ViewRemoteFile(sessionID, remotePath string) (string, error) {
 		return "", rpc.ErrNotConnected
 	}
 
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return "", err
+	}
 	req := &sliverpb.DownloadReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout / time.Second),
-		},
+		Request:          request,
 		Path:             remotePath,
 		MaxBytes:         maxViewSize,
 		RestrictedToFile: true,
@@ -39,7 +38,7 @@ func (s *Service) ViewRemoteFile(sessionID, remotePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := rpc.CheckResponse(resp); err != nil {
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return "", err
 	}
 

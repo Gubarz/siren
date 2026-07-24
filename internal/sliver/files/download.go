@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 )
 
@@ -60,14 +58,15 @@ func (s *Service) downloadChunk(
 	sessionID, remotePath string, offset, chunkSize int64,
 ) ([]byte, int64, error) {
 	chunkEnd := offset + chunkSize
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return nil, 0, err
+	}
 	req := &sliverpb.DownloadReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout / time.Second),
-		},
-		Path:  remotePath,
-		Start: offset,
-		Stop:  chunkEnd,
+		Request: request,
+		Path:    remotePath,
+		Start:   offset,
+		Stop:    chunkEnd,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
@@ -75,6 +74,9 @@ func (s *Service) downloadChunk(
 
 	resp, err := s.downloadRPC(ctx, req)
 	if err != nil {
+		return nil, 0, err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return nil, 0, err
 	}
 	return resp.Data, resp.Stop, nil
@@ -92,11 +94,12 @@ func gzipWriteTo(w io.Writer, data []byte) (int64, error) {
 func (s *Service) downloadData(
 	sessionID, remotePath string, recurse bool, emit func(string, int64, int64),
 ) ([]byte, error) {
+	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	if err != nil {
+		return nil, err
+	}
 	req := &sliverpb.DownloadReq{
-		Request: &commonpb.Request{
-			SessionID: sessionID,
-			Timeout:   int64(defaultRPCTimeout / time.Second),
-		},
+		Request: request,
 		Path:    remotePath,
 		Recurse: recurse,
 	}
@@ -106,6 +109,9 @@ func (s *Service) downloadData(
 
 	resp, err := s.downloadRPC(ctx, req)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return nil, err
 	}
 

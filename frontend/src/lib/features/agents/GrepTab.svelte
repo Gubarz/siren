@@ -9,19 +9,20 @@
   import EmptyState from '$components/ui/EmptyState.svelte'
   import LoadingState from '$components/ui/LoadingState.svelte'
 
-  let { sessionID = '' } = $props()
+  let { sessionID = '', staticOutput = null } = $props()
 
   let pattern = $state('')
   let path = $state('.')
   let recursive = $state(true)
   let beforeLines = $state(0)
   let afterLines = $state(0)
-  let results = $state(null)
+  let results = $state(staticOutput != null ? { text: staticOutput } : null)
   let loading = $state(false)
   let cancelled = $state(false)
   let error = $state('')
 
   onMount(async () => {
+    if (staticOutput != null) return
     try {
       const cwd = await Pwd(sessionID)
       if (cwd) path = cwd
@@ -54,30 +55,34 @@
 
 <div class="flex flex-col h-full">
   <div class="tab-header">
-    <div class="w-50">
-      <TextInput size="sm" placeholder="Path..." bind:value={path} class="font-mono" />
-    </div>
-    <div class="flex-1 min-w-38">
-      <TextInput size="sm" placeholder="Search pattern..." bind:value={pattern} onkeydown={(e) => { if (e.key === 'Enter') search() }} class="font-mono" />
-    </div>
-    {#if loading}
-      <Button color="red" size="xs" onclick={stop}>Stop</Button>
+    {#if staticOutput != null}
+      <span class="text-xs text-fg-muted font-semibold">Beacon Task Snapshot</span>
     {:else}
-      <Button size="xs" onclick={search}>Search</Button>
+      <div class="w-50">
+        <TextInput size="sm" placeholder="Path..." bind:value={path} class="font-mono" />
+      </div>
+      <div class="flex-1 min-w-38">
+        <TextInput size="sm" placeholder="Search pattern..." bind:value={pattern} onkeydown={(e) => { if (e.key === 'Enter') search() }} class="font-mono" />
+      </div>
+      {#if loading}
+        <Button color="red" size="xs" onclick={stop}>Stop</Button>
+      {:else}
+        <Button size="xs" onclick={search}>Search</Button>
+      {/if}
+      <Checkbox bind:checked={recursive} label="Recursive" />
+      <label class="flex items-center gap-1 text-xs whitespace-nowrap text-fg-muted">
+        <span class="whitespace-nowrap">Before:</span>
+        <div class="w-15">
+          <TextInput type="number" size="sm" bind:value={beforeLines} min="0" max="20" />
+        </div>
+      </label>
+      <label class="flex items-center gap-1 text-xs whitespace-nowrap text-fg-muted">
+        <span class="whitespace-nowrap">After:</span>
+        <div class="w-15">
+          <TextInput type="number" size="sm" bind:value={afterLines} min="0" max="20" />
+        </div>
+      </label>
     {/if}
-    <Checkbox bind:checked={recursive} label="Recursive" />
-    <label class="flex items-center gap-1 text-xs whitespace-nowrap text-fg-muted">
-      <span class="whitespace-nowrap">Before:</span>
-      <div class="w-15">
-        <TextInput type="number" size="sm" bind:value={beforeLines} min="0" max="20" />
-      </div>
-    </label>
-    <label class="flex items-center gap-1 text-xs whitespace-nowrap text-fg-muted">
-      <span class="whitespace-nowrap">After:</span>
-      <div class="w-15">
-        <TextInput type="number" size="sm" bind:value={afterLines} min="0" max="20" />
-      </div>
-    </label>
   </div>
 
   <div class="flex-1 overflow-y-auto p-2 flex flex-col">

@@ -16,12 +16,12 @@
   import { useResource } from '$stores/lib/createResource.svelte.js'
   import { entityColorStyle } from '../../utils/entityTags.js'
 
-  let { sessionID = '' } = $props()
+  let { sessionID = '', staticServices = null } = $props()
 
   useResource(entityColors)
 
-  let services = $state([])
-  let loading = $state(false)
+  let services = $state(staticServices || [])
+  let loading = $state(!staticServices)
   let error = $state('')
   let filterText = $state('')
 
@@ -68,7 +68,7 @@
     return m[v] || `Unknown (${v})`
   }
 
-  onMount(() => refresh())
+  onMount(() => { if (!staticServices) refresh() })
 
   async function refresh() {
     loading = true
