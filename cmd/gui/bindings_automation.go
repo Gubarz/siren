@@ -8,7 +8,31 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"sliver-gui/internal/automation"
+	"sort"
 )
+
+type AutomationCapabilitySpec struct {
+	Type   string                  `json:"type"`
+	Schema []automation.FieldSpec  `json:"schema"`
+}
+
+type AutomationCapabilities struct {
+	Triggers []AutomationCapabilitySpec `json:"triggers"`
+	Actions  []AutomationCapabilitySpec `json:"actions"`
+}
+
+func (a *App) ListAutomationCapabilities() (AutomationCapabilities, error) {
+	capabilities := AutomationCapabilities{}
+	for typ, schema := range a.Automation.TriggerSchemas() {
+		capabilities.Triggers = append(capabilities.Triggers, AutomationCapabilitySpec{Type: typ, Schema: schema})
+	}
+	for typ, schema := range a.Automation.ActionSchemas() {
+		capabilities.Actions = append(capabilities.Actions, AutomationCapabilitySpec{Type: typ, Schema: schema})
+	}
+	sort.Slice(capabilities.Triggers, func(i, j int) bool { return capabilities.Triggers[i].Type < capabilities.Triggers[j].Type })
+	sort.Slice(capabilities.Actions, func(i, j int) bool { return capabilities.Actions[i].Type < capabilities.Actions[j].Type })
+	return capabilities, nil
+}
 
 // ---- Automation ----
 
@@ -40,8 +64,8 @@ func (a *App) ClearAutomationHistory() error {
 	return a.Automation.ClearHistory()
 }
 
-func (a *App) ExportAutomationRules() (string, error) {
-	raw, err := a.Automation.ExportRules()
+func (a *App) ExportAutomationRules(includeSecrets bool) (string, error) {
+	raw, err := a.Automation.ExportRules(includeSecrets)
 	if err != nil {
 		return "", err
 	}

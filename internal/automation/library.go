@@ -15,10 +15,13 @@ type ImportResult struct {
 	Errors   []string `json:"errors"`
 }
 
-func (e *Engine) ExportRules() (string, error) {
+func (e *Engine) ExportRules(includeSecrets bool) (string, error) {
 	e.mu.RLock()
 	rules := append([]AutomationRule{}, e.rules...)
 	e.mu.RUnlock()
+	if !includeSecrets {
+		rules = scrubSecrets(rules)
+	}
 	data, err := json.MarshalIndent(map[string]any{"rules": rules}, "", "  ")
 	if err != nil {
 		return "", err
@@ -96,4 +99,35 @@ func parseRulesPayload(payload string) ([]AutomationRule, error) {
 		return []AutomationRule{single}, nil
 	}
 	return nil, fmt.Errorf("could not parse rules JSON")
+}
+
+func scrubSecrets(rules []AutomationRule) []AutomationRule {
+	out := make([]AutomationRule, len(rules))
+	for i, rule := range rules {
+		out[i] = scrubRuleSecrets(rule)
+	}
+	return out
+}
+
+func scrubRuleSecrets(rule AutomationRule) AutomationRule {
+	modified := false
+	scrubbed := make([]ActionSpec, len(rule.Actions))
+	copy(scrubbed, rule.Actions)
+	for j, spec := range scrubbed {
+		if spec.Type != "webhook" {
+			continue
+		}
+		cfg := make(map[string]any, len(spec.Config))
+		for k, v := range spec.Config {
+			if k != "url" {
+				cfg[k] = v
+			}
+		}
+		scrubbed[j] = ActionSpec{Type: spec.Type, Config: cfg}
+		modified = true
+	}
+	if modified {
+		rule.Actions = scrubbed
+	}
+	return rule
 }
