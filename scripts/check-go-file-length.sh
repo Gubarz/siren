@@ -1,21 +1,14 @@
 #!/usr/bin/env bash
 # Enforce the 350-line .go file budget. golangci-lint has no built-in
 # file-length linter, so this shell check plugs the gap. See CONTRIBUTING.md.
-#
-# app.go is the sanctioned exception — it fans out to every App method
-# and grew organically as the App-method surface.
 
 set -euo pipefail
 
 MAX_LINES=350
-EXEMPT=("./app.go" "./cmd/gui/app.go")
 
 fail=0
 
 while IFS= read -r -d '' file; do
-    for skip in "${EXEMPT[@]}"; do
-        [[ "$file" == "$skip" ]] && continue 2
-    done
     lines=$(wc -l < "$file")
     if (( lines > MAX_LINES )); then
         printf '%s: %d lines (> %d)\n' "$file" "$lines" "$MAX_LINES" >&2

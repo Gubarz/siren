@@ -13,8 +13,11 @@ having to build a map in their head.
 | JavaScript | 400 lines | 45 lines | `max-lines` and `max-lines-per-function` in [frontend/eslint.config.js](frontend/eslint.config.js) |
 | Svelte | 300 lines | - | `max-lines` for `.svelte` |
 
-`app.go` is the exception on the Go side. It routes a lot of App methods by
-design, so splitting it would make the code harder to follow.
+`cmd/gui/app.go` is the composition root: keep the `App` type, service 
+ownership, and construction there. Put Wails-facing methods in the
+domain-oriented `cmd/gui/bindings_*.go` file that matches the service
+they delegate to. Lifecycle and connection state belong in
+`cmd/gui/lifecycle.go` and `cmd/gui/connection.go`.
 
 Frontend size checks currently warn instead of failing, mostly so older code
 doesn't block unrelated work. For new code, treat the warning as a stop sign.
@@ -51,7 +54,7 @@ When you expose a new backend call to the UI, update all of the places that
 describe or wrap it:
 
 1. Add the backend wrapper in `internal/<pkg>/*.go`.
-2. Add the App method in `app.go`.
+2. Add the thin App method to the matching `cmd/gui/bindings_*.go` file.
 3. Re-export it from `frontend/src/lib/api/*.js`.
 
 ## Project habits
@@ -67,4 +70,3 @@ describe or wrap it:
 - Do not duplicate UI primitives inside feature code. Raw `<button>`,
   `<input>`, `<textarea>`, `<select>`, and `<input type="checkbox">` are banned
   in `src/lib/features/`; use the `$components/ui/*` wrappers.
-

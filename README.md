@@ -144,7 +144,7 @@ make analyze-frontend
 npm --prefix frontend run test:run
 ```
 
-The frontend uses Svelte 5, Vite, Tailwind CSS, Flowbite Svelte, lucide icons, xterm.js, Fuse.js, Svelte Flow, and virtualized tables. Go packages are kept small where possible; `app.go` is intentionally the large Wails facade exception.
+The frontend uses Svelte 5, Vite, Tailwind CSS, Flowbite Svelte, lucide icons, xterm.js, Fuse.js, Svelte Flow, and virtualized tables. `cmd/gui/app.go` is the small composition root, while Wails-facing methods are grouped by domain in `cmd/gui/bindings_*.go`.
 
 ## Data Maintenance
 
