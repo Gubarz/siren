@@ -34,6 +34,7 @@ analyze-go:
 	golangci-lint run --timeout=5m ./...
 	./scripts/check-go-file-length.sh
 	./scripts/check-arch.sh
+	./scripts/check-import-boundaries.sh
 
 analyze-frontend:
 	npm --prefix frontend run analyze
