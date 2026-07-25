@@ -19,6 +19,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
 
+	"sliver-gui/internal/bus"
 	"sliver-gui/internal/sliver/rpc"
 )
 
@@ -77,6 +78,7 @@ type Emitter interface {
 
 type Service struct {
 	rpc *rpc.Client
+	bus bus.Bus
 
 	mu           sync.Mutex
 	sliverCon    *console.SliverClient

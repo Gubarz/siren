@@ -106,7 +106,11 @@ func (s *Service) execCapture(ctx context.Context, line string) (string, error) 
 	out, runErr := s.output.capture(func() error {
 		return menu.RunCommandLine(ctx, line)
 	})
-	return strings.TrimRight(out, "\n"), runErr
+	trimmed := strings.TrimRight(out, "\n")
+	if runErr == nil {
+		s.publishConsoleOutput(ctx, line, trimmed)
+	}
+	return trimmed, runErr
 }
 
 // unsupportedConsoleCommand returns a human message if the parsed command
