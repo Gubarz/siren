@@ -13,10 +13,11 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/wailsapp/wails/v2 v2.12.0
-	golang.org/x/sys v0.43.0
+	golang.org/x/sys v0.46.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
+	modernc.org/sqlite v1.54.0
 )
 
 require (
@@ -64,7 +65,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/pprof v0.0.0-20240227163752-401108e1b7e7 // indirect
+	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
@@ -88,9 +89,11 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
+	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/reeflective/readline v1.1.4 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rsteube/carapace v0.50.2 // indirect
 	github.com/rsteube/carapace-shlex v0.1.2 // indirect
@@ -107,12 +110,15 @@ require (
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
-	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/term v0.42.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260316180232-0b37fe3546d5 // indirect
+	modernc.org/libc v1.74.1 // indirect
+	modernc.org/mathutil v1.7.1 // indirect
+	modernc.org/memory v1.11.0 // indirect
 	mvdan.cc/sh/v3 v3.12.0 // indirect
 )
 
