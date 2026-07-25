@@ -117,3 +117,116 @@ func TestReopenPersists(t *testing.T) {
 		t.Fatalf("after reopen: %d", total)
 	}
 }
+
+func TestQuerySearch(t *testing.T) {
+	store := openStore(t)
+	ctx := context.Background()
+	entries := []journalv1.Entry{
+		{ID: "s1", Time: 1000, Verb: "Ps", CommandLine: "ps aux", Hostname: "webserver", Status: "ok"},
+		{ID: "s2", Time: 2000, Verb: "Download", CommandLine: "download /etc/passwd", Hostname: "webserver", Status: "ok"},
+		{ID: "s3", Time: 3000, Verb: "Ps", CommandLine: "ps", Hostname: "dbserver", Status: "ok"},
+		{ID: "s4", Time: 4000, Verb: "Execute", CommandLine: "execute whoami", Hostname: "dbserver", Status: "ok"},
+	}
+	_ = store.InsertBatch(ctx, entries)
+
+	entries, total, _ := store.Query(ctx, journalv1.Filter{Search: "aux"})
+	if total != 1 || entries[0].ID != "s1" {
+		t.Fatalf("search 'aux': got %d, want 1 (id %s)", total, entries[0].ID)
+	}
+
+	_, total, _ = store.Query(ctx, journalv1.Filter{Search: "dbserver"})
+	if total != 2 {
+		t.Fatalf("search 'dbserver': got %d, want 2", total)
+	}
+
+	_, total, _ = store.Query(ctx, journalv1.Filter{Search: "Ps"})
+	if total != 2 {
+		t.Fatalf("search 'Ps': got %d, want 2", total)
+	}
+
+	_, total, _ = store.Query(ctx, journalv1.Filter{Search: "nonexistent"})
+	if total != 0 {
+		t.Fatalf("search 'nonexistent': got %d, want 0", total)
+	}
+}
+
+func TestTimeSeries(t *testing.T) {
+	store := openStore(t)
+	ctx := context.Background()
+	now := time.Now().UnixMilli()
+	hourMs := int64(3600 * 1000)
+	entries := []journalv1.Entry{
+		{ID: "ts1", Time: now, Verb: "Ps", ActorKind: "operator", Status: "ok"},
+		{ID: "ts2", Time: now, Verb: "Ps", ActorKind: "operator", Status: "ok"},
+		{ID: "ts3", Time: now + hourMs, Verb: "Ps", ActorKind: "operator", Status: "ok"},
+		{ID: "ts4", Time: now + hourMs, Verb: "Download", ActorKind: "operator", Status: "ok"},
+		{ID: "ts5", Time: now + hourMs, Verb: "Ps", ActorKind: "automation", Status: "error", Err: "x"},
+		{ID: "ts6", Time: now + 2*hourMs, Verb: "Execute", ActorKind: "operator", Status: "ok"},
+	}
+	_ = store.InsertBatch(ctx, entries)
+
+	buckets, err := store.TimeSeries(ctx, journalv1.TimeSeriesFilter{BucketSeconds: 3600})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(buckets) == 0 {
+		t.Fatal("expected buckets, got none")
+	}
+
+	var total int64
+	for _, b := range buckets {
+		total += b.Count
+	}
+	if total != 6 {
+		t.Fatalf("total count across buckets: %d, want 6", total)
+	}
+
+	buckets, _ = store.TimeSeries(ctx, journalv1.TimeSeriesFilter{BucketSeconds: 3600, Verb: "Download"})
+	if len(buckets) != 1 || buckets[0].Count != 1 {
+		t.Fatalf("verb filter: %d buckets, count %d", len(buckets), buckets[0].Count)
+	}
+
+	buckets, err = store.TimeSeries(ctx, journalv1.TimeSeriesFilter{BucketSeconds: 0})
+	if err != nil {
+		t.Fatalf("zero bucket should not error: %v", err)
+	}
+	var ct int64
+	for _, b := range buckets {
+		ct += b.Count
+	}
+	if ct != 6 {
+		t.Fatalf("zero bucket clamp: got %d, want 6", ct)
+	}
+}
+
+func TestQueryVerbsFilter(t *testing.T) {
+	store := openStore(t)
+	ctx := context.Background()
+	entries := []journalv1.Entry{
+		{ID: "v1", Time: 1000, Verb: "Ps", Status: "ok"},
+		{ID: "v2", Time: 2000, Verb: "Download", Status: "ok"},
+		{ID: "v3", Time: 3000, Verb: "Execute", Status: "ok"},
+		{ID: "v4", Time: 4000, Verb: "Ps", Status: "error", Err: "x"},
+	}
+	_ = store.InsertBatch(ctx, entries)
+
+	entries, total, _ := store.Query(ctx, journalv1.Filter{Verbs: []string{"Ps"}})
+	if total != 2 {
+		t.Fatalf("Verbs=['Ps']: got %d, want 2", total)
+	}
+
+	_, total, _ = store.Query(ctx, journalv1.Filter{Verbs: []string{"Ps", "Execute"}})
+	if total != 3 {
+		t.Fatalf("Verbs=['Ps','Execute']: got %d, want 3", total)
+	}
+
+	_, total, _ = store.Query(ctx, journalv1.Filter{Verbs: []string{}})
+	if total != 4 {
+		t.Fatalf("empty Verbs: got %d, want 4 (no filter)", total)
+	}
+
+	_, total, _ = store.Query(ctx, journalv1.Filter{Verbs: []string{"Ps"}})
+	if total != 2 {
+		t.Fatalf("Verbs with no other filter: got %d, want 2", total)
+	}
+}

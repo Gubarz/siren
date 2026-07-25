@@ -3,6 +3,7 @@ package journal
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -75,6 +76,21 @@ func (s *Service) VerbCounts(ctx context.Context, f Filter) (map[string]int64, e
 		return nil, ErrDisabled
 	}
 	return s.store.VerbCounts(ctx, f)
+}
+
+func (s *Service) TimeSeries(ctx context.Context, f TimeSeriesFilter) ([]TimeBucket, error) {
+	const maxBuckets = 10000
+	if s.store == nil {
+		return nil, ErrDisabled
+	}
+	buckets, err := s.store.TimeSeries(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	if len(buckets) > maxBuckets {
+		return nil, fmt.Errorf("time series returned %d buckets (> %d); narrow the range or increase bucket size", len(buckets), maxBuckets)
+	}
+	return buckets, nil
 }
 
 // Close drains the queue, performs a final flush, and closes the store.

@@ -10,6 +10,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.18.4
 	github.com/reeflective/console v0.1.25
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/wailsapp/wails/v2 v2.12.0
@@ -95,7 +96,6 @@ require (
 	github.com/reeflective/readline v1.1.4 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rsteube/carapace v0.50.2 // indirect
 	github.com/rsteube/carapace-shlex v0.1.2 // indirect
 	github.com/samber/lo v1.49.1 // indirect

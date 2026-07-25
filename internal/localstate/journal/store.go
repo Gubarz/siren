@@ -115,10 +115,30 @@ func whereClause(f journalv1.Filter) (string, []any) {
 		clauses = append(clauses, "time <= ?")
 		args = append(args, f.Until)
 	}
+	if len(f.Verbs) > 0 {
+		pl := make([]string, len(f.Verbs))
+		for i, v := range f.Verbs {
+			pl[i] = "?"
+			args = append(args, v)
+		}
+		clauses = append(clauses, "verb IN ("+strings.Join(pl, ",")+")")
+	}
+	if f.Search != "" {
+		clauses = append(clauses, "(verb LIKE ? ESCAPE '\\' OR command_line LIKE ? ESCAPE '\\' OR hostname LIKE ? ESCAPE '\\')")
+		pattern := "%" + escapeLike(f.Search) + "%"
+		args = append(args, pattern, pattern, pattern)
+	}
 	if len(clauses) == 0 {
 		return "", args
 	}
 	return " WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
 }
 
 func (s *SQLiteStore) Query(ctx context.Context, f journalv1.Filter) ([]journalv1.Entry, int, error) {
@@ -175,6 +195,38 @@ func (s *SQLiteStore) VerbCounts(ctx context.Context, f journalv1.Filter) (map[s
 		counts[verb] = n
 	}
 	return counts, rows.Err()
+}
+
+func (s *SQLiteStore) TimeSeries(ctx context.Context, f journalv1.TimeSeriesFilter) ([]journalv1.TimeBucket, error) {
+	bs := f.BucketSeconds
+	if bs < 60 {
+		bs = 60
+	}
+	where, args := whereClause(journalv1.Filter{
+		ConnectionID: f.ConnectionID,
+		TargetID:     f.TargetID,
+		Verb:         f.Verb,
+		ActorKind:    f.ActorKind,
+		Since:        f.Since,
+		Until:        f.Until,
+	})
+	query := "SELECT (time / 1000 / ?) * ? AS bucket_start, verb, actor_kind, status, COUNT(*) AS cnt FROM entries" +
+		where + " GROUP BY bucket_start, verb, actor_kind, status ORDER BY bucket_start"
+	queryArgs := append([]any{bs, bs}, args...)
+	rows, err := s.db.QueryContext(ctx, query, queryArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var buckets []journalv1.TimeBucket
+	for rows.Next() {
+		var b journalv1.TimeBucket
+		if err := rows.Scan(&b.Start, &b.Verb, &b.ActorKind, &b.Status, &b.Count); err != nil {
+			return nil, err
+		}
+		buckets = append(buckets, b)
+	}
+	return buckets, rows.Err()
 }
 
 func (s *SQLiteStore) Close() error {

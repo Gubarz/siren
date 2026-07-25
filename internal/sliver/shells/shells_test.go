@@ -30,6 +30,10 @@ func (f *fakeJournalStore) VerbCounts(_ context.Context, _ journal.Filter) (map[
 	return nil, nil
 }
 
+func (f *fakeJournalStore) TimeSeries(_ context.Context, _ journal.TimeSeriesFilter) ([]journal.TimeBucket, error) {
+	return nil, nil
+}
+
 func (f *fakeJournalStore) Close() error { return nil }
 
 func newFakeJournalStore(t *testing.T) *fakeJournalStore {

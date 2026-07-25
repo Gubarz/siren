@@ -30,6 +30,10 @@ func (f *fakeStore) VerbCounts(_ context.Context, _ Filter) (map[string]int64, e
 	return nil, nil
 }
 
+func (f *fakeStore) TimeSeries(_ context.Context, _ TimeSeriesFilter) ([]TimeBucket, error) {
+	return nil, nil
+}
+
 func (f *fakeStore) Close() error { return nil }
 
 func (f *fakeStore) count() int {

@@ -1,6 +1,8 @@
 package gui
 
 import (
+	"encoding/base64"
+	"errors"
 	"strings"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -33,6 +35,21 @@ func (a *App) RemoveHostIOC(iocID string) error {
 
 func (a *App) DownloadLoot(lootID string) (string, error) {
 	return a.Loot.DownloadLoot(lootID)
+}
+
+func (a *App) GetLootContent(lootID string) (string, error) {
+	const maxBytes = 1 << 20 // 1 MiB
+	resp, err := a.RPC.RPC.LootContent(a.ctx, &clientpb.Loot{ID: lootID})
+	if err != nil {
+		return "", err
+	}
+	if resp.File == nil {
+		return "", errors.New("loot item has no file content")
+	}
+	if len(resp.File.Data) > maxBytes {
+		return "", errors.New("loot content too large to preview (max 1 MiB)")
+	}
+	return base64.StdEncoding.EncodeToString(resp.File.Data), nil
 }
 
 func (a *App) RemoveLoot(id string) error {

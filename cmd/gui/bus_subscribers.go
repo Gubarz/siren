@@ -8,6 +8,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"sliver-gui/internal/bus"
+	"sliver-gui/internal/journal"
 	"sliver-gui/internal/localstate/events"
 )
 
@@ -17,23 +18,64 @@ func (a *App) startBusSubscribers() {
 }
 
 func (a *App) frontendBusSubscriber(ev bus.Event) {
-	payload, ok := ev.Payload.(map[string]interface{})
-	if !ok {
-		return
-	}
-	if ev.Type == "sliver.stream-closed" {
+	switch {
+	case ev.Type == "sliver.stream-closed":
 		a.RPC.InvalidateAgentCache()
 		a.Console.ResetConsole()
 		runtime.EventsEmit(a.ctx, "sliver-event", map[string]interface{}{"type": "stream-closed"})
-		return
+	case strings.HasPrefix(ev.Type, "sliver."):
+		if payload, ok := ev.Payload.(map[string]interface{}); ok {
+			p := copyPayload(payload)
+			p["type"] = strings.TrimPrefix(ev.Type, "sliver.")
+			runtime.EventsEmit(a.ctx, "sliver-event", p)
+		}
+		switch ev.Type {
+		case "sliver." + consts.SessionOpenedEvent,
+			"sliver." + consts.SessionClosedEvent,
+			"sliver." + consts.BeaconRegisteredEvent:
+			a.RPC.InvalidateAgentCache()
+		}
+	case strings.HasPrefix(ev.Type, "gui."):
+		if payload, ok := ev.Payload.(map[string]interface{}); ok {
+			p := copyPayload(payload)
+			p["type"] = ev.Type
+			runtime.EventsEmit(a.ctx, "gui-event", p)
+		}
+	case ev.Type == "journal.action-recorded":
+		if entry, ok := ev.Payload.(journal.Entry); ok {
+			runtime.EventsEmit(a.ctx, "journal-event", entryToMap(entry))
+		}
 	}
-	switch ev.Type {
-	case "sliver." + consts.SessionOpenedEvent,
-		"sliver." + consts.SessionClosedEvent,
-		"sliver." + consts.BeaconRegisteredEvent:
-		a.RPC.InvalidateAgentCache()
+}
+
+func copyPayload(src map[string]interface{}) map[string]interface{} {
+	dst := make(map[string]interface{}, len(src)+1)
+	for k, v := range src {
+		dst[k] = v
 	}
-	runtime.EventsEmit(a.ctx, "sliver-event", payload)
+	return dst
+}
+
+func entryToMap(e journal.Entry) map[string]interface{} {
+	return map[string]interface{}{
+		"type":           "action-recorded",
+		"id":             e.ID,
+		"time":           e.Time,
+		"connection_id":  e.ConnectionID,
+		"actor_kind":     e.ActorKind,
+		"rule_id":        e.RuleID,
+		"rule_name":      e.RuleName,
+		"verb":           e.Verb,
+		"command_line":   e.CommandLine,
+		"target_id":      e.TargetID,
+		"target_kind":    e.TargetKind,
+		"hostname":       e.Hostname,
+		"panel":          e.Panel,
+		"status":         e.Status,
+		"err":            e.Err,
+		"duration_ms":    e.DurationMs,
+		"correlation_id": e.CorrelationID,
+	}
 }
 
 func (a *App) eventsStoreBusSubscriber(ev bus.Event) {

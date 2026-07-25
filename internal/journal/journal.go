@@ -30,11 +30,32 @@ type Filter struct {
 	Until        int64
 	Limit        int
 	Offset       int
+	Search       string   `json:"search"`
+	Verbs        []string `json:"verbs"`
+}
+
+type TimeBucket struct {
+	Start     int64  `json:"start"`
+	Verb      string `json:"verb"`
+	ActorKind string `json:"actor_kind"`
+	Status    string `json:"status"`
+	Count     int64  `json:"count"`
+}
+
+type TimeSeriesFilter struct {
+	ConnectionID  string `json:"connection_id"`
+	TargetID      string `json:"target_id"`
+	Verb          string `json:"verb"`
+	ActorKind     string `json:"actor_kind"`
+	Since         int64  `json:"since"`
+	Until         int64  `json:"until"`
+	BucketSeconds int64  `json:"bucket_seconds"`
 }
 
 type Store interface {
 	InsertBatch(ctx context.Context, entries []Entry) error
 	Query(ctx context.Context, f Filter) ([]Entry, int, error)
 	VerbCounts(ctx context.Context, f Filter) (map[string]int64, error)
+	TimeSeries(ctx context.Context, f TimeSeriesFilter) ([]TimeBucket, error)
 	Close() error
 }
