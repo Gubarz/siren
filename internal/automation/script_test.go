@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"testing"
@@ -46,7 +47,7 @@ sliver.log(finalTags.join('|'));
 	}
 	target := Target{ID: "session-1", Kind: "session", OS: "windows", Arch: "amd64"}
 
-	output, commands, err := engine.executeJavaScript(rule, "manual", target)
+	output, commands, err := engine.executeJavaScript(context.Background(), rule, "manual", target)
 	if err != nil {
 		t.Fatalf("executeJavaScript() error = %v", err)
 	}

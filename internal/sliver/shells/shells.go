@@ -15,6 +15,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"sliver-gui/internal/journal"
 	"sliver-gui/internal/sliver/console"
 	"sliver-gui/internal/sliver/rpc"
 )
@@ -28,15 +29,17 @@ type ShellInfo struct {
 }
 
 type guiShell struct {
-	info   ShellInfo
-	tunnel *core.TunnelIO
-	mu     sync.RWMutex
-	output []byte
+	info      ShellInfo
+	tunnel    *core.TunnelIO
+	mu        sync.RWMutex
+	output    []byte
+	inputTail string
 }
 
 type Service struct {
 	rpc       *rpc.Client
 	console   *console.Service
+	journal   *journal.Service
 	ctx       context.Context
 	shellMu   sync.RWMutex
 	shells    map[string]*guiShell
@@ -49,6 +52,10 @@ func New(rpc *rpc.Client, con *console.Service) *Service {
 		console: con,
 		shells:  make(map[string]*guiShell),
 	}
+}
+
+func (s *Service) SetJournal(j *journal.Service) {
+	s.journal = j
 }
 
 func (s *Service) SetCtx(ctx context.Context) {
@@ -162,7 +169,46 @@ func (s *Service) WriteShell(id, data string) error {
 		}
 	}
 	_, err = shell.tunnel.Write([]byte(data))
-	return err
+	if err != nil {
+		return err
+	}
+	if !shell.info.PTY {
+		s.journalShellInput(shell, data)
+	}
+	return nil
+}
+
+func (s *Service) journalShellInput(shell *guiShell, data string) {
+	if s.journal == nil {
+		return
+	}
+	shell.mu.Lock()
+	combined := shell.inputTail + data
+	lastNewline := strings.LastIndex(combined, "\n")
+	if lastNewline < 0 {
+		shell.inputTail = combined
+		shell.mu.Unlock()
+		return
+	}
+	complete := combined[:lastNewline]
+	shell.inputTail = combined[lastNewline+1:]
+	shell.mu.Unlock()
+
+	for _, line := range strings.Split(complete, "\n") {
+		line = strings.TrimRight(line, "\r")
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		s.journal.Record(journal.Entry{
+			Verb:        "ShellInput",
+			CommandLine: line,
+			TargetID:    shell.info.SessionID,
+			TargetKind:  "session",
+			ActorKind:   "operator",
+			Panel:       "shell",
+			Status:      "ok",
+		})
+	}
 }
 
 func (s *Service) InterruptShell(id string) (bool, error) {

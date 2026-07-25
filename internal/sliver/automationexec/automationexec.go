@@ -25,7 +25,7 @@ func NewExecutor(con *console.Service, beac *beacons.Service) *Executor {
 }
 
 func (e *Executor) Execute(ctx context.Context, targetID string, targetKind string, command string) (string, error) {
-	result, taskID, err := e.console.RunAutomationLine(targetID, command)
+	result, taskID, err := e.console.RunAutomationLineContext(ctx, targetID, command)
 	if err != nil || targetKind != "beacon" {
 		return result, err
 	}

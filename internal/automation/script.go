@@ -16,8 +16,8 @@ const (
 	maxJSOutputSize          = 10 * 1024 * 1024
 )
 
-func (e *Engine) executeCommands(rule AutomationRule, target Target) (string, []string, error) {
-	ctx, cancel := automationContext(e.ctx, rule.TimeoutSeconds)
+func (e *Engine) executeCommands(ctx context.Context, rule AutomationRule, target Target) (string, []string, error) {
+	ctx, cancel := automationContext(ctx, rule.TimeoutSeconds)
 	defer cancel()
 
 	var output strings.Builder
@@ -185,11 +185,12 @@ func (je *jsExecution) setupVM(vm *sobek.Runtime, trigger string) error {
 }
 
 func (e *Engine) executeJavaScript(
+	ctx context.Context,
 	rule AutomationRule,
 	trigger string,
 	target Target,
 ) (string, []string, error) {
-	ctx, cancel := automationContext(e.ctx, rule.TimeoutSeconds)
+	ctx, cancel := automationContext(ctx, rule.TimeoutSeconds)
 	defer cancel()
 
 	je := &jsExecution{

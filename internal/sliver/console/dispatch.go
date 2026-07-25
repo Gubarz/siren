@@ -16,29 +16,38 @@ import (
 // engine's non-scripted rules. Every call round-trips through sliver's own
 // cobra dispatch so its parse/complete/print behavior stays authoritative.
 func (s *Service) RunLine(sessionID, line string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if err := s.init(); err != nil {
-		return "", err
-	}
-
-	sess, beacon, err := s.resolveTarget(sessionID, line)
-	if err != nil {
-		return "", err
-	}
-
-	s.setActiveTarget(sessionID, sess, beacon)
-	if output, handled, err := s.runDirectCommand(line, sess, beacon); handled {
-		return output, err
-	}
-	return s.execCapture(line)
+	return s.RunLineContext(context.Background(), sessionID, line)
 }
 
 // RunAutomationLine is RunLine plus beacon-task callback bookkeeping — when
 // a rule kicks off a beacon-async command, the returned taskID lets the
 // engine correlate the eventual callback with the run record.
 func (s *Service) RunAutomationLine(sessionID, line string) (string, string, error) {
+	return s.RunAutomationLineContext(context.Background(), sessionID, line)
+}
+
+func (s *Service) RunLineContext(ctx context.Context, sessionID, line string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.init(); err != nil {
+		return "", err
+	}
+
+	sess, beacon, err := s.resolveTarget(sessionID, line)
+	if err != nil {
+		return "", err
+	}
+
+	s.setActiveTarget(sessionID, sess, beacon)
+	ctx = withCommandOverlay(ctx, sessionID, targetKindOf(sess, beacon), hostnameOf(sess, beacon), line)
+	if output, handled, err := s.runDirectCommand(line, sess, beacon); handled {
+		return output, err
+	}
+	return s.execCapture(ctx, line)
+}
+
+func (s *Service) RunAutomationLineContext(ctx context.Context, sessionID, line string) (string, string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -52,7 +61,8 @@ func (s *Service) RunAutomationLine(sessionID, line string) (string, string, err
 	}
 
 	s.setActiveTarget(sessionID, sess, beacon)
-	output, err := s.execCapture(line)
+	ctx = withCommandOverlay(ctx, sessionID, targetKindOf(sess, beacon), hostnameOf(sess, beacon), line)
+	output, err := s.execCapture(ctx, line)
 	if err != nil {
 		return output, "", err
 	}
@@ -88,9 +98,9 @@ func (s *Service) setActiveTarget(sessionID string, sess *clientpb.Session, beac
 	}
 }
 
-func (s *Service) execCapture(line string) (string, error) {
+func (s *Service) execCapture(ctx context.Context, line string) (string, error) {
 	menu := s.sliverCon.App.ActiveMenu()
-	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+	ctx, cancel := context.WithTimeout(ctx, commandTimeout)
 	defer cancel()
 
 	out, runErr := s.output.capture(func() error {

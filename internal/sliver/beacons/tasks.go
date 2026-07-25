@@ -15,6 +15,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 
+	"sliver-gui/internal/journal"
 	"sliver-gui/internal/sliver/console"
 	"sliver-gui/internal/sliver/rpc"
 )
@@ -24,10 +25,15 @@ const beaconTaskPollInterval = time.Second
 type Service struct {
 	rpc     *rpc.Client
 	console *console.Service
+	journal *journal.Service
 }
 
 func New(rpc *rpc.Client, con *console.Service) *Service {
 	return &Service{rpc: rpc, console: con}
+}
+
+func (s *Service) SetJournal(j *journal.Service) {
+	s.journal = j
 }
 
 func (s *Service) GetBeaconTasks(beaconID string) (*clientpb.BeaconTasks, error) {
@@ -199,7 +205,9 @@ func (s *Service) AwaitBeaconTask(
 		if shouldCancelPendingBeaconTask(err) {
 			s.cancelPendingBeaconTask(taskID)
 		}
-		return commandOutput, true, fmt.Errorf("beacon task %s: %w", shortTaskID(taskID), err)
+		err = fmt.Errorf("beacon task %s: %w", shortTaskID(taskID), err)
+		s.journalBeaconTaskResult(ctx, beaconID, err)
+		return commandOutput, true, err
 	}
 
 	state := strings.ToLower(task.State)
@@ -207,13 +215,17 @@ func (s *Service) AwaitBeaconTask(
 		if state == "" {
 			state = "unknown"
 		}
-		return commandOutput, true, fmt.Errorf("beacon task %s %s", shortTaskID(task.ID), state)
+		err := fmt.Errorf("beacon task %s %s", shortTaskID(task.ID), state)
+		s.journalBeaconTaskResult(ctx, beaconID, err)
+		return commandOutput, true, err
 	}
 
 	rendered, err := s.renderBeaconTask(task)
 	if err != nil {
+		s.journalBeaconTaskResult(ctx, beaconID, err)
 		return commandOutput, true, err
 	}
+	s.journalBeaconTaskResult(ctx, beaconID, nil)
 	return rendered, true, nil
 }
 
@@ -292,4 +304,26 @@ func shortTaskID(taskID string) string {
 		return taskID[:index]
 	}
 	return taskID
+}
+
+func (s *Service) journalBeaconTaskResult(ctx context.Context, beaconID string, taskErr error) {
+	if s.journal == nil {
+		return
+	}
+	e := journal.Entry{
+		Verb:       "BeaconTaskResult",
+		TargetID:   beaconID,
+		TargetKind: "beacon",
+		Status:     "ok",
+	}
+	if taskErr != nil {
+		e.Status = "error"
+		e.Err = taskErr.Error()
+	}
+	if overlay, ok := journal.OverlayFrom(ctx); ok {
+		e.ApplyOverlay(overlay)
+	} else {
+		e.ApplyOverlay(journal.Overlay{})
+	}
+	s.journal.Record(e)
 }

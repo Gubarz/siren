@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"sliver-gui/internal/journal"
 )
 
 func (e *Engine) dispatchTrigger(trigger string, target Target) {
@@ -89,12 +91,23 @@ func (e *Engine) execute(rule AutomationRule, trigger string, target Target, key
 	}
 	e.storeRun(run)
 
+	parent := e.ctx
+	if parent == nil {
+		parent = context.Background()
+	}
+	runCtx := journal.WithContext(parent, journal.Overlay{
+		ActorKind:     "automation",
+		RuleID:        rule.ID,
+		RuleName:      rule.Name,
+		CorrelationID: run.ID,
+	})
+
 	var output string
 	var runErr error
 	if automationExecutionMode(rule) == ExecutionModeJavaScript {
-		output, run.Commands, runErr = e.executeJavaScript(rule, trigger, target)
+		output, run.Commands, runErr = e.executeJavaScript(runCtx, rule, trigger, target)
 	} else {
-		output, run.Commands, runErr = e.executeCommands(rule, target)
+		output, run.Commands, runErr = e.executeCommands(runCtx, rule, target)
 	}
 
 	run.Output = output
