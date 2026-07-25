@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { GuiActionGroups } from '../../palette/GuiActions.js'
+  import { registerCommandActions } from '../../palette/registry.js'
   import { GetCommandCatalog } from '../../../api/console.js'
   import { agentTabs } from '$stores/agentTabs.svelte.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
@@ -17,6 +18,7 @@
   import { workspaceState } from '$stores/workspaceState.svelte.js'
   import { dispatchCommand } from '$stores/console.svelte.js'
   import { commandModal } from '$stores/ui/commandModal.svelte.js'
+  import { selection } from '$stores/ui/selection.svelte.js'
   import { Modal } from '$stores/ui/Modal.svelte.js'
 
   let serverCategories = $state([])
@@ -46,6 +48,25 @@
         }
       }
       serverCategories = [...merged.values()]
+      const paletteActions = []
+      for (const cat of serverCategories) {
+        for (const cmd of cat.commands) {
+          paletteActions.push({
+            id: `cmd-${cmd.name}`,
+            label: `Run: ${cmd.name}`,
+            description: cmd.description || `${cat.category} command`,
+            icon: 'command',
+            section: `Commands - ${cat.category}`,
+            tags: [cmd.name, cat.category],
+            on: () => commandModal.open({
+              command: cmd,
+              useSession: true,
+              targetIDs: [...selection.agents],
+            }),
+          })
+        }
+      }
+      registerCommandActions(paletteActions)
     } catch (error) {
       await dialog.alert(`Could not load Sliver commands: ${error}`)
     }
