@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"sliver-gui/internal/automation"
+	"sliver-gui/internal/bus"
 	"sliver-gui/internal/sliver/beacons"
 	"sliver-gui/internal/sliver/console"
 	"sliver-gui/internal/sliver/rpc"
@@ -148,6 +149,48 @@ func (s *EventSource) HandleSliverEvent(ev *clientpb.Event) {
 			s.handler("beacon-registered", targetFromBeacon(beacon))
 		}
 	}
+}
+
+// HandleBusEvent translates sliver.* bus events into automation triggers.
+// Payloads are the DTO maps published by the lifecycle adapter — protobufs
+// never cross the bus.
+func (s *EventSource) HandleBusEvent(ev bus.Event) {
+	if s.handler == nil {
+		return
+	}
+	payload, ok := ev.Payload.(map[string]any)
+	if !ok {
+		return
+	}
+	switch ev.Type {
+	case "sliver.session-opened":
+		s.handler("session-connected", targetFromPayload(payload, "session"))
+	case "sliver.beacon-registered":
+		s.handler("beacon-registered", targetFromPayload(payload, "beacon"))
+	}
+}
+
+func targetFromPayload(payload map[string]any, kind string) automation.Target {
+	id := payloadString(payload, "sessionID")
+	if kind == "beacon" {
+		id = payloadString(payload, "beaconID")
+	}
+	return automation.Target{
+		ID:       id,
+		Name:     payloadString(payload, "name"),
+		Hostname: payloadString(payload, "hostname"),
+		Username: payloadString(payload, "username"),
+		OS:       payloadString(payload, "os"),
+		Arch:     payloadString(payload, "arch"),
+		Kind:     kind,
+	}
+}
+
+func payloadString(payload map[string]any, key string) string {
+	if v, ok := payload[key].(string); ok {
+		return v
+	}
+	return ""
 }
 
 func targetFromSession(session *clientpb.Session) automation.Target {

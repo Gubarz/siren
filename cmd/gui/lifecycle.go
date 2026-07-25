@@ -2,6 +2,7 @@ package gui
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"google.golang.org/protobuf/proto"
 
+	"sliver-gui/internal/bus"
 	"sliver-gui/internal/localstate/events"
 	"sliver-gui/internal/wailsadapter"
 )
@@ -30,6 +32,8 @@ func (a *App) startup(ctx context.Context) {
 	a.Staging.SetCtx(ctx)
 
 	a.Automation.Start(ctx)
+
+	a.startBusSubscribers()
 
 	go func() {
 		time.Sleep(300 * time.Millisecond)
@@ -125,53 +129,52 @@ func (a *App) OpenFileDialog(title string) (string, error) {
 }
 
 func (a *App) startEventStream() {
+	connID := ""
+	if a.RPC.Config != nil {
+		connID = fmt.Sprintf("%s:%d", a.RPC.Config.LHost, a.RPC.Config.LPort)
+	}
 	a.RPC.StartEventStream(a.ctx, func(ev *clientpb.Event) {
-		if ev.EventType == "stream-closed" {
-			a.RPC.InvalidateAgentCache()
-			a.Console.ResetConsole()
-			runtime.EventsEmit(a.ctx, "sliver-event", map[string]interface{}{"type": "stream-closed"})
-			return
-		}
-		switch ev.EventType {
-		case consts.SessionOpenedEvent, consts.SessionClosedEvent, consts.BeaconRegisteredEvent:
-			a.RPC.InvalidateAgentCache()
-		}
-		if a.AutomationEvents != nil {
-			a.AutomationEvents.HandleSliverEvent(ev)
-		}
-		payload := map[string]interface{}{"type": ev.EventType}
-		if ev.Session != nil {
-			payload["sessionID"] = ev.Session.ID
-			payload["hostname"] = ev.Session.Hostname
-			payload["username"] = ev.Session.Username
-		}
-		if ev.Job != nil {
-			payload["job"] = ev.Job.Name
-		}
-		if len(ev.Data) > 0 {
-			switch ev.EventType {
-			case consts.BeaconRegisteredEvent, consts.BeaconTaskResultEvent:
-				b := &clientpb.Beacon{}
-				if proto.Unmarshal(ev.Data, b) == nil && b.ID != "" {
-					payload["beaconID"] = b.ID
-					payload["hostname"] = b.Hostname
-					payload["username"] = b.Username
-				}
-			}
-			payload["data"] = string(ev.Data)
-		}
-		se := events.StoredEvent{Type: ev.EventType, Data: string(ev.Data), Time: time.Now().UnixMilli()}
-		if ev.Session != nil {
-			se.SessionID = ev.Session.ID
-			se.Hostname = ev.Session.Hostname
-			se.Username = ev.Session.Username
-		}
-		if ev.Job != nil {
-			se.Job = ev.Job.Name
-		}
-		a.Events.Append(se)
-		runtime.EventsEmit(a.ctx, "sliver-event", payload)
+		a.Bus.Publish(bus.Event{
+			Type:         "sliver." + ev.EventType,
+			Source:       "grpc-stream",
+			ConnectionID: connID,
+			Payload:      sliverEventPayload(ev),
+		})
 	})
+}
+
+// sliverEventPayload flattens a sliver event into a protobuf-free DTO map.
+// It carries everything today's frontend emit, events store, and automation
+// fan-out consume.
+func sliverEventPayload(ev *clientpb.Event) map[string]interface{} {
+	payload := map[string]interface{}{"type": ev.EventType}
+	if ev.Session != nil {
+		payload["sessionID"] = ev.Session.ID
+		payload["name"] = ev.Session.Name
+		payload["hostname"] = ev.Session.Hostname
+		payload["username"] = ev.Session.Username
+		payload["os"] = ev.Session.OS
+		payload["arch"] = ev.Session.Arch
+	}
+	if ev.Job != nil {
+		payload["job"] = ev.Job.Name
+	}
+	if len(ev.Data) > 0 {
+		switch ev.EventType {
+		case consts.BeaconRegisteredEvent, consts.BeaconTaskResultEvent:
+			b := &clientpb.Beacon{}
+			if proto.Unmarshal(ev.Data, b) == nil && b.ID != "" {
+				payload["beaconID"] = b.ID
+				payload["name"] = b.Name
+				payload["hostname"] = b.Hostname
+				payload["username"] = b.Username
+				payload["os"] = b.OS
+				payload["arch"] = b.Arch
+			}
+		}
+		payload["data"] = string(ev.Data)
+	}
+	return payload
 }
 
 func (a *App) GetEventHistory(since int64, limit int) ([]events.StoredEvent, error) {
