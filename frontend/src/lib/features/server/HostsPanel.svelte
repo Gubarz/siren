@@ -190,7 +190,6 @@
                 <span class="font-mono">{host._iocCount}</span>
               {:else if col.key === '_actions'}
                 <div class="flex justify-end gap-2">
-                  <Button color="dark" size="xs" onclick={(event) => { event.stopPropagation(); selectHost(host._raw) }}>View</Button>
                   <Button color="dark" size="xs" icon="tag" onclick={(event) => {
                     event.stopPropagation()
                     tagsModal.openTags('host', host._hostUUID, host._hostname || host._hostUUID)
