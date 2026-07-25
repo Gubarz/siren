@@ -25,9 +25,10 @@
       }
       selectedConfig = configs[0]
       loading = false
-      if (configs.length === 1) {
+      if (configs.length === 1 && !connection.intentionallyDisconnected) {
         await connect(selectedConfig)
       }
+      connection.intentionallyDisconnected = false
     } catch (e) {
       error = errorMessage(e, 'Failed to load configs: ')
       loading = false

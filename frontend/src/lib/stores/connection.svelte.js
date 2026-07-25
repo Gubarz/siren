@@ -8,6 +8,7 @@ class Connection {
   version = $state('')
   reconnecting = $state(false)
   error = $state(null)
+  intentionallyDisconnected = $state(false)
 
   #reconnectInterval = null
 
@@ -17,6 +18,7 @@ class Connection {
     this.profile = profile
     this.version = version
     this.reconnecting = false
+    this.intentionallyDisconnected = false
     this.error = null
     this.#stopReconnect()
     if (changed) {
@@ -55,6 +57,7 @@ class Connection {
     this.profile = ''
     this.version = ''
     this.reconnecting = false
+    this.intentionallyDisconnected = true
     this.#stopReconnect()
     workspaceState.clear()
   }

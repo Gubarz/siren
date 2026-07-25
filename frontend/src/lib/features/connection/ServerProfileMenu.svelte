@@ -127,7 +127,7 @@
       <Button size="sm" color="alternative" icon="x" onclick={disconnect} disabled={busy}>Disconnect</Button>
     {/if}
   </div>
-  <input bind:this={fileInputEl} type="file" accept=".cfg,.json,application/json" class="hidden" onchange={handleFile} />
+  <input bind:this={fileInputEl} type="file" class="hidden" onchange={handleFile} />
 
   {#if loading}
     <LoadingState />
