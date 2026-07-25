@@ -99,6 +99,11 @@ func (a *App) shutdown(context.Context) {
 	if a.RPC != nil && !preserveLiveResources {
 		a.RPC.Disconnect()
 	}
+	if a.Journal != nil {
+		if err := a.Journal.Close(); err != nil {
+			log.Printf("shutdown: close journal: %v", err)
+		}
+	}
 	a.Events.Close()
 	if a.cancel != nil {
 		a.cancel()
