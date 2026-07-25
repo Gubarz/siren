@@ -78,7 +78,11 @@ func (s *Service) uploadLocalFile(sessionID string, remotePath string, localPath
 		})
 	}
 
-	return s.uploadRequest(sessionID, remotePath, filepath.Base(localPath), encodedData)
+	if err := s.uploadRequest(sessionID, remotePath, filepath.Base(localPath), encodedData); err != nil {
+		return err
+	}
+	s.publish("gui.file-uploaded", map[string]any{"sessionID": sessionID, "remotePath": remotePath, "localPath": localPath})
+	return nil
 }
 
 func (s *Service) uploadRequest(sessionID, remotePath, fileName string, encodedData []byte) error {

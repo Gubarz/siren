@@ -305,6 +305,13 @@ func (c *Client) LookupSessionByBeaconName(name string) *clientpb.Session {
 	return nil
 }
 
+func (c *Client) ConnectionID() string {
+	if c.Config == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.Config.LHost, c.Config.LPort)
+}
+
 func (c *Client) InvalidateAgentCache() {
 	c.cacheMu.Lock()
 	c.cachedSessions = nil

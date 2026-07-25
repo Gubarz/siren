@@ -64,6 +64,7 @@ func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurs
 
 	s.finalizeDownloadHistory(recordID, "completed", totalWritten, "")
 	emit("done", totalWritten, totalWritten)
+	s.publish("gui.file-downloaded", map[string]any{"sessionID": sessionID, "remotePath": remotePath, "localPath": localPath})
 	return nil
 }
 

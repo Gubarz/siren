@@ -6,11 +6,13 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
+	"sliver-gui/internal/bus"
 	"sliver-gui/internal/sliver/rpc"
 )
 
 type Service struct {
 	rpc *rpc.Client
+	bus bus.Bus
 }
 
 func New(rpc *rpc.Client) *Service {
@@ -18,6 +20,22 @@ func New(rpc *rpc.Client) *Service {
 }
 
 func (s *Service) Close() {}
+
+func (s *Service) SetBus(b bus.Bus) {
+	s.bus = b
+}
+
+func (s *Service) publish(eventType string, payload map[string]any) {
+	if s.bus == nil {
+		return
+	}
+	s.bus.Publish(bus.Event{
+		Type:         eventType,
+		Source:       "gui",
+		ConnectionID: s.rpc.ConnectionID(),
+		Payload:      payload,
+	})
+}
 
 func (s *Service) Builders() (*clientpb.Builders, error) {
 	if !s.rpc.Connected() {
@@ -45,7 +63,11 @@ func (s *Service) SaveExternalBuild(binary *clientpb.ExternalImplantBinary) erro
 		return rpc.ErrNotConnected
 	}
 	_, err := s.rpc.RPC.GenerateExternalSaveBuild(context.Background(), binary)
-	return err
+	if err != nil {
+		return err
+	}
+	s.publish("gui.payload-built", map[string]any{"name": binary.Name, "builder": "external"})
+	return nil
 }
 
 func (s *Service) Trigger(ev *clientpb.Event) error {

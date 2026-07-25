@@ -9,12 +9,14 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"sliver-gui/internal/bus"
 	"sliver-gui/internal/sliver/rpc"
 )
 
 type Service struct {
 	rpc *rpc.Client
 	ctx context.Context
+	bus bus.Bus
 }
 
 func New(rpc *rpc.Client) *Service {
@@ -23,6 +25,22 @@ func New(rpc *rpc.Client) *Service {
 
 func (s *Service) SetCtx(ctx context.Context) {
 	s.ctx = ctx
+}
+
+func (s *Service) SetBus(b bus.Bus) {
+	s.bus = b
+}
+
+func (s *Service) publish(eventType string, payload map[string]any) {
+	if s.bus == nil {
+		return
+	}
+	s.bus.Publish(bus.Event{
+		Type:         eventType,
+		Source:       "gui",
+		ConnectionID: s.rpc.ConnectionID(),
+		Payload:      payload,
+	})
 }
 
 func (s *Service) GetLoot() (*clientpb.AllLoot, error) {

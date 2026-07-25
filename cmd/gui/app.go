@@ -114,6 +114,11 @@ func NewApp() *App {
 		Builders:    builders.New(shared.RPC),
 		Env:         env.New(shared.RPC),
 	}
+	app.Files.SetBus(shared.Bus)
+	app.Procs.SetBus(shared.Bus)
+	app.Implants.SetBus(shared.Bus)
+	app.Builders.SetBus(shared.Bus)
+	app.Loot.SetBus(shared.Bus)
 	app.Console.SetRoutedCommandHandler(func(sessionID, line string) console.RoutedCommandResult {
 		result := app.Tunneling.HandleConsoleTunnelCommand(sessionID, line)
 		return console.RoutedCommandResult{

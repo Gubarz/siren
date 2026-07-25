@@ -28,7 +28,11 @@ func (s *Service) AddCredential(username, plaintext, hash, collection string) er
 			Hash: hash, Collection: collection,
 		}},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	s.publish("gui.loot-added", map[string]any{"kind": "credential", "username": username, "collection": collection})
+	return nil
 }
 
 func (s *Service) RemoveCredential(id string) error {

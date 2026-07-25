@@ -8,6 +8,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 
+	"sliver-gui/internal/bus"
 	"sliver-gui/internal/sliver/rpc"
 )
 
@@ -18,6 +19,7 @@ type Service struct {
 	ctx     context.Context
 	history *HistoryStore
 	dl      func(ctx context.Context, in *sliverpb.DownloadReq) (*sliverpb.Download, error)
+	bus     bus.Bus
 }
 
 func New(rpc *rpc.Client) *Service {
@@ -25,6 +27,22 @@ func New(rpc *rpc.Client) *Service {
 		rpc:     rpc,
 		history: NewHistoryStore(),
 	}
+}
+
+func (s *Service) SetBus(b bus.Bus) {
+	s.bus = b
+}
+
+func (s *Service) publish(eventType string, payload map[string]any) {
+	if s.bus == nil {
+		return
+	}
+	s.bus.Publish(bus.Event{
+		Type:         eventType,
+		Source:       "gui",
+		ConnectionID: s.rpc.ConnectionID(),
+		Payload:      payload,
+	})
 }
 
 func (s *Service) SetCtx(ctx context.Context) {

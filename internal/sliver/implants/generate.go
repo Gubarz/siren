@@ -10,12 +10,14 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"sliver-gui/internal/bus"
 	"sliver-gui/internal/sliver/rpc"
 )
 
 type Service struct {
 	rpc *rpc.Client
 	ctx context.Context
+	bus bus.Bus
 }
 
 func New(rpc *rpc.Client) *Service {
@@ -24,6 +26,22 @@ func New(rpc *rpc.Client) *Service {
 
 func (s *Service) SetCtx(ctx context.Context) {
 	s.ctx = ctx
+}
+
+func (s *Service) SetBus(b bus.Bus) {
+	s.bus = b
+}
+
+func (s *Service) publish(eventType string, payload map[string]any) {
+	if s.bus == nil {
+		return
+	}
+	s.bus.Publish(bus.Event{
+		Type:         eventType,
+		Source:       "gui",
+		ConnectionID: s.rpc.ConnectionID(),
+		Payload:      payload,
+	})
 }
 
 func newImplantConfig(goos, goarch, format, c2url string, isBeacon bool, beaconInterval int64) (*clientpb.ImplantConfig, error) {
@@ -153,6 +171,7 @@ func (s *Service) GenerateAdvanced(req GenerateRequest) (string, error) {
 	if err := os.WriteFile(localPath, resp.File.Data, 0755); err != nil {
 		return "", fmt.Errorf("failed to save implant: %w", err)
 	}
+	s.publish("gui.payload-built", map[string]any{"name": req.Name, "builder": "sliver"})
 	return localPath, nil
 }
 
@@ -209,6 +228,7 @@ func (s *Service) Generate(goos, goarch, format, c2url, name string, isBeacon bo
 	if err := os.WriteFile(localPath, resp.File.Data, 0755); err != nil {
 		return "", fmt.Errorf("failed to save implant: %w", err)
 	}
+	s.publish("gui.payload-built", map[string]any{"name": name, "builder": "sliver"})
 	return localPath, nil
 }
 
@@ -266,5 +286,6 @@ func (s *Service) GenerateFromProfile(profileConfigID string, name string, forma
 	if err := os.WriteFile(localPath, resp.File.Data, 0755); err != nil {
 		return "", fmt.Errorf("failed to save implant: %w", err)
 	}
+	s.publish("gui.payload-built", map[string]any{"name": name, "builder": "sliver"})
 	return localPath, nil
 }
