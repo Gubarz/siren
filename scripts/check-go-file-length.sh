@@ -9,6 +9,9 @@ MAX_LINES=350
 fail=0
 
 while IFS= read -r -d '' file; do
+    if head -1 "$file" | grep -q 'Code generated .* DO NOT EDIT\.'; then
+        continue
+    fi
     lines=$(wc -l < "$file")
     if (( lines > MAX_LINES )); then
         printf '%s: %d lines (> %d)\n' "$file" "$lines" "$MAX_LINES" >&2

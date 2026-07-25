@@ -23,6 +23,10 @@ type Client struct {
 	RPC    rpcpb.SliverRPCClient
 	Conn   *grpc.ClientConn
 
+	// JournalHook, when set (bootstrap wires it), makes Connect wrap the RPC
+	// client with the journal decorator.
+	JournalHook *JournalHook
+
 	connected atomic.Bool
 	connectMu sync.Mutex
 
@@ -81,7 +85,12 @@ func (c *Client) Connect(profileName string) error {
 	c.stopEventStream()
 	oldConn := c.Conn
 	c.Config = config
-	c.RPC = rpcClient
+	if c.JournalHook != nil {
+		c.JournalHook.SetConnection(fmt.Sprintf("%s:%d", config.LHost, config.LPort))
+		c.RPC = WrapJournal(rpcClient, c.JournalHook)
+	} else {
+		c.RPC = rpcClient
+	}
 	c.Conn = grpcConn
 	c.connected.Store(true)
 	if oldConn != nil && oldConn != grpcConn {
