@@ -60,6 +60,20 @@ if out=$(internal_imports ./internal/automation | grep -v '^sliver-gui/internal/
     fail=1
 fi
 
+# Rule 4b: automation subpackages (triggers, actions) follow the same contract.
+for sub in ./internal/automation/triggers ./internal/automation/actions; do
+    if out=$(external_imports "$sub" | grep -E '^github\.com/(bishopfox|wailsapp)') && [ -n "$out" ]; then
+        echo "boundary: $sub must not import sliver or wails:" >&2
+        echo "$out" >&2
+        fail=1
+    fi
+    if out=$(internal_imports "$sub" | grep -v '^sliver-gui/internal/\(automation\|automation/triggers\|automation/actions\|bus\|journal\)$') && [ -n "$out" ]; then
+        echo "boundary: $sub may only import internal/automation, internal/bus, internal/journal:" >&2
+        echo "$out" >&2
+        fail=1
+    fi
+done
+
 # Rule 5: within internal/sliver/*, only automationexec may import internal/automation.
 while IFS= read -r pkg; do
     case "$pkg" in

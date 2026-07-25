@@ -7,7 +7,6 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 
 	"sliver-gui/internal/bootstrap"
-	"sliver-gui/internal/localstate/casefile"
 	"sliver-gui/internal/sliver/agents"
 	"sliver-gui/internal/sliver/armory"
 	"sliver-gui/internal/sliver/builders"
@@ -72,7 +71,6 @@ type App struct {
 	Websites   *websites.Service
 	Staging    *staging.Service
 	Hosts      *hosts.Service
-	Cases      *casefile.Service
 	Health     *health.Service
 	Env        *env.Service
 }
@@ -105,7 +103,6 @@ func NewApp() *App {
 		Websites:    websites.New(shared.RPC),
 		Staging:     staging.New(shared.RPC),
 		Hosts:       hosts.New(shared.RPC),
-		Cases:       casefile.New(assets.GetRootAppDir()),
 		Monitor:     monitor.New(shared.RPC),
 		Extensions:  extensions.New(shared.RPC),
 		Memfiles:    memfiles.New(shared.RPC),

@@ -8,14 +8,17 @@
       "trigger": "session-connected",
       "targetKind": "any",
       "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
-      "executionMode": "javascript",
-      "commands": [],
-      "script": "const tags = [target.kind];\nif (target.os) tags.push(target.os);\nif (target.arch) tags.push(target.arch);\nconst user = (target.username || '').toLowerCase();\nif (user.includes('system') || user === 'root') tags.push('high-priv');\nconst updated = sliver.tags.add(tags.join(','));\nsliver.log('Tags:', updated.join(', '));",
+      "actions": [
+        {
+          "type": "script",
+          "config": {
+            "source": "const tags = [target.kind];\nif (target.os) tags.push(target.os);\nif (target.arch) tags.push(target.arch);\nconst user = (target.username || '').toLowerCase();\nif (user.includes('system') || user === 'root') tags.push('high-priv');\nconst updated = sliver.tags.add(tags.join(','));\nsliver.log('Tags:', updated.join(', '));"
+          }
+        }
+      ],
       "timeoutSeconds": 30,
       "continueOnError": false,
-      "delaySeconds": 0,
       "cooldownSeconds": 120,
-      "intervalSeconds": 60,
       "maxRuns": 0
     },
     {
@@ -26,14 +29,17 @@
       "trigger": "beacon-registered",
       "targetKind": "beacon",
       "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
-      "executionMode": "javascript",
-      "commands": [],
-      "script": "const tags = ['beacon'];\nif (target.os) tags.push(target.os);\nif (target.arch) tags.push(target.arch);\nconst user = (target.username || '').toLowerCase();\nif (user.includes('system') || user === 'root') tags.push('high-priv');\nconst updated = sliver.tags.add(tags.join(','));\nsliver.log('Tags:', updated.join(', '));",
+      "actions": [
+        {
+          "type": "script",
+          "config": {
+            "source": "const tags = ['beacon'];\nif (target.os) tags.push(target.os);\nif (target.arch) tags.push(target.arch);\nconst user = (target.username || '').toLowerCase();\nif (user.includes('system') || user === 'root') tags.push('high-priv');\nconst updated = sliver.tags.add(tags.join(','));\nsliver.log('Tags:', updated.join(', '));"
+          }
+        }
+      ],
       "timeoutSeconds": 30,
       "continueOnError": false,
-      "delaySeconds": 0,
       "cooldownSeconds": 120,
-      "intervalSeconds": 60,
       "maxRuns": 0
     },
     {
@@ -44,19 +50,19 @@
       "trigger": "session-connected",
       "targetKind": "session",
       "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
-      "executionMode": "commands",
-      "commands": [
-        "whoami",
-        "info",
-        "pwd",
-        "ps"
+      "actions": [
+        {
+          "type": "commands",
+          "config": {
+            "commands": ["whoami", "info", "pwd", "ps"],
+            "delaySeconds": 1,
+            "continueOnError": true
+          }
+        }
       ],
-      "script": "",
       "timeoutSeconds": 180,
       "continueOnError": true,
-      "delaySeconds": 1,
       "cooldownSeconds": 300,
-      "intervalSeconds": 60,
       "maxRuns": 0
     },
     {
@@ -67,18 +73,19 @@
       "trigger": "manual",
       "targetKind": "any",
       "filter": { "os": "", "arch": "", "hostname": "", "username": "", "name": "" },
-      "executionMode": "commands",
-      "commands": [
-        "whoami",
-        "ps",
-        "netstat"
+      "actions": [
+        {
+          "type": "commands",
+          "config": {
+            "commands": ["whoami", "ps", "netstat"],
+            "delaySeconds": 1,
+            "continueOnError": true
+          }
+        }
       ],
-      "script": "",
       "timeoutSeconds": 180,
       "continueOnError": true,
-      "delaySeconds": 1,
       "cooldownSeconds": 0,
-      "intervalSeconds": 60,
       "maxRuns": 0
     }
   ]
