@@ -39,22 +39,25 @@ type AutomationRule struct {
 	RunCount        int              `json:"runCount"`
 	CreatedAt       int64            `json:"createdAt"`
 	UpdatedAt       int64            `json:"updatedAt"`
+	TriggerConfig   map[string]any   `json:"triggerConfig,omitempty"`
+	Actions         []ActionSpec     `json:"actions,omitempty"`
 }
 
 type AutomationRun struct {
-	ID         string   `json:"id"`
-	RuleID     string   `json:"ruleId"`
-	RuleName   string   `json:"ruleName"`
-	Trigger    string   `json:"trigger"`
-	TargetID   string   `json:"targetId"`
-	TargetName string   `json:"targetName"`
-	TargetKind string   `json:"targetKind"`
-	Commands   []string `json:"commands"`
-	Output     string   `json:"output"`
-	Error      string   `json:"error"`
-	Status     string   `json:"status"`
-	StartedAt  int64    `json:"startedAt"`
-	FinishedAt int64    `json:"finishedAt"`
+	ID            string         `json:"id"`
+	RuleID        string         `json:"ruleId"`
+	RuleName      string         `json:"ruleName"`
+	Trigger       string         `json:"trigger"`
+	TargetID      string         `json:"targetId"`
+	TargetName    string         `json:"targetName"`
+	TargetKind    string         `json:"targetKind"`
+	Commands      []string       `json:"commands"`
+	Output        string         `json:"output"`
+	Error         string         `json:"error"`
+	Status        string         `json:"status"`
+	StartedAt     int64          `json:"startedAt"`
+	FinishedAt    int64          `json:"finishedAt"`
+	ActionResults []ActionResult `json:"actionResults,omitempty"`
 }
 
 func (e *Engine) ListRules() ([]AutomationRule, error) {
@@ -75,7 +78,8 @@ func (e *Engine) SaveRule(rule AutomationRule) (AutomationRule, error) {
 	if rule.ExecutionMode == ExecutionModeCommands {
 		rule.Commands = compactCommands(rule.Commands)
 	}
-	if err := validateAutomationRule(rule); err != nil {
+	migrateRule(&rule)
+	if err := e.validateAutomationRule(rule); err != nil {
 		return AutomationRule{}, err
 	}
 	now := time.Now().UnixMilli()
@@ -101,11 +105,17 @@ func (e *Engine) SaveRule(rule AutomationRule) (AutomationRule, error) {
 		return AutomationRule{}, err
 	}
 	e.mu.Unlock()
+	if rule.Enabled {
+		e.armRule(rule)
+	} else {
+		e.disarmRule(rule.ID)
+	}
 	e.emit("automation-updated", rule)
 	return rule, nil
 }
 
 func (e *Engine) DeleteRule(id string) error {
+	e.disarmRule(id)
 	e.mu.Lock()
 	for index := range e.rules {
 		if e.rules[index].ID == id {
@@ -135,6 +145,11 @@ func (e *Engine) SetRuleEnabled(id string, enabled bool) error {
 	err := e.persistLocked()
 	e.mu.Unlock()
 	if err == nil {
+		if enabled {
+			e.armRule(saved)
+		} else {
+			e.disarmRule(saved.ID)
+		}
 		e.emit("automation-updated", saved)
 	}
 	return err
@@ -192,40 +207,40 @@ func (e *Engine) ClearHistory() error {
 	return err
 }
 
-func validateAutomationRule(rule AutomationRule) error {
+func (e *Engine) validateAutomationRule(rule AutomationRule) error {
 	rule.Name = strings.TrimSpace(rule.Name)
 	if rule.Name == "" {
 		return fmt.Errorf("rule name is required")
 	}
-	switch rule.Trigger {
-	case "session-connected", "beacon-registered", "beacon-checkin", "interval", "manual":
-	default:
-		return fmt.Errorf("unsupported trigger %q", rule.Trigger)
+	if _, ok := e.triggerByType(rule.Trigger); !ok {
+		return fmt.Errorf("unsupported trigger %q (registered: %v)", rule.Trigger, sortedTriggerTypes(e))
 	}
 	switch rule.TargetKind {
 	case "", "any", "session", "beacon":
 	default:
 		return fmt.Errorf("unsupported target kind %q", rule.TargetKind)
 	}
-	switch automationExecutionMode(rule) {
-	case ExecutionModeJavaScript:
-		if strings.TrimSpace(rule.Script) == "" {
-			return fmt.Errorf("JavaScript source is required")
-		}
-		if _, err := sobek.Compile(rule.Name+".js", rule.Script, true); err != nil {
-			return fmt.Errorf("JavaScript: %w", err)
-		}
-		return nil
-	case ExecutionModeCommands:
-		for _, command := range rule.Commands {
-			if strings.TrimSpace(command) != "" {
-				return nil
+	if t, ok := e.triggerByType(rule.Trigger); ok {
+		if v, isValidator := t.(configValidator); isValidator {
+			if err := v.Validate(triggerConfig(rule)); err != nil {
+				return err
 			}
 		}
-		return fmt.Errorf("at least one command is required")
-	default:
-		return fmt.Errorf("unsupported execution mode %q", rule.ExecutionMode)
 	}
+	for _, spec := range rule.Actions {
+		if _, ok := e.actionByType(spec.Type); !ok {
+			return fmt.Errorf("unsupported action type %q", spec.Type)
+		}
+	}
+	if len(rule.Actions) == 0 {
+		return fmt.Errorf("at least one action is required")
+	}
+	if script := rule.Script; strings.TrimSpace(script) != "" {
+		if _, err := sobek.Compile(rule.Name+".js", script, true); err != nil {
+			return fmt.Errorf("JavaScript: %w", err)
+		}
+	}
+	return nil
 }
 
 func compactCommands(commands []string) []string {

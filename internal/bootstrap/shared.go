@@ -7,10 +7,13 @@ import (
 	"path/filepath"
 
 	"sliver-gui/internal/automation"
+	"sliver-gui/internal/automation/actions"
+	"sliver-gui/internal/automation/triggers"
 	"sliver-gui/internal/bus"
 	"sliver-gui/internal/envvars"
 	"sliver-gui/internal/journal"
 	automationstate "sliver-gui/internal/localstate/automation"
+	"sliver-gui/internal/localstate/casefile"
 	"sliver-gui/internal/localstate/comments"
 	"sliver-gui/internal/localstate/events"
 	localjournal "sliver-gui/internal/localstate/journal"
@@ -25,23 +28,23 @@ import (
 )
 
 type Dependencies struct {
-	DataDir     string
-	GUIConfig   *envvars.GUIConfig
-	Emitter     automation.Emitter
-	StartEvents bool
+	DataDir   string
+	GUIConfig *envvars.GUIConfig
+	Emitter   automation.Emitter
 }
 
 type SharedStack struct {
-	RPC              *rpc.Client
-	Console          *console.Service
-	Beacons          *beacons.Service
-	Automation       *automation.Engine
-	AutomationEvents *automationexec.EventSource
-	Tags             *tags.Service
-	Comments         *comments.Service
-	Events           *events.Store
-	Bus              bus.Bus
-	Journal          *journal.Service
+	RPC        *rpc.Client
+	Console    *console.Service
+	Beacons    *beacons.Service
+	Automation *automation.Engine
+	CheckinPub *automationexec.CheckinPublisher
+	Tags       *tags.Service
+	Comments   *comments.Service
+	Cases      *casefile.Service
+	Events     *events.Store
+	Bus        bus.Bus
+	Journal    *journal.Service
 }
 
 func resolveDataDir(deps Dependencies) string {
@@ -62,7 +65,6 @@ func resolveDataDir(deps Dependencies) string {
 
 func NewShared(deps Dependencies) *SharedStack {
 	deps.DataDir = resolveDataDir(deps)
-
 	busImpl := bus.New()
 	journalStore, err := localjournal.NewSQLiteStore(deps.DataDir)
 	if err != nil {
@@ -70,7 +72,6 @@ func NewShared(deps Dependencies) *SharedStack {
 		journalStore = nil
 	}
 	journalSvc := journal.NewService(journalStore, busImpl)
-
 	rpcClient := rpc.NewClient()
 	rpcClient.JournalHook = rpc.NewJournalHook(journalSvc)
 	con := console.New(rpcClient)
@@ -79,37 +80,57 @@ func NewShared(deps Dependencies) *SharedStack {
 	tagsSvc := tags.New(deps.DataDir)
 	commentsSvc := comments.New(deps.DataDir)
 	eventsStore := events.New(deps.DataDir)
-
-	store := automationstate.New(deps.DataDir)
+	caseSvc := casefile.New(deps.DataDir)
+	con.SetBus(busImpl)
 	executor := automationexec.NewExecutor(con, beac)
 	targets := automationexec.NewTargetProvider(rpcClient)
-
-	var automationEvents *automationexec.EventSource
-	if deps.StartEvents {
-		automationEvents = automationexec.NewEventSource(rpcClient)
-	} else {
-		automationEvents = automationexec.NewEventSource(nil)
-	}
-
 	eng := automation.New(automation.Dependencies{
-		Store:    store,
-		Emitter:  deps.Emitter,
-		Executor: executor,
-		Targets:  targets,
-		Events:   automationEvents,
-		Tags:     tagsSvc,
+		Store: automationstate.New(deps.DataDir), Emitter: deps.Emitter,
+		Executor: executor, Targets: targets, Tags: tagsSvc,
+		Bus: busImpl, Journal: journalSvc, Cases: caseSvc,
+		Loot: automationexec.NewLootWriter(rpcClient),
 	})
-
+	registerBuiltinTriggers(eng, busImpl)
+	registerBuiltinActions(eng)
 	return &SharedStack{
-		RPC:              rpcClient,
-		Console:          con,
-		Beacons:          beac,
-		Automation:       eng,
-		AutomationEvents: automationEvents,
-		Tags:             tagsSvc,
-		Comments:         commentsSvc,
-		Events:           eventsStore,
-		Bus:              busImpl,
-		Journal:          journalSvc,
+		RPC: rpcClient, Console: con, Beacons: beac, Automation: eng,
+		CheckinPub: automationexec.NewCheckinPublisher(rpcClient, busImpl),
+		Tags: tagsSvc, Comments: commentsSvc, Cases: caseSvc,
+		Events: eventsStore, Bus: busImpl, Journal: journalSvc,
+	}
+}
+
+func registerBuiltinTriggers(eng *automation.Engine, b bus.Bus) {
+	for _, t := range []automation.Trigger{
+		triggers.Manual(),
+		triggers.Interval(),
+		triggers.SessionConnected(b),
+		triggers.BeaconRegistered(b),
+		triggers.BeaconCheckin(b),
+		triggers.Cron(),
+		triggers.TaskFinish(b),
+		triggers.Keyword(b),
+		triggers.FileDownload(b),
+		triggers.Screenshot(b),
+		triggers.PayloadBuild(b),
+	} {
+		if err := eng.RegisterTrigger(t); err != nil {
+			log.Printf("bootstrap: register trigger: %v", err)
+		}
+	}
+}
+
+func registerBuiltinActions(eng *automation.Engine) {
+	for _, a := range []automation.Action{
+		actions.Commands(),
+		actions.Script(),
+		actions.Webhook(),
+		actions.Notify(),
+		actions.Tag(),
+		actions.CaseAdd(),
+	} {
+		if err := eng.RegisterAction(a); err != nil {
+			log.Printf("bootstrap: register action: %v", err)
+		}
 	}
 }

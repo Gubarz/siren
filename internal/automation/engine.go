@@ -5,52 +5,67 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"sliver-gui/internal/bus"
 )
 
-const (
-	automationHistoryLimit = 500
-	beaconPollInterval     = 5 * time.Second
-)
+const automationHistoryLimit = 500
 
 type Engine struct {
 	store    StateStore
 	emitter  Emitter
 	executor CommandExecutor
 	targets  TargetProvider
-	events   EventSource
 	tags     AgentTagStore
+	bus      bus.Bus
+	journal  JournalQuerier
+	http     HTTPDoer
+	cases    CaseAppender
+	loot     LootWriter
 	ctx      context.Context
 
-	mu             sync.RWMutex
-	rules          []AutomationRule
-	history        []AutomationRun
-	running        map[string]bool
-	activeByRule   map[string]int
-	lastRun        map[string]time.Time
-	lastInterval   map[string]time.Time
-	beaconCheckins map[string]int64
-	beaconsPrimed  bool
+	triggersMu sync.RWMutex
+	triggers   map[string]Trigger
+	actionsMu  sync.RWMutex
+	actions    map[string]Action
+	armedMu    sync.Mutex
+	armed      map[string]context.CancelFunc
+
+	mu           sync.RWMutex
+	rules        []AutomationRule
+	history      []AutomationRun
+	running      map[string]bool
+	activeByRule map[string]int
+	lastRun      map[string]time.Time
 }
 
 func New(deps Dependencies) *Engine {
 	e := &Engine{
-		store:          deps.Store,
-		emitter:        deps.Emitter,
-		executor:       deps.Executor,
-		targets:        deps.Targets,
-		events:         deps.Events,
-		tags:           deps.Tags,
-		running:        map[string]bool{},
-		activeByRule:   map[string]int{},
-		lastRun:        map[string]time.Time{},
-		lastInterval:   map[string]time.Time{},
-		beaconCheckins: map[string]int64{},
+		store:    deps.Store,
+		emitter:  deps.Emitter,
+		executor: deps.Executor,
+		targets:  deps.Targets,
+		tags:     deps.Tags,
+		bus:      deps.Bus,
+		journal:  deps.Journal,
+		http:     deps.HTTP,
+		cases:    deps.Cases,
+		loot:     deps.Loot,
+		triggers: map[string]Trigger{},
+		actions:  map[string]Action{},
+		armed:    map[string]context.CancelFunc{},
+		running:  map[string]bool{},
+		activeByRule: map[string]int{},
+		lastRun:  map[string]time.Time{},
 	}
 	if state, err := deps.Store.Load(context.Background()); err != nil {
 		log.Printf("automation: could not load state: %v", err)
 	} else if state != nil {
 		e.rules = state.Rules
 		e.history = state.History
+		for i := range e.rules {
+			migrateRule(&e.rules[i])
+		}
 	}
 	return e
 }
@@ -61,29 +76,18 @@ func (e *Engine) SetEmitter(emitter Emitter) {
 
 func (e *Engine) Start(ctx context.Context) {
 	e.ctx = ctx
-	e.events.Start(ctx, func(trigger string, target Target) {
-		if trigger == "beacon-registered" && target.LastCheckin > 0 {
-			e.mu.Lock()
-			e.beaconCheckins[target.ID] = target.LastCheckin
-			e.mu.Unlock()
+	e.mu.RLock()
+	rules := append([]AutomationRule(nil), e.rules...)
+	e.mu.RUnlock()
+	for _, rule := range rules {
+		if rule.Enabled {
+			e.armRule(rule)
 		}
-		e.dispatchTrigger(trigger, target)
-	})
-	go func() {
-		ticker := time.NewTicker(beaconPollInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case now := <-ticker.C:
-				e.tick(now)
-			}
-		}
-	}()
+	}
 }
 
 func (e *Engine) SetServer(host string, port uint32) {
+	e.disarmAll()
 	e.store.SetServer(host, port)
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -94,71 +98,14 @@ func (e *Engine) SetServer(host string, port uint32) {
 	} else if state != nil {
 		e.rules = state.Rules
 		e.history = state.History
+		for i := range e.rules {
+			migrateRule(&e.rules[i])
+		}
 	}
 }
 
 func (e *Engine) persistLocked() error {
 	return e.store.Save(context.Background(), &State{Rules: e.rules, History: e.history})
-}
-
-func (e *Engine) tick(now time.Time) {
-	if !e.targets.Connected() {
-		return
-	}
-	e.pollBeaconCheckins()
-
-	e.mu.RLock()
-	rules := append([]AutomationRule(nil), e.rules...)
-	e.mu.RUnlock()
-	for _, rule := range rules {
-		if !rule.Enabled || rule.Trigger != "interval" {
-			continue
-		}
-		interval := time.Duration(rule.IntervalSeconds) * time.Second
-		if interval < 10*time.Second {
-			interval = 10 * time.Second
-		}
-		e.mu.Lock()
-		last := e.lastInterval[rule.ID]
-		if last.IsZero() {
-			e.lastInterval[rule.ID] = now
-			e.mu.Unlock()
-			continue
-		}
-		if now.Sub(last) < interval {
-			e.mu.Unlock()
-			continue
-		}
-		e.lastInterval[rule.ID] = now
-		e.mu.Unlock()
-		e.dispatchRule(rule, "interval", nil)
-	}
-}
-
-func (e *Engine) pollBeaconCheckins() {
-	beacons, err := e.targets.GetBeacons(context.Background())
-	if err != nil {
-		return
-	}
-	e.mu.RLock()
-	previous := make(map[string]int64, len(e.beaconCheckins))
-	for id, checkin := range e.beaconCheckins {
-		previous[id] = checkin
-	}
-	primed := e.beaconsPrimed
-	e.mu.RUnlock()
-
-	current := make(map[string]int64, len(beacons))
-	for _, beacon := range beacons {
-		current[beacon.ID] = beacon.LastCheckin
-		if primed && previous[beacon.ID] != 0 && beacon.LastCheckin > previous[beacon.ID] {
-			e.dispatchTrigger("beacon-checkin", beacon)
-		}
-	}
-	e.mu.Lock()
-	e.beaconCheckins = current
-	e.beaconsPrimed = true
-	e.mu.Unlock()
 }
 
 func (e *Engine) emit(name string, payload any) {

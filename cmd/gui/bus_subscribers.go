@@ -11,13 +11,9 @@ import (
 	"sliver-gui/internal/localstate/events"
 )
 
-// startBusSubscribers replaces the old manual event fan-out: one gRPC
-// stream publishes sliver.* events; these subscribers reproduce today's
-// frontend emit, events-store append, and automation trigger behavior.
 func (a *App) startBusSubscribers() {
 	a.Bus.Subscribe(nil, a.frontendBusSubscriber)
 	a.Bus.Subscribe(nil, a.eventsStoreBusSubscriber)
-	a.Bus.Subscribe([]string{"sliver.session-opened", "sliver.beacon-registered"}, a.automationBusSubscriber)
 }
 
 func (a *App) frontendBusSubscriber(ev bus.Event) {
@@ -58,12 +54,6 @@ func (a *App) eventsStoreBusSubscriber(ev bus.Event) {
 		Data:      payloadString(payload, "data"),
 	}
 	a.Events.Append(se)
-}
-
-func (a *App) automationBusSubscriber(ev bus.Event) {
-	if a.AutomationEvents != nil {
-		a.AutomationEvents.HandleBusEvent(ev)
-	}
 }
 
 func payloadString(payload map[string]interface{}, key string) string {

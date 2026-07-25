@@ -65,7 +65,16 @@ sliver.log(finalTags.join('|'));
 }
 
 func TestStarterRulesParseAndCompile(t *testing.T) {
-	engine := &Engine{}
+	engine := &Engine{triggers: map[string]Trigger{
+		"manual":            triggersStub{typ: "manual"},
+		"interval":          triggersStub{typ: "interval"},
+		"session-connected": triggersStub{typ: "session-connected"},
+		"beacon-registered": triggersStub{typ: "beacon-registered"},
+		"beacon-checkin":    triggersStub{typ: "beacon-checkin"},
+	}, actions: map[string]Action{
+		"commands": actionStub{typ: "commands"},
+		"script":   actionStub{typ: "script"},
+	}}
 	rules, err := engine.StarterRules()
 	if err != nil {
 		t.Fatalf("StarterRules() error = %v", err)
@@ -74,11 +83,35 @@ func TestStarterRulesParseAndCompile(t *testing.T) {
 		t.Fatal("StarterRules() returned no rules")
 	}
 	for _, rule := range rules {
-		if err := validateAutomationRule(rule); err != nil {
+		migrateRule(&rule)
+		if err := engine.validateAutomationRule(rule); err != nil {
 			t.Fatalf("starter %q is invalid: %v", rule.Name, err)
 		}
 	}
 }
+
+type triggersStub struct {
+	typ    string
+	schema []FieldSpec
+}
+
+func (t triggersStub) Type() string                  { return t.typ }
+func (t triggersStub) ConfigSchema() []FieldSpec     { return t.schema }
+func (t triggersStub) Arm(ctx context.Context, cfg map[string]any, fire func(FireEvent)) error { <-ctx.Done(); return ctx.Err() }
+
+var _ Trigger = triggersStub{}
+
+type actionStub struct {
+	typ    string
+	schema []FieldSpec
+}
+
+func (a actionStub) Type() string                { return a.typ }
+func (a actionStub) ConfigSchema() []FieldSpec   { return a.schema }
+func (a actionStub) Execute(*RunContext) error   { return nil }
+
+var _ Action = actionStub{}
+
 
 func normalizeTestTags(values []string) []string {
 	seen := map[string]struct{}{}

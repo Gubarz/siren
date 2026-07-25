@@ -1,6 +1,10 @@
 package automation
 
-import "context"
+import (
+	"context"
+
+	"sliver-gui/internal/bus"
+)
 
 type Emitter interface {
 	Emit(name string, payload any)
@@ -15,13 +19,6 @@ type TargetProvider interface {
 	GetSessions(ctx context.Context) ([]Target, error)
 	GetBeacons(ctx context.Context) ([]Target, error)
 	FindTarget(ctx context.Context, targetID string) (Target, error)
-}
-
-type EventHandler func(trigger string, target Target)
-
-type EventSource interface {
-	Start(ctx context.Context, handler EventHandler)
-	Stop()
 }
 
 type StateStore interface {
@@ -40,6 +37,10 @@ type Dependencies struct {
 	Emitter  Emitter
 	Executor CommandExecutor
 	Targets  TargetProvider
-	Events   EventSource
 	Tags     AgentTagStore
+	Bus      bus.Bus
+	Journal  JournalQuerier
+	HTTP     HTTPDoer
+	Cases    CaseAppender
+	Loot     LootWriter
 }

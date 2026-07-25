@@ -2,24 +2,15 @@ package automation
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
 	"sliver-gui/internal/journal"
 )
-
-func (e *Engine) dispatchTrigger(trigger string, target Target) {
-	e.mu.RLock()
-	rules := append([]AutomationRule(nil), e.rules...)
-	e.mu.RUnlock()
-	for _, rule := range rules {
-		if rule.Enabled && rule.Trigger == trigger {
-			e.dispatchRule(rule, trigger, &target)
-		}
-	}
-}
 
 func (e *Engine) dispatchRule(rule AutomationRule, trigger string, target *Target) {
 	if rule.MaxRuns > 0 && rule.RunCount >= rule.MaxRuns {
@@ -90,36 +81,70 @@ func (e *Engine) execute(rule AutomationRule, trigger string, target Target, key
 		Status: "running", StartedAt: time.Now().UnixMilli(),
 	}
 	e.storeRun(run)
-
 	parent := e.ctx
 	if parent == nil {
 		parent = context.Background()
 	}
-	runCtx := journal.WithContext(parent, journal.Overlay{
-		ActorKind:     "automation",
-		RuleID:        rule.ID,
-		RuleName:      rule.Name,
-		CorrelationID: run.ID,
+	ctxWithOverlay := journal.WithContext(parent, journal.Overlay{
+		ActorKind: "automation", RuleID: rule.ID, RuleName: rule.Name, CorrelationID: run.ID,
 	})
-
-	var output string
-	var runErr error
-	if automationExecutionMode(rule) == ExecutionModeJavaScript {
-		output, run.Commands, runErr = e.executeJavaScript(runCtx, rule, trigger, target)
-	} else {
-		output, run.Commands, runErr = e.executeCommands(runCtx, rule, target)
+	var output strings.Builder
+	var commands []string
+	rc := &RunContext{
+		Ctx:      ctxWithOverlay,
+		Rule:     rule,
+		Trigger:  trigger,
+		Target:   target,
+		RunID:    run.ID,
+		Commands: &commands,
+		Deps:     e.actionDeps(),
 	}
-
-	run.Output = output
+	rc.Log = func(args ...any) {
+		line := fmt.Sprint(args...)
+		if output.Len() > 0 {
+			output.WriteByte('\n')
+		}
+		output.WriteString(line)
+	}
+	rc.OutputSoFar = output.String
+	e.executeActionList(rc, &run, &output)
+	run.Commands = commands
+	run.Output = output.String()
 	run.FinishedAt = time.Now().UnixMilli()
-	if runErr != nil {
+	if err := firstActionError(run.ActionResults); err != nil {
 		run.Status = "failed"
-		run.Error = runErr.Error()
+		run.Error = err.Error
 	} else {
 		run.Status = "completed"
 	}
 	e.finalizeRun(run, rule.ID, key)
 	e.emit("automation-run", run)
+}
+
+func (e *Engine) executeActionList(rc *RunContext, run *AutomationRun, output *strings.Builder) {
+	for _, spec := range rc.Rule.Actions {
+		rc.Action = spec
+		result := e.executeAction(rc, spec)
+		run.ActionResults = append(run.ActionResults, result)
+		if result.Output != "" {
+			if output.Len() > 0 {
+				output.WriteString("\n\n")
+			}
+			output.WriteString(result.Output)
+		}
+		if result.Status == "error" && !rc.Rule.ContinueOnError {
+			break
+		}
+	}
+}
+
+func firstActionError(results []ActionResult) *ActionResult {
+	for _, r := range results {
+		if r.Status == "error" {
+			return &r
+		}
+	}
+	return nil
 }
 
 func (e *Engine) finalizeRun(run AutomationRun, ruleID, key string) {

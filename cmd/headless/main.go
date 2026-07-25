@@ -37,9 +37,8 @@ func main() {
 
 	emitter := headlessEmitter{}
 	shared := bootstrap.NewShared(bootstrap.Dependencies{
-		Emitter:     emitter,
-		DataDir:     dataDir,
-		StartEvents: true,
+		Emitter: emitter,
+		DataDir: dataDir,
 	})
 
 	if err := shared.RPC.Connect(*profile); err != nil {
@@ -58,6 +57,7 @@ func main() {
 
 	shared.Console.SetEmitter(emitter)
 	shared.Automation.Start(ctx)
+	shared.CheckinPub.Start(ctx)
 
 	log.Printf("headless: connected to %s:%d as %s", cfg.LHost, cfg.LPort, cfg.Operator)
 	<-ctx.Done()

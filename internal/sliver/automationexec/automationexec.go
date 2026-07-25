@@ -4,13 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"google.golang.org/protobuf/proto"
 
 	"sliver-gui/internal/automation"
-	"sliver-gui/internal/bus"
 	"sliver-gui/internal/sliver/beacons"
 	"sliver-gui/internal/sliver/console"
 	"sliver-gui/internal/sliver/rpc"
@@ -98,99 +95,6 @@ func (p *TargetProvider) FindTarget(ctx context.Context, targetID string) (autom
 		}
 	}
 	return automation.Target{}, fmt.Errorf("agent not found: %s", targetID)
-}
-
-type EventSource struct {
-	rpc     *rpc.Client
-	handler automation.EventHandler
-	cancel  context.CancelFunc
-}
-
-func NewEventSource(rpcClient *rpc.Client) *EventSource {
-	return &EventSource{rpc: rpcClient}
-}
-
-func (s *EventSource) Start(ctx context.Context, handler automation.EventHandler) {
-	s.handler = handler
-	if s.rpc != nil {
-		s.stop()
-		streamCtx, cancel := context.WithCancel(ctx)
-		s.cancel = cancel
-		s.rpc.StartEventStream(streamCtx, func(ev *clientpb.Event) {
-			s.HandleSliverEvent(ev)
-		})
-	}
-}
-
-func (s *EventSource) Stop() {
-	s.handler = nil
-	s.stop()
-}
-
-func (s *EventSource) stop() {
-	if s.cancel != nil {
-		s.cancel()
-		s.cancel = nil
-	}
-}
-
-func (s *EventSource) HandleSliverEvent(ev *clientpb.Event) {
-	if s.handler == nil {
-		return
-	}
-	switch ev.EventType {
-	case consts.SessionOpenedEvent:
-		if ev.Session != nil {
-			s.handler("session-connected", targetFromSession(ev.Session))
-		}
-	case consts.BeaconRegisteredEvent:
-		beacon := &clientpb.Beacon{}
-		if len(ev.Data) > 0 && proto.Unmarshal(ev.Data, beacon) == nil && beacon.ID != "" {
-			s.handler("beacon-registered", targetFromBeacon(beacon))
-		}
-	}
-}
-
-// HandleBusEvent translates sliver.* bus events into automation triggers.
-// Payloads are the DTO maps published by the lifecycle adapter — protobufs
-// never cross the bus.
-func (s *EventSource) HandleBusEvent(ev bus.Event) {
-	if s.handler == nil {
-		return
-	}
-	payload, ok := ev.Payload.(map[string]any)
-	if !ok {
-		return
-	}
-	switch ev.Type {
-	case "sliver.session-opened":
-		s.handler("session-connected", targetFromPayload(payload, "session"))
-	case "sliver.beacon-registered":
-		s.handler("beacon-registered", targetFromPayload(payload, "beacon"))
-	}
-}
-
-func targetFromPayload(payload map[string]any, kind string) automation.Target {
-	id := payloadString(payload, "sessionID")
-	if kind == "beacon" {
-		id = payloadString(payload, "beaconID")
-	}
-	return automation.Target{
-		ID:       id,
-		Name:     payloadString(payload, "name"),
-		Hostname: payloadString(payload, "hostname"),
-		Username: payloadString(payload, "username"),
-		OS:       payloadString(payload, "os"),
-		Arch:     payloadString(payload, "arch"),
-		Kind:     kind,
-	}
-}
-
-func payloadString(payload map[string]any, key string) string {
-	if v, ok := payload[key].(string); ok {
-		return v
-	}
-	return ""
 }
 
 func targetFromSession(session *clientpb.Session) automation.Target {

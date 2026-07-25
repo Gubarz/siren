@@ -32,6 +32,7 @@ func (a *App) startup(ctx context.Context) {
 	a.Staging.SetCtx(ctx)
 
 	a.Automation.Start(ctx)
+	a.CheckinPub.Start(ctx)
 
 	a.startBusSubscribers()
 
