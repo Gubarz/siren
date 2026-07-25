@@ -7,6 +7,7 @@
   import ImplantBuildsPanel from './ImplantBuildsPanel.svelte';
   import ProfilesPanel from './ProfilesPanel.svelte';
   import CanariesPanel from './CanariesPanel.svelte';
+  import CertificatesPanel from './CertificatesPanel.svelte';
   import ServerInfoPanel from './ServerInfoPanel.svelte';
   import HTTPC2ProfilesPanel from './HTTPC2ProfilesPanel.svelte';
   import TrafficEncodersPanel from './TrafficEncodersPanel.svelte';
@@ -43,6 +44,7 @@
     { id: 'shellcode', label: 'Shellcode', icon: 'package' },
     { id: 'hosts', label: 'Hosts', icon: 'monitor' },
     { id: 'canaries', label: 'Canaries', icon: 'alert-triangle' },
+    { id: 'certificates', label: 'Certificates', icon: 'shield' },
     { id: 'monitors', label: 'Threat Monitors', icon: 'shield' },
     { id: 'cracking', label: 'Cracking', icon: 'skull' },
     { id: 'build-farm', label: 'Build Farm', icon: 'server' },
@@ -67,7 +69,7 @@
       id: 'advanced',
       label: 'Advanced',
       icon: 'sliders',
-      tabs: tabs.filter((tab) => ['http-c2', 'traffic-encoders', 'shellcode', 'cracking', 'build-farm', 'server'].includes(tab.id)),
+      tabs: tabs.filter((tab) => ['http-c2', 'traffic-encoders', 'shellcode', 'cracking', 'build-farm', 'server', 'certificates'].includes(tab.id)),
     },
   ];
   const navTabBase = '!h-10 !rounded-none !border-x-0 !border-t-0 !border-b-2 !bg-transparent !px-3 !py-0 !text-sm !font-medium !shadow-none focus:!ring-0';
@@ -189,6 +191,8 @@
       <BuildFarmPanel embedded />
     {:else if active === 'server'}
       <ServerInfoPanel embedded />
+    {:else if active === 'certificates'}
+      <CertificatesPanel embedded />
     {:else if active === 'events'}
       <EventsLog />
     {:else if active === 'builds'}

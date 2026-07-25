@@ -19,6 +19,7 @@ export {
 
   // Server utilities
   GetCertificateAuthorityInfo,
+  GetCertificates,
   GetCompiler,
   GetCanaries,
   RestartJobs,
