@@ -116,6 +116,7 @@ func NewApp() *App {
 	app.Implants.SetBus(shared.Bus)
 	app.Builders.SetBus(shared.Bus)
 	app.Loot.SetBus(shared.Bus)
+	shared.LootWriter.SetService(app.Loot)
 	app.Console.SetRoutedCommandHandler(func(sessionID, line string) console.RoutedCommandResult {
 		result := app.Tunneling.HandleConsoleTunnelCommand(sessionID, line)
 		return console.RoutedCommandResult{

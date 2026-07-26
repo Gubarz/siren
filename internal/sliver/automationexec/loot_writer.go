@@ -12,11 +12,20 @@ import (
 )
 
 type LootWriter struct {
-	rpc *rpc.Client
+	rpc     *rpc.Client
+	service interface {
+		Add(ctx context.Context, name string, fileType clientpb.FileType, data []byte) (*clientpb.Loot, error)
+	}
 }
 
 func NewLootWriter(rpcClient *rpc.Client) *LootWriter {
 	return &LootWriter{rpc: rpcClient}
+}
+
+func (w *LootWriter) SetService(svc interface {
+	Add(ctx context.Context, name string, fileType clientpb.FileType, data []byte) (*clientpb.Loot, error)
+}) {
+	w.service = svc
 }
 
 func (w *LootWriter) Add(ctx context.Context, name, lootType string, data []byte) error {
@@ -24,11 +33,12 @@ func (w *LootWriter) Add(ctx context.Context, name, lootType string, data []byte
 		return fmt.Errorf("not connected")
 	}
 	ft := clientpb.FileType_TEXT
-	switch lootType {
-	case "binary":
+	if lootType == "binary" {
 		ft = clientpb.FileType_BINARY
-	case "credential":
-	default:
+	}
+	if w.service != nil {
+		_, err := w.service.Add(ctx, name, ft, data)
+		return err
 	}
 	_, err := w.rpc.RPC.LootAdd(ctx, &clientpb.Loot{
 		Name:     name,

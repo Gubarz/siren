@@ -41,22 +41,22 @@ type Engine struct {
 
 func New(deps Dependencies) *Engine {
 	e := &Engine{
-		store:    deps.Store,
-		emitter:  deps.Emitter,
-		executor: deps.Executor,
-		targets:  deps.Targets,
-		tags:     deps.Tags,
-		bus:      deps.Bus,
-		journal:  deps.Journal,
-		http:     deps.HTTP,
-		cases:    deps.Cases,
-		loot:     deps.Loot,
-		triggers: map[string]Trigger{},
-		actions:  map[string]Action{},
-		armed:    map[string]context.CancelFunc{},
-		running:  map[string]bool{},
+		store:        deps.Store,
+		emitter:      deps.Emitter,
+		executor:     deps.Executor,
+		targets:      deps.Targets,
+		tags:         deps.Tags,
+		bus:          deps.Bus,
+		journal:      deps.Journal,
+		http:         deps.HTTP,
+		cases:        deps.Cases,
+		loot:         deps.Loot,
+		triggers:     map[string]Trigger{},
+		actions:      map[string]Action{},
+		armed:        map[string]context.CancelFunc{},
+		running:      map[string]bool{},
 		activeByRule: map[string]int{},
-		lastRun:  map[string]time.Time{},
+		lastRun:      map[string]time.Time{},
 	}
 	if state, err := deps.Store.Load(context.Background()); err != nil {
 		log.Printf("automation: could not load state: %v", err)

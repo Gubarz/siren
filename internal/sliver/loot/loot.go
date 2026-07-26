@@ -88,3 +88,51 @@ func (s *Service) RemoveLoot(id string) error {
 	_, err := s.rpc.RPC.LootRm(context.Background(), &clientpb.Loot{ID: id})
 	return err
 }
+
+const maxPreviewBytes = 1 << 20 // 1 MiB
+
+func (s *Service) Add(ctx context.Context, name string, fileType clientpb.FileType, data []byte) (*clientpb.Loot, error) {
+	if !s.rpc.Connected() {
+		return nil, rpc.ErrNotConnected
+	}
+	resp, err := s.rpc.RPC.LootAdd(ctx, &clientpb.Loot{
+		Name:     name,
+		FileType: fileType,
+		File:     &commonpb.File{Data: data},
+	})
+	if err != nil {
+		return nil, err
+	}
+	s.publish("gui.loot-added", map[string]any{
+		"type":     "loot-added",
+		"lootID":   resp.ID,
+		"name":     resp.Name,
+		"fileType": int32(resp.FileType),
+		"size":     int64(len(data)),
+	})
+	return resp, nil
+}
+
+func (s *Service) Update(ctx context.Context, id string, name string) (*clientpb.Loot, error) {
+	if !s.rpc.Connected() {
+		return nil, rpc.ErrNotConnected
+	}
+	return s.rpc.RPC.LootUpdate(ctx, &clientpb.Loot{ID: id, Name: name})
+}
+
+func (s *Service) Content(ctx context.Context, id string) ([]byte, error) {
+	if !s.rpc.Connected() {
+		return nil, rpc.ErrNotConnected
+	}
+	resp, err := s.rpc.RPC.LootContent(ctx, &clientpb.Loot{ID: id})
+	if err != nil {
+		return nil, err
+	}
+	if resp.File == nil {
+		return nil, fmt.Errorf("loot item has no file content")
+	}
+	if len(resp.File.Data) > maxPreviewBytes {
+		return nil, fmt.Errorf("loot content too large to preview (max 1 MiB)")
+	}
+	return resp.File.Data, nil
+}

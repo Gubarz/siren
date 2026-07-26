@@ -39,6 +39,7 @@ type SharedStack struct {
 	Beacons    *beacons.Service
 	Automation *automation.Engine
 	CheckinPub *automationexec.CheckinPublisher
+	LootWriter *automationexec.LootWriter
 	Tags       *tags.Service
 	Comments   *comments.Service
 	Cases      *casefile.Service
@@ -84,17 +85,19 @@ func NewShared(deps Dependencies) *SharedStack {
 	con.SetBus(busImpl)
 	executor := automationexec.NewExecutor(con, beac)
 	targets := automationexec.NewTargetProvider(rpcClient)
+	lootWriter := automationexec.NewLootWriter(rpcClient)
 	eng := automation.New(automation.Dependencies{
 		Store: automationstate.New(deps.DataDir), Emitter: deps.Emitter,
 		Executor: executor, Targets: targets, Tags: tagsSvc,
 		Bus: busImpl, Journal: journalSvc, Cases: caseSvc,
-		Loot: automationexec.NewLootWriter(rpcClient),
+		Loot: lootWriter,
 	})
 	registerBuiltinTriggers(eng, busImpl)
 	registerBuiltinActions(eng)
 	return &SharedStack{
 		RPC: rpcClient, Console: con, Beacons: beac, Automation: eng,
 		CheckinPub: automationexec.NewCheckinPublisher(rpcClient, busImpl),
+		LootWriter: lootWriter,
 		Tags: tagsSvc, Comments: commentsSvc, Cases: caseSvc,
 		Events: eventsStore, Bus: busImpl, Journal: journalSvc,
 	}

@@ -2,7 +2,7 @@ package gui
 
 import (
 	"encoding/base64"
-	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
@@ -38,22 +38,31 @@ func (a *App) DownloadLoot(lootID string) (string, error) {
 }
 
 func (a *App) GetLootContent(lootID string) (string, error) {
-	const maxBytes = 1 << 20 // 1 MiB
-	resp, err := a.RPC.RPC.LootContent(a.ctx, &clientpb.Loot{ID: lootID})
+	data, err := a.Loot.Content(a.ctx, lootID)
 	if err != nil {
 		return "", err
 	}
-	if resp.File == nil {
-		return "", errors.New("loot item has no file content")
-	}
-	if len(resp.File.Data) > maxBytes {
-		return "", errors.New("loot content too large to preview (max 1 MiB)")
-	}
-	return base64.StdEncoding.EncodeToString(resp.File.Data), nil
+	return base64.StdEncoding.EncodeToString(data), nil
 }
 
 func (a *App) RemoveLoot(id string) error {
 	return a.Loot.RemoveLoot(id)
+}
+
+func (a *App) LootAdd(name string, fileType int32, dataBase64 string) (*clientpb.Loot, error) {
+	const maxDecodedBytes = 10 << 20 // 10 MiB
+	data, err := base64.StdEncoding.DecodeString(dataBase64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64: %w", err)
+	}
+	if len(data) > maxDecodedBytes {
+		return nil, fmt.Errorf("data too large (max 10 MiB)")
+	}
+	return a.Loot.Add(a.ctx, name, clientpb.FileType(fileType), data)
+}
+
+func (a *App) LootUpdate(id string, name string) (*clientpb.Loot, error) {
+	return a.Loot.Update(a.ctx, id, name)
 }
 
 func (a *App) GetCredentials() (*clientpb.Credentials, error) {
