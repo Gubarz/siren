@@ -10,6 +10,7 @@ COMMIT ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BUILDINFO_LDFLAGS := -X sliver-gui/internal/buildinfo.Version=$(VERSION) -X sliver-gui/internal/buildinfo.Commit=$(COMMIT) -X sliver-gui/internal/buildinfo.Date=$(BUILD_DATE)
 BUILD_TAGS_ARG := $(if $(strip $(BUILD_TAGS)),-tags "$(BUILD_TAGS)",)
+BUILD_OUTPUT_NAME := $(notdir $(BUILD_OUTPUT))
 
 export GOCACHE
 export XDG_CACHE_HOME
@@ -41,7 +42,9 @@ analyze-frontend:
 
 build:
 	npm --prefix frontend run build
-	go build $(BUILD_TAGS_ARG) -ldflags "$(BUILDINFO_LDFLAGS)" -o $(BUILD_OUTPUT) .
+	wails build -m -nopackage -nosyncgomod -s -skipbindings -o "$(BUILD_OUTPUT_NAME)" $(BUILD_TAGS_ARG) -ldflags "$(BUILDINFO_LDFLAGS)"
+	mkdir -p "$(dir $(BUILD_OUTPUT))"
+	cp "build/bin/$(BUILD_OUTPUT_NAME)" "$(BUILD_OUTPUT)"
 
 print-version:
 	@printf '%s\n' "$(VERSION)"

@@ -85,14 +85,18 @@ jobs:
         run: |
           COMMIT=$(git rev-parse --short=12 HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          TAGS="desktop,production"
-          if [ -n "${{ matrix.build_tags }}" ]; then
-            TAGS="${TAGS},${{ matrix.build_tags }}"
-          fi
-          go build \
-            -tags "$TAGS" \
-            -ldflags "-X sliver-gui/internal/buildinfo.Version=${GITHUB_REF_NAME} -X sliver-gui/internal/buildinfo.Commit=${COMMIT} -X sliver-gui/internal/buildinfo.Date=${DATE}" \
-            -o "${{ matrix.output }}" .
+          BINARY=$(basename "${{ matrix.output }}")
+          wails build \
+            -m \
+            -nopackage \
+            -nosyncgomod \
+            -s \
+            -skipbindings \
+            -o "$BINARY" \
+            -tags "${{ matrix.build_tags }}" \
+            -ldflags "-X sliver-gui/internal/buildinfo.Version=${GITHUB_REF_NAME} -X sliver-gui/internal/buildinfo.Commit=${COMMIT} -X sliver-gui/internal/buildinfo.Date=${DATE}"
+          mkdir -p "$(dirname "${{ matrix.output }}")"
+          cp "build/bin/$BINARY" "${{ matrix.output }}"
 
       - name: Package archive (tar.gz)
         if: runner.os != 'Windows'
