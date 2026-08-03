@@ -85,13 +85,12 @@ jobs:
         run: |
           COMMIT=$(git rev-parse --short=12 HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          TAGS="${{ matrix.build_tags }}"
-          TAG_ARGS=()
-          if [ -n "$TAGS" ]; then
-            TAG_ARGS=(-tags "$TAGS")
+          TAGS="desktop,production"
+          if [ -n "${{ matrix.build_tags }}" ]; then
+            TAGS="${TAGS},${{ matrix.build_tags }}"
           fi
           go build \
-            "${TAG_ARGS[@]}" \
+            -tags "$TAGS" \
             -ldflags "-X sliver-gui/internal/buildinfo.Version=${GITHUB_REF_NAME} -X sliver-gui/internal/buildinfo.Commit=${COMMIT} -X sliver-gui/internal/buildinfo.Date=${DATE}" \
             -o "${{ matrix.output }}" .
 
