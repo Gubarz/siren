@@ -17,30 +17,40 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: linux-amd64-webkit4.1
+          # Wails v3 default: GTK4 + webkitgtk-6.0
+          - name: linux-amd64-gtk4
             os: ubuntu-24.04
             output: dist/siren
-            asset: siren-linux-amd64-webkit4.1.tar.gz
-            build_tags: webkit2_41
-            webkit: "4.1"
-          - name: linux-amd64-webkit4.0
-            os: ubuntu-22.04
-            output: dist/siren
-            asset: siren-linux-amd64-webkit4.0.tar.gz
+            asset: siren-linux-amd64-gtk4.tar.gz
             build_tags: ""
-            webkit: "4.0"
+            linux_deps: libgtk-4-dev libwebkitgtk-6.0-dev
+            gui_ldflags: ""
+            cgo: "1"
+          # Wails v3 opt-in: GTK3 + webkit2gtk-4.1 (older distros)
+          - name: linux-amd64-gtk3-webkit4.1
+            os: ubuntu-24.04
+            output: dist/siren
+            asset: siren-linux-amd64-gtk3-webkit4.1.tar.gz
+            build_tags: "gtk3"
+            linux_deps: libgtk-3-dev libwebkit2gtk-4.1-dev
+            gui_ldflags: ""
+            cgo: "1"
           - name: windows-amd64
             os: windows-latest
             output: dist/siren.exe
             asset: siren-windows-amd64.zip
             build_tags: ""
-            webkit: ""
+            linux_deps: ""
+            gui_ldflags: "-H windowsgui"
+            cgo: "0"
           - name: macos-arm64
             os: macos-latest
             output: dist/siren
             asset: siren-macos-arm64.tar.gz
             build_tags: ""
-            webkit: ""
+            linux_deps: ""
+            gui_ldflags: ""
+            cgo: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,47 +66,39 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install WebKitGTK 4.1 headers
-        if: matrix.webkit == '4.1'
+      - name: Install Linux webview headers
+        if: matrix.linux_deps != ''
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
-
-      - name: Install WebKitGTK 4.0 headers
-        if: matrix.webkit == '4.0'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+          sudo apt-get install -y ${{ matrix.linux_deps }}
 
       # frontend/dist is embedded via go:embed, so it must exist first.
-      # frontend/wailsjs is gitignored — bindings must be generated from
-      # the Go bindings before vite can build the frontend.
+      # frontend/bindings is gitignored — bindings must be generated from
+      # the Go service before vite can build the frontend.
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.7
 
       - name: Generate Wails bindings
-        run: wails generate module -tags "${{ matrix.build_tags }}"
+        run: wails3 generate bindings
 
       - run: npm --prefix frontend ci
       - run: npm --prefix frontend run build
 
       - name: Build binary
         shell: bash
+        env:
+          CGO_ENABLED: ${{ matrix.cgo }}
         run: |
           COMMIT=$(git rev-parse --short=12 HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          BINARY=$(basename "${{ matrix.output }}")
-          wails build \
-            -m \
-            -nopackage \
-            -nosyncgomod \
-            -s \
-            -skipbindings \
-            -o "$BINARY" \
-            -tags "${{ matrix.build_tags }}" \
-            -ldflags "-X siren/internal/buildinfo.Version=${GITHUB_REF_NAME} -X siren/internal/buildinfo.Commit=${COMMIT} -X siren/internal/buildinfo.Date=${DATE}"
           mkdir -p "$(dirname "${{ matrix.output }}")"
-          cp "build/bin/$BINARY" "${{ matrix.output }}"
+          go build \
+            -tags "production ${{ matrix.build_tags }}" \
+            -trimpath \
+            -buildvcs=false \
+            -ldflags="-w -s ${{ matrix.gui_ldflags }} -X siren/internal/buildinfo.Version=${GITHUB_REF_NAME} -X siren/internal/buildinfo.Commit=${COMMIT} -X siren/internal/buildinfo.Date=${DATE}" \
+            -o "${{ matrix.output }}" \
+            .
 
       - name: Package archive (tar.gz)
         if: runner.os != 'Windows'

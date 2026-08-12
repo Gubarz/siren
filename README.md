@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Gubarz/siren/actions/workflows/ci.yml/badge.svg)](https://github.com/Gubarz/siren/actions/workflows/ci.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](go.mod) [![Platform](https://img.shields.io/badge/Platform-Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-555555)](#build-it) [![Releases](https://img.shields.io/badge/Releases-GitHub-181717?logo=github)](https://github.com/Gubarz/siren/releases)
 
-A desktop operator workbench for the [Sliver](https://github.com/BishopFox/sliver) C2 framework, built with [Wails v2](https://wails.io), Go, Svelte 5, Vite, and Tailwind CSS.
+A desktop operator workbench for the [Sliver](https://github.com/BishopFox/sliver) C2 framework, built with [Wails v3](https://v3.wails.io), Go, Svelte 5, Vite, and Tailwind CSS.
 
 **Authorized use only.** This is an offensive-security tool. Use it solely on systems you own or have explicit written permission to test.
 
@@ -82,7 +82,7 @@ Frontend feature code should call wrappers in `frontend/src/lib/api/`, not gener
 
 ## Build It
 
-You need Go, Node.js/npm, and [Wails v2](https://wails.io/docs/gettingstarted/installation). Install frontend dependencies once with:
+You need Go, Node.js/npm, and the [Wails v3 CLI](https://v3.wails.io) (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.7`). Install frontend dependencies once with:
 
 ```sh
 npm --prefix frontend install
@@ -104,25 +104,25 @@ make build
 /tmp/siren-build --version
 ```
 
-If you build with Wails directly, pass the same linker flags:
+If you build with `go build` directly, use the `production` tag and pass the
+same linker flags:
 
 ```sh
-wails build -ldflags "$(make print-ldflags)"
+go build -tags production -trimpath -ldflags "-w -s $(make print-ldflags)" -o siren .
 ```
 
-On Linux, Wails uses WebKitGTK for the desktop webview. The default build looks for `webkit2gtk-4.0`. Some newer distros only package `webkit2gtk-4.1`; on those systems, pass Wails' WebKit 4.1 tag too:
+On Linux, Wails v3 uses GTK4 + webkitgtk-6.0 for the desktop webview by
+default (`libgtk-4-dev libwebkitgtk-6.0-dev`). Distros that only package
+webkit2gtk-4.1 (e.g. Ubuntu 22.04) can build the GTK3 variant instead:
 
 ```sh
-BUILD_TAGS=webkit2_41 make dev
-BUILD_TAGS=webkit2_41 make build
+BUILD_TAGS=gtk3 make dev
+BUILD_TAGS=gtk3 make build
 ```
 
-For direct Wails commands, pass both the tag and linker flags:
-
-```sh
-wails dev -tags webkit2_41 -ldflags "$(make print-ldflags)"
-wails build -tags webkit2_41 -ldflags "$(make print-ldflags)"
-```
+The dev loop is orchestrated by `wails3 dev` (see `build/config.yml`); it
+starts the vite dev server, regenerates bindings, and rebuilds the Go binary
+on change.
 
 The macOS archive is currently unsigned and not notarized. Until signing is
 configured, open it using Finder's **Open** context-menu action or remove its
