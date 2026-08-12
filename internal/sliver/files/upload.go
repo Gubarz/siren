@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/sliver/rpc"
 )
@@ -20,7 +20,7 @@ func (s *Service) UploadFile(sessionID string, remotePath string) error {
 		return rpc.ErrNotConnected
 	}
 
-	localPath, err := runtime.OpenFileDialog(s.ctx, runtime.OpenDialogOptions{
+	localPath, err := s.ui.OpenFileDialog(&application.OpenFileDialogOptions{
 		Title: "Select File to Upload",
 	})
 	if err != nil {
@@ -70,8 +70,8 @@ func (s *Service) uploadLocalFile(sessionID string, remotePath string, localPath
 		return err
 	}
 
-	if s.ctx != nil {
-		runtime.EventsEmit(s.ctx, "file-upload-progress", map[string]interface{}{
+	if s.ui != nil {
+		s.ui.Emit("file-upload-progress", map[string]interface{}{
 			"path":  localPath,
 			"total": totalSize,
 			"phase": "upload",
@@ -134,8 +134,8 @@ func (s *Service) compressFileGzip(f *os.File, totalSize int64, localPath string
 		n, readErr := pr.Read(chunk)
 		if n > 0 {
 			buf.Write(chunk[:n])
-			if s.ctx != nil {
-				runtime.EventsEmit(s.ctx, "file-upload-progress", map[string]interface{}{
+			if s.ui != nil {
+				s.ui.Emit("file-upload-progress", map[string]interface{}{
 					"path":     localPath,
 					"total":    totalSize,
 					"compress": buf.Len(),

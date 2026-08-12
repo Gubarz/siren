@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/buildinfo"
 	"siren/internal/sliver/console"
@@ -23,7 +21,27 @@ func Run(frontendAssets embed.FS) {
 		return
 	}
 
-	if err := wails.Run(appOptions(frontendAssets, NewApp())); err != nil {
+	wailsApp := application.New(application.Options{
+		Name: "siren",
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(frontendAssets),
+		},
+	})
+
+	window := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            "siren",
+		Width:            1024,
+		Height:           768,
+		StartState:       application.WindowStateMaximised,
+		Frameless:        true,
+		Hidden:           true,
+		EnableFileDrop:   true,
+		BackgroundColour: application.RGBA{Red: 26, Green: 26, Blue: 26, Alpha: 255},
+	})
+
+	wailsApp.RegisterService(application.NewService(NewApp(wailsApp, window)))
+
+	if err := wailsApp.Run(); err != nil {
 		println("Error:", err.Error())
 	}
 }
@@ -41,25 +59,4 @@ func runConsoleMode() bool {
 		os.Exit(1)
 	}
 	return true
-}
-
-func appOptions(frontendAssets embed.FS, app *App) *options.App {
-	return &options.App{
-		Title:            "siren",
-		Width:            1024,
-		Height:           768,
-		WindowStartState: options.Maximised,
-		Frameless:        true,
-		StartHidden:      true,
-		AssetServer: &assetserver.Options{
-			Assets: frontendAssets,
-		},
-		BackgroundColour: &options.RGBA{R: 26, G: 26, B: 26, A: 255},
-		DragAndDrop:      &options.DragAndDrop{EnableFileDrop: true},
-		OnStartup:        app.startup,
-		OnShutdown:       app.shutdown,
-		Bind: []interface{}{
-			app,
-		},
-	}
 }

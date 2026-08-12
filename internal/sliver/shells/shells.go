@@ -13,11 +13,11 @@ import (
 	"github.com/bishopfox/sliver/client/core"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"siren/internal/journal"
 	"siren/internal/sliver/console"
 	"siren/internal/sliver/rpc"
+	"siren/internal/wailsadapter"
 )
 
 type ShellInfo struct {
@@ -40,7 +40,7 @@ type Service struct {
 	rpc       *rpc.Client
 	console   *console.Service
 	journal   *journal.Service
-	ctx       context.Context
+	ui        *wailsadapter.Bridge
 	shellMu   sync.RWMutex
 	shells    map[string]*guiShell
 	nextShell atomic.Uint64
@@ -58,8 +58,8 @@ func (s *Service) SetJournal(j *journal.Service) {
 	s.journal = j
 }
 
-func (s *Service) SetCtx(ctx context.Context) {
-	s.ctx = ctx
+func (s *Service) SetUI(ui *wailsadapter.Bridge) {
+	s.ui = ui
 }
 
 func prepareShellParams(sessionOS string, enablePTY bool, rows, cols uint32) (bool, uint32, uint32) {
@@ -337,11 +337,11 @@ func (s *Service) pumpShellOutput(id string, tunnel *core.TunnelIO, buffer []byt
 
 func (s *Service) finishShell(id string, tunnel *core.TunnelIO, readErr error) {
 	if readErr != nil {
-		runtime.EventsEmit(s.ctx, "shell-output", map[string]interface{}{
+		s.ui.Emit("shell-output", map[string]interface{}{
 			"id": id, "error": readErr.Error(),
 		})
 	}
-	runtime.EventsEmit(s.ctx, "shell-output", map[string]interface{}{"id": id, "closed": true})
+	s.ui.Emit("shell-output", map[string]interface{}{"id": id, "closed": true})
 
 	s.shellMu.Lock()
 	shell := s.shells[id]

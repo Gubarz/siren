@@ -131,11 +131,11 @@ func (a *App) GetShellcodeEncoderMap() (*clientpb.ShellcodeEncoderMap, error) {
 }
 
 func (a *App) GenerateShellcodeRDI(req uishellcode.RDIRequest) (string, error) {
-	return uishellcode.GenerateRDI(a.ctx, a.RPC, req)
+	return uishellcode.GenerateRDI(a.bridge, a.RPC, req)
 }
 
 func (a *App) EncodeShellcode(req uishellcode.EncodeRequest) (string, error) {
-	return uishellcode.Encode(a.ctx, a.RPC, req)
+	return uishellcode.Encode(a.bridge, a.RPC, req)
 }
 
 func (a *App) GetHTTPC2Profiles() (*clientpb.HTTPC2Configs, error) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -76,9 +76,9 @@ func (s *Service) Regenerate(name string) (string, error) {
 	if resp.File == nil {
 		return "", fmt.Errorf("no build artifact found for %q", name)
 	}
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		Title:           "Save Implant",
-		DefaultFilename: resp.File.Name,
+	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    "Save Implant",
+		Filename: resp.File.Name,
 	})
 	if err != nil || localPath == "" {
 		return "", err

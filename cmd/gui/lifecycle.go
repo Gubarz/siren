@@ -4,45 +4,56 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
+	"os"
 	"time"
 
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
+	wailsevents "github.com/wailsapp/wails/v3/pkg/events"
 	"google.golang.org/protobuf/proto"
 
 	"siren/internal/bus"
 	"siren/internal/localstate/events"
-	"siren/internal/wailsadapter"
 )
 
-func (a *App) startup(ctx context.Context) {
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx, a.cancel = context.WithCancel(ctx)
 
-	emitter := wailsadapter.New(ctx)
-	a.Console.SetEmitter(emitter)
-	a.Automation.SetEmitter(emitter)
+	a.Console.SetEmitter(a.bridge)
+	a.Automation.SetEmitter(a.bridge)
 
-	a.Implants.SetCtx(ctx)
-	a.Files.SetCtx(ctx)
-	a.Loot.SetCtx(ctx)
-	a.Shells.SetCtx(ctx)
-	a.Discovery.SetCtx(ctx)
-	a.Staging.SetCtx(ctx)
+	a.Implants.SetUI(a.bridge)
+	a.Files.SetUI(a.bridge)
+	a.Loot.SetUI(a.bridge)
+	a.Shells.SetUI(a.bridge)
+	a.Discovery.SetUI(a.bridge)
+	a.Staging.SetUI(a.bridge)
 
 	a.Automation.Start(ctx)
 	a.CheckinPub.Start(ctx)
+
+	// v3 delivers file drops to the backend (only for elements marked with
+	// data-file-drop-target); re-emit to the frontend with the v2 event shape.
+	a.window.OnWindowEvent(wailsevents.Common.WindowFilesDropped, func(event *application.WindowEvent) {
+		files := event.Context().DroppedFiles()
+		x, y := 0, 0
+		if details := event.Context().DropTargetDetails(); details != nil {
+			x, y = details.X, details.Y
+		}
+		a.bridge.Emit("files-dropped", map[string]interface{}{"files": files, "x": x, "y": y})
+	})
 
 	a.startBusSubscribers()
 
 	go func() {
 		time.Sleep(300 * time.Millisecond)
-		runtime.WindowShow(ctx)
+		a.window.Show()
 	}()
+	return nil
 }
 
-func (a *App) shutdown(context.Context) {
+func (a *App) ServiceShutdown() error {
 	preserveLiveResources := a.shouldPreserveLiveResourcesOnShutdown()
 	if preserveLiveResources {
 		log.Printf("shutdown: dev build detected; preserving live tunnels, shells, and consoles")
@@ -113,18 +124,18 @@ func (a *App) shutdown(context.Context) {
 	if a.cancel != nil {
 		a.cancel()
 	}
+	return nil
 }
 
+// shouldPreserveLiveResourcesOnShutdown reports whether the app is running
+// under the dev server (wails3 dev sets FRONTEND_DEVSERVER_URL), in which case
+// live sessions survive the restart of the GUI process.
 func (a *App) shouldPreserveLiveResourcesOnShutdown() bool {
-	if a.ctx == nil {
-		return false
-	}
-	env := runtime.Environment(a.ctx)
-	return strings.EqualFold(env.BuildType, "dev")
+	return os.Getenv("FRONTEND_DEVSERVER_URL") != ""
 }
 
 func (a *App) OpenFileDialog(title string) (string, error) {
-	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+	return a.bridge.OpenFileDialog(&application.OpenFileDialogOptions{
 		Title: title,
 	})
 }
