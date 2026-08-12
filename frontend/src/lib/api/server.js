@@ -5,7 +5,7 @@ import {
   GetLoot,
   GetOperators,
   GetProfiles,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';
 import { responseField } from './normalize.js';
 
 export {
@@ -29,7 +29,7 @@ export {
   RemoveCredential,
   RemoveLoot,
   StartListener,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';
 
 export async function listCredentials() {
   return responseField(await GetCredentials(), 'Credentials', []);

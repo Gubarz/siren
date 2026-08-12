@@ -1,2 +1,2 @@
-import { HealthSnapshot } from '../../../wailsjs/go/gui/App.js'
+import { HealthSnapshot } from '../../../bindings/siren/cmd/gui/app.js'
 export { HealthSnapshot }

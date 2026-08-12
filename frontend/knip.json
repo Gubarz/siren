@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignore": [
-    "wailsjs/**",
+    "bindings/**",
     "src/lib/components/ui/*.svelte",
     "src/lib/components/patterns/*.svelte",
     "src/lib/components/system/*.svelte",

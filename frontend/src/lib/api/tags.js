@@ -14,7 +14,7 @@ import {
   GetEntityColor,
   SetAgentColor,
   SetEntityColor,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';
 
 export {
   GetAgentTags,

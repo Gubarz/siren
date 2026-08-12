@@ -386,7 +386,7 @@ const localRules = {
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'wailsjs/**'],
+    ignores: ['dist/**', 'node_modules/**', 'bindings/**'],
   },
   js.configs.recommended,
   ...svelte.configs.recommended,
@@ -446,7 +446,7 @@ export default [
         ],
         patterns: [
           { group: ['lucide-svelte*'], message: 'Use <Icon name="..." /> from $components/ui/Icon.svelte' },
-          { group: ['**/wailsjs/**'], message: 'Feature/store/pattern code must call the backend through src/lib/api/*.js — never import the wailsjs bindings directly.' },
+          { group: ['**/bindings/**'], message: 'Feature/store/pattern code must call the backend through src/lib/api/*.js — never import the generated bindings directly.' },
         ],
       }],
 
@@ -497,7 +497,7 @@ export default [
     },
   },
   {
-    // The api/ layer is the ONE place wailsjs imports belong. Everywhere else
+    // The api/ layer is the ONE place generated-binding imports belong. Everywhere else
     // routes through it — see no-restricted-imports above.
     files: ['src/lib/api/**/*.{js,svelte}'],
     rules: {

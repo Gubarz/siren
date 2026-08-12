@@ -3,7 +3,7 @@ import {
   GenerateExternalBuild,
   GetExternalBuildConfig,
   SaveExternalBuild,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';
 import { responseField } from './normalize.js';
 
 export {

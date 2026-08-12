@@ -10,7 +10,8 @@ import {
   DeleteCase,
   AddToCase,
   RemoveFromCase,
-} from '../../../wailsjs/go/gui/App.js';
+  ExportCaseReport,
+} from '../../../bindings/siren/cmd/gui/app.js';
 
 export {
   ListCases,
@@ -20,8 +21,5 @@ export {
   DeleteCase,
   AddToCase,
   RemoveFromCase,
+  ExportCaseReport,
 };
-
-export function ExportCaseReport(caseID) {
-  return window.go.gui.App.ExportCaseReport(caseID)
-}

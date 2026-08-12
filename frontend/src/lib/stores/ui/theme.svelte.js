@@ -1,10 +1,14 @@
+import { GetSystemTheme } from '../../api/discovery.js'
+
 export const SYSTEM_THEME = 'system'
 export const THEME_STORAGE_KEY = 'sliver-theme'
 
 const FALLBACK_THEME = 'dark'
 
 function hasNativeSystemThemeProvider() {
-  return typeof window !== 'undefined' && typeof window.go?.gui?.App?.GetSystemTheme === 'function'
+  // window._wails.flags is injected by the Wails backend on window load;
+  // it stays absent in plain-browser/test contexts.
+  return typeof window !== 'undefined' && window._wails?.flags != null
 }
 
 export function getBrowserSystemTheme() {
@@ -23,7 +27,7 @@ export function getSystemTheme() {
 
 async function getNativeSystemTheme() {
   try {
-    const t = await window.go.gui.App.GetSystemTheme()
+    const t = await GetSystemTheme()
     return t === 'dark' || t === 'light' ? t : ''
   } catch {
     return ''

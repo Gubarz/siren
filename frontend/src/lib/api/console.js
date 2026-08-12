@@ -9,7 +9,7 @@ export {
   RunSessionCommand,
   StartShell,
   WriteShell,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';
 
 // Subprocess-console methods aren't in the generated wailsjs bindings
 // until the next `wails dev`/`build`. Route through the runtime global

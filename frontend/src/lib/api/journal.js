@@ -1,1 +1,1 @@
-export { GetJournalVerbCounts, QueryJournal } from '../../../wailsjs/go/gui/App.js'
+export { GetJournalVerbCounts, QueryJournal } from '../../../bindings/siren/cmd/gui/app.js'
