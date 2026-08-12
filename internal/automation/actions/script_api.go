@@ -11,8 +11,8 @@ import (
 
 	"github.com/grafana/sobek"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/journal"
+	"siren/internal/bus"
+	"siren/internal/journal"
 )
 
 const (

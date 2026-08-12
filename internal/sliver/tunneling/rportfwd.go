@@ -10,7 +10,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	sliverpb "github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 // rportfwdInfo tracks a reverse port forward we started, so we can list/stop

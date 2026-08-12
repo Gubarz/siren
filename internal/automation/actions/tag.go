@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 type tag struct{}

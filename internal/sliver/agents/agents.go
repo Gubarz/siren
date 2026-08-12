@@ -8,8 +8,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/console"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/console"
+	"siren/internal/sliver/rpc"
 )
 
 type Service struct {

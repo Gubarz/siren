@@ -3,8 +3,8 @@ package gui
 import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/sliver/discovery"
-	"sliver-gui/internal/theme"
+	"siren/internal/sliver/discovery"
+	"siren/internal/theme"
 )
 
 // ---- Network Discovery ----

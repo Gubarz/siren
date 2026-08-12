@@ -5,7 +5,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 // RestartJobs asks the teamserver to tear down and rebuild the listener/job

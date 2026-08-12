@@ -9,7 +9,7 @@ import (
 
 	"github.com/grafana/sobek"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 const maxJSOutputSize = 10 * 1024 * 1024

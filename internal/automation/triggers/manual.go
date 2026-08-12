@@ -3,7 +3,7 @@ package triggers
 import (
 	"context"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 type manual struct{}

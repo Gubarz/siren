@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"sliver-gui/internal/sliver/console"
+	"siren/internal/sliver/console"
 )
 
 type CommandCatalog struct {

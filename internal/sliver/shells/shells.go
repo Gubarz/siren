@@ -15,9 +15,9 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/journal"
-	"sliver-gui/internal/sliver/console"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/journal"
+	"siren/internal/sliver/console"
+	"siren/internal/sliver/rpc"
 )
 
 type ShellInfo struct {

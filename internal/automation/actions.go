@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/journal"
+	"siren/internal/bus"
+	"siren/internal/journal"
 )
 
 type ActionSpec struct {

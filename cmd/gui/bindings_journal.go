@@ -1,7 +1,7 @@
 package gui
 
 import (
-	"sliver-gui/internal/journal"
+	"siren/internal/journal"
 )
 
 type JournalPage struct {

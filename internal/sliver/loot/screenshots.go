@@ -8,7 +8,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func (s *Service) GetScreenshotData(lootID string) (string, error) {

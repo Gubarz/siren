@@ -7,9 +7,9 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/journal"
-	"sliver-gui/internal/localstate/events"
+	"siren/internal/bus"
+	"siren/internal/journal"
+	"siren/internal/localstate/events"
 )
 
 func (a *App) startBusSubscribers() {

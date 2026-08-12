@@ -7,7 +7,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 	"sort"
 )
 

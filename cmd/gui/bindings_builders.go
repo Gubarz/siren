@@ -7,7 +7,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
-	"sliver-gui/internal/sliver/implants"
+	"siren/internal/sliver/implants"
 )
 
 // ---- Distributed Builders ----

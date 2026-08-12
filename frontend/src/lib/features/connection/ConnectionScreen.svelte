@@ -62,7 +62,7 @@
   <div class="bg-panel border border-panel-border rounded-lg p-7 w-88 max-w-pct-90 shadow-2xl text-center">
     <div class="mb-6">
       <img src="/wails.png" alt="Sliver Logo" class="w-20 h-20 mb-2 mx-auto" />
-      <h2 class="m-0 text-fg font-light text-xl">Sliver GUI</h2>
+      <h2 class="m-0 text-fg font-light text-xl">Siren</h2>
     </div>
 
     {#if connection.reconnecting}

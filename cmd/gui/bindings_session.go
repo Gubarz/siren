@@ -4,8 +4,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/sliver/files"
-	"sliver-gui/internal/sliver/registry"
+	"siren/internal/sliver/files"
+	"siren/internal/sliver/registry"
 )
 
 // ---- Process / File Tools ----

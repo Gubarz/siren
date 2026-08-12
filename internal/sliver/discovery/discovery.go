@@ -17,8 +17,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/sliver/beacons"
-	"sliver-gui/internal/sliver/console"
+	"siren/internal/sliver/beacons"
+	"siren/internal/sliver/console"
 )
 
 const discoveryTimeout = 10 * time.Minute

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"sliver-gui/internal/journal"
+	"siren/internal/journal"
 )
 
 type fakeJournalStore struct {

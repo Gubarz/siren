@@ -1,8 +1,8 @@
 package triggers
 
 import (
-	"sliver-gui/internal/automation"
-	"sliver-gui/internal/bus"
+	"siren/internal/automation"
+	"siren/internal/bus"
 )
 
 func SessionConnected(b bus.Bus) automation.Trigger {

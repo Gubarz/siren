@@ -7,7 +7,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 const maxGrepResults = 5000

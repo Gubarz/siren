@@ -7,7 +7,7 @@ import (
 	sliverconsole "github.com/bishopfox/sliver/client/console"
 	"github.com/spf13/cobra"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func TestOutputSinkCapturesSliverPrintf(t *testing.T) {

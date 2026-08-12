@@ -3,9 +3,9 @@ package gui
 import (
 	"github.com/bishopfox/sliver/client/assets"
 
-	"sliver-gui/internal/buildinfo"
-	"sliver-gui/internal/envvars"
-	"sliver-gui/internal/sliver/health"
+	"siren/internal/buildinfo"
+	"siren/internal/envvars"
+	"siren/internal/sliver/health"
 )
 
 func (a *App) GetBuildInfo() buildinfo.Info {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"sliver-gui/internal/sliver/catalog"
+	"siren/internal/sliver/catalog"
 )
 
 // ---- Console / Commands ----

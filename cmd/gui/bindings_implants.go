@@ -3,8 +3,8 @@ package gui
 import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 
-	"sliver-gui/internal/sliver/implants"
-	"sliver-gui/internal/sliver/staging"
+	"siren/internal/sliver/implants"
+	"siren/internal/sliver/staging"
 )
 
 // ---- Implants / Builds / Profiles ----

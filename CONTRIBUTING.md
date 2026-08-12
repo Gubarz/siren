@@ -1,4 +1,4 @@
-# Contributing to sliver-gui
+# Contributing to siren
 
 This project moves fastest when the rules stay small and visible.
 

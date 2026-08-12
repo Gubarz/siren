@@ -13,11 +13,11 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 const (
-	defaultStream   = "sliver-gui"
+	defaultStream   = "siren"
 	flushInterval   = 2 * time.Second
 	channelCapacity = 256
 )

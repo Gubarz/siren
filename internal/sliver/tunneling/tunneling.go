@@ -13,7 +13,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	sliverpb "github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 var nextID atomic.Uint64

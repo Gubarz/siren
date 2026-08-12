@@ -13,11 +13,11 @@ Only the latest release and the `main` branch receive security fixes.
 
 **Please do not open public issues for security vulnerabilities.**
 
-Report them privately through [GitHub Security Advisories](https://github.com/Gubarz/sliver-gui/security/advisories/new).
+Report them privately through [GitHub Security Advisories](https://github.com/Gubarz/siren/security/advisories/new).
 
 Include:
 
-- The version you are running (`sliver-gui --version`, or the commit hash)
+- The version you are running (`siren --version`, or the commit hash)
 - Your OS and architecture
 - The Sliver teamserver version you were connected to, if relevant
 - Steps to reproduce, and the security impact you see
@@ -27,7 +27,7 @@ acknowledgment within a few days, but there is no formal response-time SLA.
 
 ## Scope
 
-**In scope:** the sliver-gui application itself — the Go backend, the Svelte
+**In scope:** the siren application itself — the Go backend, the Svelte
 frontend, the console subprocess handling, and the build/CI configuration in
 this repository.
 
@@ -40,7 +40,7 @@ this repository.
 
 ## Authorized Use
 
-sliver-gui is an offensive-security tool. Use it solely on systems you own or
+siren is an offensive-security tool. Use it solely on systems you own or
 have explicit written permission to test.
 
 ## Data Handling

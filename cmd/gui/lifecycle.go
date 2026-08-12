@@ -12,9 +12,9 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"google.golang.org/protobuf/proto"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/localstate/events"
-	"sliver-gui/internal/wailsadapter"
+	"siren/internal/bus"
+	"siren/internal/localstate/events"
+	"siren/internal/wailsadapter"
 )
 
 func (a *App) startup(ctx context.Context) {

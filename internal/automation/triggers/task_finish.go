@@ -3,9 +3,9 @@ package triggers
 import (
 	"context"
 
-	"sliver-gui/internal/automation"
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/journal"
+	"siren/internal/automation"
+	"siren/internal/bus"
+	"siren/internal/journal"
 )
 
 func TaskFinish(b bus.Bus) automation.Trigger {

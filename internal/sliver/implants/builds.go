@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 // isEmptyRecordErr reports whether err is the gRPC NotFound the Sliver server

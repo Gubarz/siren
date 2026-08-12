@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"sliver-gui/internal/envvars"
+	"siren/internal/envvars"
 
 	"golang.org/x/sys/windows"
 )

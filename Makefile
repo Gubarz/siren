@@ -1,14 +1,14 @@
 .PHONY: dev dev-backend analyze analyze-go analyze-frontend build print-version print-ldflags
 
-GOCACHE ?= /tmp/sliver-gui-cache/go-build
-XDG_CACHE_HOME ?= /tmp/sliver-gui-cache
-CCACHE_DIR ?= /tmp/sliver-gui-cache/ccache
-BUILD_OUTPUT ?= /tmp/sliver-gui-build
+GOCACHE ?= /tmp/siren-cache/go-build
+XDG_CACHE_HOME ?= /tmp/siren-cache
+CCACHE_DIR ?= /tmp/siren-cache/ccache
+BUILD_OUTPUT ?= /tmp/siren-build
 BUILD_TAGS ?=
 VERSION ?= $(shell git describe --tags --dirty --always 2>/dev/null || echo dev)
 COMMIT ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-BUILDINFO_LDFLAGS := -X sliver-gui/internal/buildinfo.Version=$(VERSION) -X sliver-gui/internal/buildinfo.Commit=$(COMMIT) -X sliver-gui/internal/buildinfo.Date=$(BUILD_DATE)
+BUILDINFO_LDFLAGS := -X siren/internal/buildinfo.Version=$(VERSION) -X siren/internal/buildinfo.Commit=$(COMMIT) -X siren/internal/buildinfo.Date=$(BUILD_DATE)
 BUILD_TAGS_ARG := $(if $(strip $(BUILD_TAGS)),-tags "$(BUILD_TAGS)",)
 BUILD_OUTPUT_NAME := $(notdir $(BUILD_OUTPUT))
 

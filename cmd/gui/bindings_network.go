@@ -4,8 +4,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/shells"
-	"sliver-gui/internal/sliver/tunneling"
+	"siren/internal/sliver/shells"
+	"siren/internal/sliver/tunneling"
 )
 
 // ---- Tunneling ----

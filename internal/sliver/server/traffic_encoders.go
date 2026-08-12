@@ -11,7 +11,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/google/uuid"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 const maxTrafficEncoderBytes = 8 * 1024 * 1024

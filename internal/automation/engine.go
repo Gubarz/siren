@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"sliver-gui/internal/bus"
+	"siren/internal/bus"
 )
 
 const automationHistoryLimit = 500

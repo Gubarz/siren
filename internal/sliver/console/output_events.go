@@ -3,8 +3,8 @@ package console
 import (
 	"context"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/journal"
+	"siren/internal/bus"
+	"siren/internal/journal"
 )
 
 const outputTailMaxBytes = 64 * 1024

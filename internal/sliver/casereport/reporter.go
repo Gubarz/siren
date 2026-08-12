@@ -8,9 +8,9 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
-	"sliver-gui/internal/localstate/casefile"
-	"sliver-gui/internal/sliver/console"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/localstate/casefile"
+	"siren/internal/sliver/console"
+	"siren/internal/sliver/rpc"
 )
 
 // NewReporter resolves the IDs stored on a Case back into human-readable

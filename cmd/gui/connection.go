@@ -3,7 +3,7 @@ package gui
 import (
 	"log"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func (a *App) GetClientConfigs() ([]string, error) {

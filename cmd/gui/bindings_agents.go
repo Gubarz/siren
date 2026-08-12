@@ -4,10 +4,10 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/agents"
-	"sliver-gui/internal/sliver/armory"
-	"sliver-gui/internal/sliver/beacons"
-	"sliver-gui/internal/sliver/pivots"
+	"siren/internal/sliver/agents"
+	"siren/internal/sliver/armory"
+	"siren/internal/sliver/beacons"
+	"siren/internal/sliver/pivots"
 )
 
 // ---- Sessions / Beacons ----

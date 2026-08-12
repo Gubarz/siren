@@ -3,8 +3,8 @@ package triggers
 import (
 	"context"
 
-	"sliver-gui/internal/automation"
-	"sliver-gui/internal/bus"
+	"siren/internal/automation"
+	"siren/internal/bus"
 )
 
 type MapFunc func(ev bus.Event, cfg map[string]any) (automation.FireEvent, bool)

@@ -3,7 +3,7 @@ package main
 import (
 	"embed"
 
-	"sliver-gui/cmd/gui"
+	"siren/cmd/gui"
 )
 
 //go:embed all:frontend/dist

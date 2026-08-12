@@ -3,7 +3,7 @@ package automation
 import (
 	"context"
 
-	"sliver-gui/internal/bus"
+	"siren/internal/bus"
 )
 
 type Emitter interface {

@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	shellOpenFramePrefix      = "\x1b]777;sliver-gui-open-shell="
-	consoleCommandFramePrefix = "\x1b]777;sliver-gui-command="
+	shellOpenFramePrefix      = "\x1b]777;siren-open-shell="
+	consoleCommandFramePrefix = "\x1b]777;siren-command="
 	controlFrameSuffix        = "\x07"
 	shellOpenFrameSuffix      = controlFrameSuffix
 )

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 type JSONStore struct {

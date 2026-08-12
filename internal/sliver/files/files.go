@@ -8,8 +8,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/bus"
+	"siren/internal/sliver/rpc"
 )
 
 const defaultRPCTimeout = 5 * time.Minute

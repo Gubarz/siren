@@ -11,7 +11,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 const rpcTimeout = 60 * time.Second

@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"sliver-gui/internal/envvars"
+	"siren/internal/envvars"
 
 	"github.com/creack/pty"
 )

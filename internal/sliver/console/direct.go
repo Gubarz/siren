@@ -16,7 +16,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/pflag"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func (s *Service) runDirectCommand(line string, sess *clientpb.Session, beacon *clientpb.Beacon) (string, bool, error) {

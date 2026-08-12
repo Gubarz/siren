@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/bus"
+	"siren/internal/sliver/rpc"
 )
 
 func TestServicePublishPayload(t *testing.T) {

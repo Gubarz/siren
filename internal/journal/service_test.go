@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"sliver-gui/internal/bus"
+	"siren/internal/bus"
 )
 
 type fakeStore struct {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func (s *Service) CopyPath(sessionID, src, dst string) (int64, error) {

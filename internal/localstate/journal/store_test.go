@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	journalv1 "sliver-gui/internal/journal"
+	journalv1 "siren/internal/journal"
 )
 
 func openStore(t *testing.T) *SQLiteStore {

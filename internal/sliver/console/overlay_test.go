@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"sliver-gui/internal/journal"
+	"siren/internal/journal"
 )
 
 func TestWithCommandOverlayDefaultsOperator(t *testing.T) {

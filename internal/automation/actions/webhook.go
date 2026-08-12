@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 const (

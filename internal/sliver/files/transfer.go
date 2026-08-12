@@ -12,7 +12,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func (s *Service) DownloadDirectory(sessionID string, remotePath string) error {

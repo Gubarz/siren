@@ -1,4 +1,4 @@
-module sliver-gui
+module siren
 
 go 1.26.3
 

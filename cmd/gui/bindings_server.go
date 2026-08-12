@@ -7,9 +7,9 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
-	uishellcode "sliver-gui/internal/sliver/shellcode"
-	"sliver-gui/internal/sliver/staging"
-	"sliver-gui/internal/sliver/websites"
+	uishellcode "siren/internal/sliver/shellcode"
+	"siren/internal/sliver/staging"
+	"siren/internal/sliver/websites"
 )
 
 // ---- Server info ----

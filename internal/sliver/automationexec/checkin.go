@@ -7,8 +7,8 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/bus"
+	"siren/internal/sliver/rpc"
 )
 
 const checkinPollInterval = 5 * time.Second

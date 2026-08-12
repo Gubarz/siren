@@ -15,9 +15,9 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/grpc"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/journal"
-	localjournal "sliver-gui/internal/localstate/journal"
+	"siren/internal/bus"
+	"siren/internal/journal"
+	localjournal "siren/internal/localstate/journal"
 )
 
 // fakeRPC embeds the interface (unimplemented methods panic) and stubs the

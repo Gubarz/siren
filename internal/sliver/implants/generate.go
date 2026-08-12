@@ -10,8 +10,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/bus"
+	"siren/internal/sliver/rpc"
 )
 
 type Service struct {

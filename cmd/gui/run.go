@@ -9,8 +9,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
-	"sliver-gui/internal/buildinfo"
-	"sliver-gui/internal/sliver/console"
+	"siren/internal/buildinfo"
+	"siren/internal/sliver/console"
 )
 
 func Run(frontendAssets embed.FS) {
@@ -45,7 +45,7 @@ func runConsoleMode() bool {
 
 func appOptions(frontendAssets embed.FS, app *App) *options.App {
 	return &options.App{
-		Title:            "sliver-gui",
+		Title:            "siren",
 		Width:            1024,
 		Height:           768,
 		WindowStartState: options.Maximised,

@@ -13,7 +13,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/klauspost/compress/zstd"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 type Service struct {

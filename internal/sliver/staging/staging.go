@@ -11,7 +11,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 const maxStageBytes = 64 * 1024 * 1024

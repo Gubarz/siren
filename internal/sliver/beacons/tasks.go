@@ -15,9 +15,9 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 
-	"sliver-gui/internal/journal"
-	"sliver-gui/internal/sliver/console"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/journal"
+	"siren/internal/sliver/console"
+	"siren/internal/sliver/rpc"
 )
 
 const beaconTaskPollInterval = time.Second

@@ -13,7 +13,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 const maxInputBytes = 64 * 1024 * 1024

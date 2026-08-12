@@ -1,6 +1,6 @@
-# Sliver GUI
+# Siren
 
-[![CI](https://github.com/Gubarz/sliver-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/Gubarz/sliver-gui/actions/workflows/ci.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](go.mod) [![Platform](https://img.shields.io/badge/Platform-Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-555555)](#build-it) [![Releases](https://img.shields.io/badge/Releases-GitHub-181717?logo=github)](https://github.com/Gubarz/sliver-gui/releases)
+[![CI](https://github.com/Gubarz/siren/actions/workflows/ci.yml/badge.svg)](https://github.com/Gubarz/siren/actions/workflows/ci.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](go.mod) [![Platform](https://img.shields.io/badge/Platform-Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-555555)](#build-it) [![Releases](https://img.shields.io/badge/Releases-GitHub-181717?logo=github)](https://github.com/Gubarz/siren/releases)
 
 A desktop operator workbench for the [Sliver](https://github.com/BishopFox/sliver) C2 framework, built with [Wails v2](https://wails.io), Go, Svelte 5, Vite, and Tailwind CSS.
 
@@ -8,7 +8,7 @@ A desktop operator workbench for the [Sliver](https://github.com/BishopFox/slive
 
 ## What It Is
 
-`sliver-gui` wraps the Sliver client RPC surface in a native desktop shell. The Go backend owns the Sliver RPC client, long-lived streams, subprocess consoles, local files, and Wails bindings. The Svelte frontend provides the operator workspace, server management panels, command palette, automation editor, and app state.
+`siren` wraps the Sliver client RPC surface in a native desktop shell. The Go backend owns the Sliver RPC client, long-lived streams, subprocess consoles, local files, and Wails bindings. The Svelte frontend provides the operator workspace, server management panels, command palette, automation editor, and app state.
 
 The app starts disconnected. Import or select a Sliver client config, connect to a teamserver, then work from the main views:
 
@@ -93,7 +93,7 @@ Common commands:
 ```sh
 make dev          # frontend hot reload without auto-killing the Go backend
 make dev-backend  # rebuild/restart backend on Go changes
-make build        # produce a binary at /tmp/sliver-gui-build
+make build        # produce a binary at /tmp/siren-build
 ```
 
 Builds are stamped from Git. On a tagged commit, `git describe --tags` becomes the app version; otherwise it falls back to a descriptive commit value. Check what will be stamped with:
@@ -101,7 +101,7 @@ Builds are stamped from Git. On a tagged commit, `git describe --tags` becomes t
 ```sh
 make print-version
 make build
-/tmp/sliver-gui-build --version
+/tmp/siren-build --version
 ```
 
 If you build with Wails directly, pass the same linker flags:

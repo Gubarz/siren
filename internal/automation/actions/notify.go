@@ -3,7 +3,7 @@ package actions
 import (
 	"fmt"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 type notify struct{}

@@ -8,7 +8,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func (s *Service) CompleteCommand(sessionID, line string) ([]string, error) {

@@ -3,7 +3,7 @@ package actions
 import (
 	"strings"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 func cfgString(key string, cfg map[string]any) string {

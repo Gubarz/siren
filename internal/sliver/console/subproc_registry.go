@@ -124,7 +124,7 @@ func writeConfigForSubproc(cfg *assets.ClientConfig) (string, error) {
 	if cfg == nil {
 		return "", os.ErrInvalid
 	}
-	f, err := os.CreateTemp("", "sliver-gui-console-*.json")
+	f, err := os.CreateTemp("", "siren-console-*.json")
 	if err != nil {
 		return "", err
 	}

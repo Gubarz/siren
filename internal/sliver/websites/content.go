@@ -9,7 +9,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 // AddContentRequest describes one path we want served under a site. Only

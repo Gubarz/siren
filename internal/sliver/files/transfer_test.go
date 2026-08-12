@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 func gzipBytes(data []byte) []byte {

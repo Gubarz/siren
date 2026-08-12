@@ -9,7 +9,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 // SpoofMetadataRequest is the flat form the GUI passes for priming a

@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"sliver-gui/internal/automation"
-	"sliver-gui/internal/bus"
+	"siren/internal/automation"
+	"siren/internal/bus"
 )
 
 type keyword struct{ b bus.Bus }

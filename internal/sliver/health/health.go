@@ -10,8 +10,8 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
-	"sliver-gui/internal/sliver/rpc"
-	"sliver-gui/internal/sliver/tunneling"
+	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/tunneling"
 )
 
 const rpcTimeout = 3 * time.Second

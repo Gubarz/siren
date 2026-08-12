@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"sliver-gui/internal/bus"
+	"siren/internal/bus"
 )
 
 var ErrDisabled = errors.New("journal disabled")

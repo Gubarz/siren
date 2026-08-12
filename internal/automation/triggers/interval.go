@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"sliver-gui/internal/automation"
+	"siren/internal/automation"
 )
 
 var MinInterval = 10 * time.Second

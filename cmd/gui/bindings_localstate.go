@@ -7,9 +7,9 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/localstate/casefile"
-	"sliver-gui/internal/localstate/comments"
-	"sliver-gui/internal/sliver/casereport"
+	"siren/internal/localstate/casefile"
+	"siren/internal/localstate/comments"
+	"siren/internal/sliver/casereport"
 )
 
 // ---- Entity tags & colors ----

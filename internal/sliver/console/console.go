@@ -19,8 +19,8 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
 
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/bus"
+	"siren/internal/sliver/rpc"
 )
 
 var BeaconTaskNoticePattern = regexp.MustCompile(`(?i)Tasked beacon .*\(([0-9a-f]{8})\)`)

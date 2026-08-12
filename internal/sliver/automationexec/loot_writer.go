@@ -7,8 +7,8 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
-	"sliver-gui/internal/automation"
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/automation"
+	"siren/internal/sliver/rpc"
 )
 
 type LootWriter struct {

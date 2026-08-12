@@ -8,7 +8,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"sliver-gui/internal/sliver/loot"
+	"siren/internal/sliver/loot"
 )
 
 // ---- Loot / Credentials ----

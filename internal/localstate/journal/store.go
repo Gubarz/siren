@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	journalv1 "sliver-gui/internal/journal"
+	journalv1 "siren/internal/journal"
 
 	_ "modernc.org/sqlite"
 )

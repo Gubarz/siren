@@ -10,7 +10,7 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"sliver-gui/internal/sliver/rpc"
+	"siren/internal/sliver/rpc"
 )
 
 const maxViewSize = 10 * 1024 * 1024

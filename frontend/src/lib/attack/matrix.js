@@ -22,12 +22,12 @@ export function joinCountsWithMap(verbCounts) {
   }
 }
 
-export function navigatorLayer(techniques, name = 'sliver-gui operation') {
+export function navigatorLayer(techniques, name = 'siren operation') {
   return {
     name,
     versions: { layer: '4.5', attack: '16', navigator: '5.1' },
     domain: 'enterprise-attack',
-    description: 'Generated from sliver-gui activity journal verb counts',
+    description: 'Generated from siren activity journal verb counts',
     techniques: techniques.map((t) => ({
       techniqueID: t.techniqueID,
       score: t.score,

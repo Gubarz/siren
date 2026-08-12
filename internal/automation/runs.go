@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"sliver-gui/internal/journal"
+	"siren/internal/journal"
 )
 
 func (e *Engine) dispatchRule(rule AutomationRule, trigger string, target *Target) {

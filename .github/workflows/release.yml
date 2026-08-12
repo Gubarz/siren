@@ -19,26 +19,26 @@ jobs:
         include:
           - name: linux-amd64-webkit4.1
             os: ubuntu-24.04
-            output: dist/sliver-gui
-            asset: sliver-gui-linux-amd64-webkit4.1.tar.gz
+            output: dist/siren
+            asset: siren-linux-amd64-webkit4.1.tar.gz
             build_tags: webkit2_41
             webkit: "4.1"
           - name: linux-amd64-webkit4.0
             os: ubuntu-22.04
-            output: dist/sliver-gui
-            asset: sliver-gui-linux-amd64-webkit4.0.tar.gz
+            output: dist/siren
+            asset: siren-linux-amd64-webkit4.0.tar.gz
             build_tags: ""
             webkit: "4.0"
           - name: windows-amd64
             os: windows-latest
-            output: dist/sliver-gui.exe
-            asset: sliver-gui-windows-amd64.zip
+            output: dist/siren.exe
+            asset: siren-windows-amd64.zip
             build_tags: ""
             webkit: ""
           - name: macos-arm64
             os: macos-latest
-            output: dist/sliver-gui
-            asset: sliver-gui-macos-arm64.tar.gz
+            output: dist/siren
+            asset: siren-macos-arm64.tar.gz
             build_tags: ""
             webkit: ""
     steps:
@@ -94,7 +94,7 @@ jobs:
             -skipbindings \
             -o "$BINARY" \
             -tags "${{ matrix.build_tags }}" \
-            -ldflags "-X sliver-gui/internal/buildinfo.Version=${GITHUB_REF_NAME} -X sliver-gui/internal/buildinfo.Commit=${COMMIT} -X sliver-gui/internal/buildinfo.Date=${DATE}"
+            -ldflags "-X siren/internal/buildinfo.Version=${GITHUB_REF_NAME} -X siren/internal/buildinfo.Commit=${COMMIT} -X siren/internal/buildinfo.Date=${DATE}"
           mkdir -p "$(dirname "${{ matrix.output }}")"
           cp "build/bin/$BINARY" "${{ matrix.output }}"
 

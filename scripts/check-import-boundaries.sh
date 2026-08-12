@@ -13,7 +13,7 @@ external_imports() {
 }
 
 internal_imports() {
-    go list -deps "$1" 2>/dev/null | grep '^sliver-gui/internal/' || true
+    go list -deps "$1" 2>/dev/null | grep '^siren/internal/' || true
 }
 
 # Rule 1: internal/bus is stdlib-only.
@@ -30,7 +30,7 @@ if out=$(external_imports ./internal/journal | grep -E '^github\.com/(bishopfox|
     echo "$out" >&2
     fail=1
 fi
-if out=$(internal_imports ./internal/journal | grep -v '^sliver-gui/internal/\(journal\|bus\)$') && [ -n "$out" ]; then
+if out=$(internal_imports ./internal/journal | grep -v '^siren/internal/\(journal\|bus\)$') && [ -n "$out" ]; then
     echo "boundary: internal/journal may only import internal/bus:" >&2
     echo "$out" >&2
     fail=1
@@ -42,7 +42,7 @@ if out=$(external_imports ./internal/localstate/journal | grep -E '^github\.com/
     echo "$out" >&2
     fail=1
 fi
-if out=$(internal_imports ./internal/localstate/journal | grep -v '^sliver-gui/internal/\(localstate/journal\|journal\|bus\)$') && [ -n "$out" ]; then
+if out=$(internal_imports ./internal/localstate/journal | grep -v '^siren/internal/\(localstate/journal\|journal\|bus\)$') && [ -n "$out" ]; then
     echo "boundary: internal/localstate/journal may only import internal/journal:" >&2
     echo "$out" >&2
     fail=1
@@ -54,7 +54,7 @@ if out=$(external_imports ./internal/automation | grep -E '^github\.com/(bishopf
     echo "$out" >&2
     fail=1
 fi
-if out=$(internal_imports ./internal/automation | grep -v '^sliver-gui/internal/\(automation\|bus\|journal\)$') && [ -n "$out" ]; then
+if out=$(internal_imports ./internal/automation | grep -v '^siren/internal/\(automation\|bus\|journal\)$') && [ -n "$out" ]; then
     echo "boundary: internal/automation may only import internal/bus and internal/journal:" >&2
     echo "$out" >&2
     fail=1
@@ -67,7 +67,7 @@ for sub in ./internal/automation/triggers ./internal/automation/actions; do
         echo "$out" >&2
         fail=1
     fi
-    if out=$(internal_imports "$sub" | grep -v '^sliver-gui/internal/\(automation\|automation/triggers\|automation/actions\|bus\|journal\)$') && [ -n "$out" ]; then
+    if out=$(internal_imports "$sub" | grep -v '^siren/internal/\(automation\|automation/triggers\|automation/actions\|bus\|journal\)$') && [ -n "$out" ]; then
         echo "boundary: $sub may only import internal/automation, internal/bus, internal/journal:" >&2
         echo "$out" >&2
         fail=1
@@ -77,9 +77,9 @@ done
 # Rule 5: within internal/sliver/*, only automationexec may import internal/automation.
 while IFS= read -r pkg; do
     case "$pkg" in
-        sliver-gui/internal/sliver/automationexec) continue ;;
+        siren/internal/sliver/automationexec) continue ;;
     esac
-    if go list -f '{{join .Imports " "}}' "$pkg" | tr ' ' '\n' | grep -q '^sliver-gui/internal/automation$'; then
+    if go list -f '{{join .Imports " "}}' "$pkg" | tr ' ' '\n' | grep -q '^siren/internal/automation$'; then
         echo "boundary: $pkg imports internal/automation (only automationexec may)" >&2
         fail=1
     fi

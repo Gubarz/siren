@@ -6,23 +6,23 @@ import (
 	"os"
 	"path/filepath"
 
-	"sliver-gui/internal/automation"
-	"sliver-gui/internal/automation/actions"
-	"sliver-gui/internal/automation/triggers"
-	"sliver-gui/internal/bus"
-	"sliver-gui/internal/envvars"
-	"sliver-gui/internal/journal"
-	automationstate "sliver-gui/internal/localstate/automation"
-	"sliver-gui/internal/localstate/casefile"
-	"sliver-gui/internal/localstate/comments"
-	"sliver-gui/internal/localstate/events"
-	localjournal "sliver-gui/internal/localstate/journal"
-	"sliver-gui/internal/localstate/tags"
+	"siren/internal/automation"
+	"siren/internal/automation/actions"
+	"siren/internal/automation/triggers"
+	"siren/internal/bus"
+	"siren/internal/envvars"
+	"siren/internal/journal"
+	automationstate "siren/internal/localstate/automation"
+	"siren/internal/localstate/casefile"
+	"siren/internal/localstate/comments"
+	"siren/internal/localstate/events"
+	localjournal "siren/internal/localstate/journal"
+	"siren/internal/localstate/tags"
 
-	automationexec "sliver-gui/internal/sliver/automationexec"
-	"sliver-gui/internal/sliver/beacons"
-	"sliver-gui/internal/sliver/console"
-	"sliver-gui/internal/sliver/rpc"
+	automationexec "siren/internal/sliver/automationexec"
+	"siren/internal/sliver/beacons"
+	"siren/internal/sliver/console"
+	"siren/internal/sliver/rpc"
 
 	"github.com/bishopfox/sliver/client/assets"
 )
@@ -58,7 +58,7 @@ func resolveDataDir(deps Dependencies) string {
 	}
 	dataDir, err := envvars.ResolveDataDir(guiCfg)
 	if err != nil {
-		dataDir = filepath.Join(os.TempDir(), fmt.Sprintf("sliver-gui-%d", os.Getpid()))
+		dataDir = filepath.Join(os.TempDir(), fmt.Sprintf("siren-%d", os.Getpid()))
 		_ = os.MkdirAll(dataDir, 0o700)
 	}
 	return dataDir

@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync/atomic"
 
-	"sliver-gui/internal/journal"
+	"siren/internal/journal"
 )
 
 // JournalHook is the hand-written half of the journal decorator: the

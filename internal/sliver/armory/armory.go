@@ -7,7 +7,7 @@ import (
 	"github.com/bishopfox/sliver/client/command/alias"
 	"github.com/bishopfox/sliver/client/command/extensions"
 
-	"sliver-gui/internal/sliver/console"
+	"siren/internal/sliver/console"
 )
 
 //go:linkname packageManifestsInCache github.com/bishopfox/sliver/client/command/armory.packageManifestsInCache

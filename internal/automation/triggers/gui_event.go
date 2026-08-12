@@ -4,8 +4,8 @@ import (
 	"context"
 	"path/filepath"
 
-	"sliver-gui/internal/automation"
-	"sliver-gui/internal/bus"
+	"siren/internal/automation"
+	"siren/internal/bus"
 )
 
 func FileDownload(b bus.Bus) automation.Trigger {

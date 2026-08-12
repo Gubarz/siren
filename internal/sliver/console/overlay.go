@@ -6,7 +6,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/google/uuid"
 
-	"sliver-gui/internal/journal"
+	"siren/internal/journal"
 )
 
 func withCommandOverlay(ctx context.Context, targetID, targetKind, hostname, line string) context.Context {

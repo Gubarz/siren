@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"sliver-gui/internal/bootstrap"
-	"sliver-gui/internal/envvars"
+	"siren/internal/bootstrap"
+	"siren/internal/envvars"
 )
 
 type headlessEmitter struct{}
@@ -31,7 +31,7 @@ func main() {
 
 	dataDir, err := envvars.ResolveDataDir(nil)
 	if err != nil {
-		dataDir = filepath.Join(os.TempDir(), fmt.Sprintf("sliver-gui-%d", os.Getpid()))
+		dataDir = filepath.Join(os.TempDir(), fmt.Sprintf("siren-%d", os.Getpid()))
 		_ = os.MkdirAll(dataDir, 0o700)
 	}
 
