@@ -11,9 +11,10 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/wailsadapter"
 )
 
 const maxInputBytes = 64 * 1024 * 1024
@@ -39,7 +40,7 @@ func EncoderMap(client *rpc.Client) (*clientpb.ShellcodeEncoderMap, error) {
 	return client.RPC.ShellcodeEncoderMap(context.Background(), &commonpb.Empty{})
 }
 
-func GenerateRDI(ctx context.Context, client *rpc.Client, req RDIRequest) (string, error) {
+func GenerateRDI(ui *wailsadapter.Bridge, client *rpc.Client, req RDIRequest) (string, error) {
 	if !client.Connected() {
 		return "", rpc.ErrNotConnected
 	}
@@ -53,10 +54,10 @@ func GenerateRDI(ctx context.Context, client *rpc.Client, req RDIRequest) (strin
 	if err != nil {
 		return "", err
 	}
-	return saveBytes(ctx, resp.GetData(), "Save RDI Shellcode", outputName(name, "rdi"))
+	return saveBytes(ui, resp.GetData(), "Save RDI Shellcode", outputName(name, "rdi"))
 }
 
-func Encode(ctx context.Context, client *rpc.Client, req EncodeRequest) (string, error) {
+func Encode(ui *wailsadapter.Bridge, client *rpc.Client, req EncodeRequest) (string, error) {
 	if !client.Connected() {
 		return "", rpc.ErrNotConnected
 	}
@@ -72,7 +73,7 @@ func Encode(ctx context.Context, client *rpc.Client, req EncodeRequest) (string,
 	if err != nil {
 		return "", err
 	}
-	return saveBytes(ctx, resp.GetData(), "Save Encoded Shellcode", outputName(name, "encoded"))
+	return saveBytes(ui, resp.GetData(), "Save Encoded Shellcode", outputName(name, "encoded"))
 }
 
 func encodeBytes(client *rpc.Client, req EncodeRequest, data []byte, badChars []byte) (*clientpb.ShellcodeEncode, error) {
@@ -110,12 +111,12 @@ func readInput(localPath string) ([]byte, string, error) {
 	return data, filepath.Base(path), nil
 }
 
-func saveBytes(ctx context.Context, data []byte, title string, name string) (string, error) {
+func saveBytes(ui *wailsadapter.Bridge, data []byte, title string, name string) (string, error) {
 	if len(data) == 0 {
 		return "", fmt.Errorf("server returned no shellcode bytes")
 	}
-	localPath, err := runtime.SaveFileDialog(ctx, runtime.SaveDialogOptions{
-		Title: title, DefaultFilename: name,
+	localPath, err := ui.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title: title, Filename: name,
 	})
 	if err != nil || localPath == "" {
 		return localPath, err

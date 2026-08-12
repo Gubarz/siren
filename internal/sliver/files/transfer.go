@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/sliver/rpc"
 )
@@ -29,9 +29,9 @@ func (s *Service) downloadWithDialog(sessionID, remotePath, title, defaultName s
 	}
 
 	goruntime.LockOSThread()
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		Title:           title,
-		DefaultFilename: defaultName,
+	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    title,
+		Filename: defaultName,
 	})
 	goruntime.UnlockOSThread()
 	if err != nil {
@@ -112,8 +112,8 @@ func (s *Service) finalizeDownloadHistory(recordID, status string, size int64, e
 
 func (s *Service) downloadEmitter(localPath string) func(string, int64, int64) {
 	return func(phase string, current, total int64) {
-		if s.ctx != nil {
-			runtime.EventsEmit(s.ctx, "download-progress", map[string]interface{}{
+		if s.ui != nil {
+			s.ui.Emit("download-progress", map[string]interface{}{
 				"path":    localPath,
 				"phase":   phase,
 				"current": current,
@@ -145,9 +145,9 @@ func (s *Service) DownloadMultipleTar(sessionID string, items []BulkDownloadItem
 
 	defaultName := fmt.Sprintf("archive_%d.tar", time.Now().Unix())
 	goruntime.LockOSThread()
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		Title:           "Save Tar Archive",
-		DefaultFilename: defaultName,
+	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    "Save Tar Archive",
+		Filename: defaultName,
 	})
 	goruntime.UnlockOSThread()
 	if err != nil {
@@ -221,5 +221,3 @@ func (s *Service) downloadRPC(ctx context.Context, req *sliverpb.DownloadReq) (*
 	}
 	return s.rpc.RPC.Download(ctx, req)
 }
-
-

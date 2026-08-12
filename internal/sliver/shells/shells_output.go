@@ -3,8 +3,6 @@ package shells
 import (
 	"bytes"
 	"time"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const (
@@ -26,7 +24,7 @@ func (s *Service) emitShellOutput(id string, chunks <-chan []byte, done chan<- s
 		if len(pending) == 0 {
 			return
 		}
-		runtime.EventsEmit(s.ctx, "shell-output", map[string]interface{}{
+		s.ui.Emit("shell-output", map[string]interface{}{
 			"id": id, "data": string(pending),
 		})
 		pending = pending[:0]

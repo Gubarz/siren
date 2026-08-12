@@ -5,15 +5,15 @@ import (
 	"os"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/automation"
 	"sort"
 )
 
 type AutomationCapabilitySpec struct {
-	Type   string                  `json:"type"`
-	Schema []automation.FieldSpec  `json:"schema"`
+	Type   string                 `json:"type"`
+	Schema []automation.FieldSpec `json:"schema"`
 }
 
 type AutomationCapabilities struct {
@@ -69,10 +69,10 @@ func (a *App) ExportAutomationRules(includeSecrets bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Export Automation Rules",
-		DefaultFilename: fmt.Sprintf("sliver-automation-%s.json", time.Now().Format("2006-01-02")),
-		Filters: []runtime.FileFilter{{
+	path, err := a.bridge.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    "Export Automation Rules",
+		Filename: fmt.Sprintf("sliver-automation-%s.json", time.Now().Format("2006-01-02")),
+		Filters: []application.FileFilter{{
 			DisplayName: "JSON files (*.json)",
 			Pattern:     "*.json",
 		}},

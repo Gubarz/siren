@@ -1,1 +1,1 @@
-export { GetAliases } from '../../../wailsjs/go/gui/App.js'
+export { GetAliases } from '../../../bindings/siren/cmd/gui/app.js'

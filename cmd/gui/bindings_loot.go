@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"siren/internal/sliver/loot"
 )
@@ -98,8 +97,8 @@ func (a *App) SaveAgentNote(agentID, text string) error {
 	if err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "comments-updated", nil)
-	runtime.EventsEmit(a.ctx, "agent-notes-updated", agentID)
+	a.bridge.Emit("comments-updated", nil)
+	a.bridge.Emit("agent-notes-updated", agentID)
 	return nil
 }
 

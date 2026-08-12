@@ -7,15 +7,16 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/bus"
 	"siren/internal/sliver/rpc"
+	"siren/internal/wailsadapter"
 )
 
 type Service struct {
 	rpc *rpc.Client
-	ctx context.Context
+	ui  *wailsadapter.Bridge
 	bus bus.Bus
 }
 
@@ -23,8 +24,8 @@ func New(rpc *rpc.Client) *Service {
 	return &Service{rpc: rpc}
 }
 
-func (s *Service) SetCtx(ctx context.Context) {
-	s.ctx = ctx
+func (s *Service) SetUI(ui *wailsadapter.Bridge) {
+	s.ui = ui
 }
 
 func (s *Service) SetBus(b bus.Bus) {
@@ -65,9 +66,9 @@ func (s *Service) DownloadLoot(lootID string) (string, error) {
 	if fname == "" {
 		fname = loot.Name
 	}
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		Title:           "Save Loot",
-		DefaultFilename: fname,
+	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    "Save Loot",
+		Filename: fname,
 	})
 	if err != nil {
 		return "", fmt.Errorf("dialog error: %w", err)

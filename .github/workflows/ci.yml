@@ -12,7 +12,9 @@ concurrency:
 jobs:
   go:
     name: Basic Go checks
-    runs-on: ubuntu-22.04
+    # 24.04: internal/wailsadapter compiles Wails v3's Linux windowing stack
+    # (GTK4 + webkitgtk-6.0), which 22.04 does not package.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -20,6 +22,11 @@ jobs:
         with:
           go-version: "1.26.x"
           cache: true
+
+      - name: Install webview headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
       - name: go test
         run: go test ./internal/... ./scripts

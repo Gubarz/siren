@@ -10,13 +10,14 @@ import (
 
 	"siren/internal/bus"
 	"siren/internal/sliver/rpc"
+	"siren/internal/wailsadapter"
 )
 
 const defaultRPCTimeout = 5 * time.Minute
 
 type Service struct {
 	rpc     *rpc.Client
-	ctx     context.Context
+	ui      *wailsadapter.Bridge
 	history *HistoryStore
 	dl      func(ctx context.Context, in *sliverpb.DownloadReq) (*sliverpb.Download, error)
 	bus     bus.Bus
@@ -45,8 +46,8 @@ func (s *Service) publish(eventType string, payload map[string]any) {
 	})
 }
 
-func (s *Service) SetCtx(ctx context.Context) {
-	s.ctx = ctx
+func (s *Service) SetUI(ui *wailsadapter.Bridge) {
+	s.ui = ui
 }
 
 func (s *Service) SetHistoryStore(h *HistoryStore) {

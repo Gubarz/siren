@@ -2,5 +2,6 @@ export {
   ClearNetworkDiscoveries,
   DiscoverNetwork,
   GetNetworkDiscoveries,
+  GetSystemTheme,
   RemoveNetworkDiscoveries,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';

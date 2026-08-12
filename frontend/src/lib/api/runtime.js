@@ -1,75 +1,77 @@
-import {
-  EventsOn,
-  OnFileDrop,
-  OnFileDropOff,
-  Quit,
-  WindowMinimise,
-  WindowToggleMaximise,
-} from '../../../wailsjs/runtime/runtime.js';
-import { OpenFileDialog as WailsOpenFileDialog } from '../../../wailsjs/go/gui/App.js';
+import { Application, Events, Window } from '@wailsio/runtime';
+import { OpenFileDialog as WailsOpenFileDialog } from '../../../bindings/siren/cmd/gui/app.js';
 
 // Compatibility alias — matches the original App-binding name so callers
-// swapping from `import { OpenFileDialog } from wailsjs` only change the
-// import path, not the call site.
+// swapping from the generated bindings only change the import path, not the
+// call site.
 export const OpenFileDialog = WailsOpenFileDialog;
 
-const fileDropListeners = new Set();
-let fileDropRegistered = false;
+// v3 event callbacks receive a WailsEvent object; unwrap the payload so
+// subscribers keep the v2 callback shape (raw data only).
+function subscribe(name, callback) {
+  return Events.On(name, (event) => callback(event?.data));
+}
 
 export function onSliverEvent(callback) {
-  return EventsOn('sliver-event', callback);
+  return subscribe('sliver-event', callback);
 }
 
 export function onShellOutput(callback) {
-  return EventsOn('shell-output', callback);
+  return subscribe('shell-output', callback);
 }
 
 // Console subprocess events. Payload: {jobID, data (base64)} for output,
 // {jobID, exitCode?} for exit. Emitted by internal/console/subproc.go.
 export function onConsoleOutput(callback) {
-  return EventsOn('console-output', callback);
+  return subscribe('console-output', callback);
 }
 
 export function onConsoleExit(callback) {
-  return EventsOn('console-exit', callback);
+  return subscribe('console-exit', callback);
 }
 
 export function onConsoleOpenShell(callback) {
-  return EventsOn('console-open-shell', callback);
+  return subscribe('console-open-shell', callback);
 }
 
-// Generic named-event subscription — wrap wails' EventsOn so store code
-// doesn't reach into the wailsjs bindings directly.
+// Generic named-event subscription — wrap the runtime so store code
+// doesn't reach into the generated bindings directly.
 export function onWailsEvent(name, callback) {
-  return EventsOn(name, callback);
+  return subscribe(name, callback);
 }
 
+const fileDropListeners = new Set();
+let fileDropRegistered = false;
+
+// v3 only delivers drops that land on elements carrying the
+// data-file-drop-target attribute; the Go backend re-emits them as the
+// 'files-dropped' custom event (see cmd/gui/lifecycle.go).
 export function onFileDrop(callback) {
   fileDropListeners.add(callback);
   if (!fileDropRegistered) {
-    OnFileDrop((x, y, paths) => {
-      for (const listener of fileDropListeners) listener(x, y, paths);
-    }, true);
+    subscribe('files-dropped', (data) => {
+      if (!data) return;
+      for (const listener of fileDropListeners) listener(data.x, data.y, data.files);
+    });
     fileDropRegistered = true;
   }
 
   return () => {
     fileDropListeners.delete(callback);
-    if (fileDropListeners.size === 0 && fileDropRegistered) {
-      OnFileDropOff();
-      fileDropRegistered = false;
-    }
+    // The underlying Events.On subscription is process-lifetime; only the
+    // listener set is drained. (Events.Off would nuke every listener for the
+    // channel, so we deliberately don't call it.)
   };
 }
 
 export function minimizeWindow() {
-  WindowMinimise();
+  Window.Minimise();
 }
 
 export function toggleMaximizeWindow() {
-  WindowToggleMaximise();
+  Window.ToggleMaximise();
 }
 
 export function quitApplication() {
-  Quit();
+  Application.Quit();
 }

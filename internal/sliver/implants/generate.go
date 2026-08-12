@@ -8,15 +8,16 @@ import (
 	"time"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/bus"
 	"siren/internal/sliver/rpc"
+	"siren/internal/wailsadapter"
 )
 
 type Service struct {
 	rpc *rpc.Client
-	ctx context.Context
+	ui  *wailsadapter.Bridge
 	bus bus.Bus
 }
 
@@ -24,8 +25,8 @@ func New(rpc *rpc.Client) *Service {
 	return &Service{rpc: rpc}
 }
 
-func (s *Service) SetCtx(ctx context.Context) {
-	s.ctx = ctx
+func (s *Service) SetUI(ui *wailsadapter.Bridge) {
+	s.ui = ui
 }
 
 func (s *Service) SetBus(b bus.Bus) {
@@ -158,9 +159,9 @@ func (s *Service) GenerateAdvanced(req GenerateRequest) (string, error) {
 	if resp.File == nil {
 		return "", fmt.Errorf("server returned no implant file")
 	}
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
+	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
 		Title:           "Save Implant",
-		DefaultFilename: resp.File.Name,
+		Filename: resp.File.Name,
 	})
 	if err != nil {
 		return "", fmt.Errorf("dialog error: %w", err)
@@ -215,9 +216,9 @@ func (s *Service) Generate(goos, goarch, format, c2url, name string, isBeacon bo
 		return "", fmt.Errorf("server returned no implant file")
 	}
 
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
+	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
 		Title:           "Save Implant",
-		DefaultFilename: resp.File.Name,
+		Filename: resp.File.Name,
 	})
 	if err != nil {
 		return "", fmt.Errorf("dialog error: %w", err)
@@ -273,9 +274,9 @@ func (s *Service) GenerateFromProfile(profileConfigID string, name string, forma
 		return "", fmt.Errorf("server returned no implant file")
 	}
 
-	localPath, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
+	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
 		Title:           "Save Implant from Profile",
-		DefaultFilename: resp.File.Name,
+		Filename: resp.File.Name,
 	})
 	if err != nil {
 		return "", fmt.Errorf("dialog error: %w", err)

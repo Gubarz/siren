@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/localstate/casefile"
 	"siren/internal/localstate/comments"
@@ -23,9 +23,9 @@ func (a *App) SetEntityTags(entityType, entityID string, tagList []string) error
 		return err
 	}
 	key := entityType + ":" + entityID
-	runtime.EventsEmit(a.ctx, "entity-tags-updated", key)
+	a.bridge.Emit("entity-tags-updated", key)
 	if strings.EqualFold(strings.TrimSpace(entityType), "agent") {
-		runtime.EventsEmit(a.ctx, "agent-tags-updated", entityID)
+		a.bridge.Emit("agent-tags-updated", entityID)
 	}
 	return nil
 }
@@ -43,9 +43,9 @@ func (a *App) SetEntityColor(entityType, entityID string, color string) error {
 		return err
 	}
 	key := entityType + ":" + entityID
-	runtime.EventsEmit(a.ctx, "entity-colors-updated", key)
+	a.bridge.Emit("entity-colors-updated", key)
 	if strings.EqualFold(strings.TrimSpace(entityType), "agent") {
-		runtime.EventsEmit(a.ctx, "agent-colors-updated", entityID)
+		a.bridge.Emit("agent-colors-updated", entityID)
 	}
 	return nil
 }
@@ -62,8 +62,8 @@ func (a *App) SetAgentTags(agentID string, tagList []string) error {
 	if err := a.Tags.SetAgentTags(agentID, tagList); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "entity-tags-updated", "agent:"+agentID)
-	runtime.EventsEmit(a.ctx, "agent-tags-updated", agentID)
+	a.bridge.Emit("entity-tags-updated", "agent:"+agentID)
+	a.bridge.Emit("agent-tags-updated", agentID)
 	return nil
 }
 
@@ -83,8 +83,8 @@ func (a *App) SetAgentColor(agentID string, color string) error {
 	if err := a.Tags.SetAgentColor(agentID, color); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "entity-colors-updated", "agent:"+agentID)
-	runtime.EventsEmit(a.ctx, "agent-colors-updated", agentID)
+	a.bridge.Emit("entity-colors-updated", "agent:"+agentID)
+	a.bridge.Emit("agent-colors-updated", agentID)
 	return nil
 }
 
@@ -103,7 +103,7 @@ func (a *App) AddEntityComment(entityType, entityID, author, text string) (comme
 	if err != nil {
 		return comments.Comment{}, err
 	}
-	runtime.EventsEmit(a.ctx, "comments-updated", entityType+":"+entityID)
+	a.bridge.Emit("comments-updated", entityType+":"+entityID)
 	return c, nil
 }
 
@@ -111,7 +111,7 @@ func (a *App) DeleteEntityComment(commentID string) error {
 	if err := a.Comments.DeleteComment(commentID); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "comments-updated", "")
+	a.bridge.Emit("comments-updated", "")
 	return nil
 }
 
@@ -128,7 +128,7 @@ func (a *App) GetCase(id string) *casefile.Record {
 func (a *App) CreateCase(name, description string) (*casefile.Record, error) {
 	c, err := a.Cases.Create(name, description)
 	if err == nil {
-		runtime.EventsEmit(a.ctx, "case-updated", c.ID)
+		a.bridge.Emit("case-updated", c.ID)
 	}
 	return c, err
 }
@@ -137,7 +137,7 @@ func (a *App) UpdateCase(id, name, description, notes string) error {
 	if err := a.Cases.Update(id, name, description, notes); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "case-updated", id)
+	a.bridge.Emit("case-updated", id)
 	return nil
 }
 
@@ -145,7 +145,7 @@ func (a *App) DeleteCase(id string) error {
 	if err := a.Cases.Delete(id); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "case-updated", id)
+	a.bridge.Emit("case-updated", id)
 	return nil
 }
 
@@ -154,7 +154,7 @@ func (a *App) AddToCase(caseID, collection, itemID string) error {
 	if err := a.Cases.Add(caseID, casefile.Collection(collection), itemID); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "case-updated", caseID)
+	a.bridge.Emit("case-updated", caseID)
 	return nil
 }
 
@@ -162,7 +162,7 @@ func (a *App) RemoveFromCase(caseID, collection, itemID string) error {
 	if err := a.Cases.Remove(caseID, casefile.Collection(collection), itemID); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, "case-updated", caseID)
+	a.bridge.Emit("case-updated", caseID)
 	return nil
 }
 
@@ -180,10 +180,10 @@ func (a *App) ExportCaseReport(caseID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Export Case Report",
-		DefaultFilename: casefile.ReportFilename(c.Name),
-		Filters: []runtime.FileFilter{{
+	path, err := a.bridge.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    "Export Case Report",
+		Filename: casefile.ReportFilename(c.Name),
+		Filters: []application.FileFilter{{
 			DisplayName: "Markdown files (*.md)",
 			Pattern:     "*.md",
 		}},

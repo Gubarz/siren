@@ -1,49 +1,72 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installWailsRuntime } from '../../../../test/mocks/wails.js'
+
+const app = vi.hoisted(() => ({
+  OpenFileDialog: vi.fn(),
+}))
+const runtime = vi.hoisted(() => ({
+  Events: { On: vi.fn(() => vi.fn()) },
+  Window: { Minimise: vi.fn(), ToggleMaximise: vi.fn() },
+  Application: { Quit: vi.fn() },
+}))
+vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
+vi.mock('@wailsio/runtime', () => runtime)
 
 describe('runtime api', () => {
-  let runtime
   let api
 
   beforeEach(async () => {
     vi.resetModules()
-    runtime = installWailsRuntime({
-      EventsOnMultiple: vi.fn(() => vi.fn()),
-      OnFileDrop: vi.fn(),
-      OnFileDropOff: vi.fn(),
-      WindowMinimise: vi.fn(),
-      WindowToggleMaximise: vi.fn(),
-      Quit: vi.fn(),
-    })
+    vi.clearAllMocks()
+    runtime.Events.On.mockImplementation(() => vi.fn())
     api = await import('../runtime.js')
   })
 
   it('subscribes to Sliver events on the canonical Wails channel', () => {
     const callback = vi.fn()
     const unsubscribe = vi.fn()
-    runtime.EventsOnMultiple.mockReturnValue(unsubscribe)
+    runtime.Events.On.mockReturnValueOnce(unsubscribe)
 
     expect(api.onSliverEvent(callback)).toBe(unsubscribe)
-    expect(runtime.EventsOnMultiple).toHaveBeenCalledWith('sliver-event', callback, -1)
+    expect(runtime.Events.On).toHaveBeenCalledWith('sliver-event', expect.any(Function))
   })
 
-  it('multiplexes file-drop listeners onto one Wails registration', () => {
+  it('unwraps the v3 event envelope before invoking callbacks', () => {
+    const callback = vi.fn()
+    api.onSliverEvent(callback)
+
+    const [, handler] = runtime.Events.On.mock.calls[0]
+    handler({ data: { type: 'session-opened' } })
+
+    expect(callback).toHaveBeenCalledWith({ type: 'session-opened' })
+  })
+
+  it('multiplexes file-drop listeners onto one Wails subscription', () => {
     const first = vi.fn()
     const second = vi.fn()
 
     const offFirst = api.onFileDrop(first)
-    const offSecond = api.onFileDrop(second)
-    const [handler, includeDirectories] = runtime.OnFileDrop.mock.calls[0]
-    handler(12, 34, ['/tmp/payload.bin'])
+    api.onFileDrop(second)
+    const [name, handler] = runtime.Events.On.mock.calls[0]
+    expect(name).toBe('files-dropped')
+    handler({ data: { x: 12, y: 34, files: ['/tmp/payload.bin'] } })
 
-    expect(runtime.OnFileDrop).toHaveBeenCalledTimes(1)
-    expect(includeDirectories).toBe(true)
+    expect(runtime.Events.On).toHaveBeenCalledTimes(1)
     expect(first).toHaveBeenCalledWith(12, 34, ['/tmp/payload.bin'])
     expect(second).toHaveBeenCalledWith(12, 34, ['/tmp/payload.bin'])
 
     offFirst()
-    expect(runtime.OnFileDropOff).not.toHaveBeenCalled()
-    offSecond()
-    expect(runtime.OnFileDropOff).toHaveBeenCalledOnce()
+    handler({ data: { x: 1, y: 2, files: [] } })
+    expect(first).toHaveBeenCalledTimes(1)
+    expect(second).toHaveBeenCalledTimes(2)
+  })
+
+  it('routes window controls through the v3 runtime', () => {
+    api.minimizeWindow()
+    api.toggleMaximizeWindow()
+    api.quitApplication()
+
+    expect(runtime.Window.Minimise).toHaveBeenCalledOnce()
+    expect(runtime.Window.ToggleMaximise).toHaveBeenCalledOnce()
+    expect(runtime.Application.Quit).toHaveBeenCalledOnce()
   })
 })

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/bishopfox/sliver/client/assets"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/bootstrap"
 	"siren/internal/sliver/agents"
@@ -35,6 +36,7 @@ import (
 	"siren/internal/sliver/tunneling"
 	"siren/internal/sliver/websites"
 	"siren/internal/sliver/wireguard"
+	"siren/internal/wailsadapter"
 )
 
 // App is the Wails-facing composition root. Keep construction and service
@@ -44,6 +46,9 @@ type App struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	connectionMu sync.Mutex
+	wails        *application.App
+	window       *application.WebviewWindow
+	bridge       *wailsadapter.Bridge
 	*bootstrap.SharedStack
 
 	Catalog    *catalog.Service
@@ -75,7 +80,7 @@ type App struct {
 	Env        *env.Service
 }
 
-func NewApp() *App {
+func NewApp(wailsApp *application.App, window *application.WebviewWindow) *App {
 	configureDefaultArmory()
 	shared := bootstrap.NewShared(bootstrap.Dependencies{
 		DataDir: "", // let NewShared resolve via envvars
@@ -84,6 +89,9 @@ func NewApp() *App {
 	tun := tunneling.New(shared.RPC)
 	app := &App{
 		SharedStack: shared,
+		wails:       wailsApp,
+		window:      window,
+		bridge:      wailsadapter.New(wailsApp),
 		Catalog:     catalog.New(shared.Console),
 		Agents:      agents.New(shared.RPC, shared.Console),
 		Armory:      armory.New(shared.Console),

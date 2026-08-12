@@ -1,4 +1,4 @@
 export {
   GetTokenPrivs,
   RevToSelfToken,
-} from '../../../wailsjs/go/gui/App.js'
+} from '../../../bindings/siren/cmd/gui/app.js'

@@ -5,7 +5,7 @@ import {
   RegisterWasmExtensionFromPath,
   ListWasmExtensions,
   ExecWasmExtension,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';
 import { responseField } from './normalize.js';
 
 export { RegisterExtensionFromPath, CallExtension, RegisterWasmExtensionFromPath, ExecWasmExtension };

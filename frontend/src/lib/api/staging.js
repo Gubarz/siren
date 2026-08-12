@@ -2,6 +2,6 @@ import {
   GenerateStage,
   StageImplantBuilds,
   StartTCPStagerListener,
-} from '../../../wailsjs/go/gui/App.js'
+} from '../../../bindings/siren/cmd/gui/app.js'
 
 export { GenerateStage, StageImplantBuilds, StartTCPStagerListener }

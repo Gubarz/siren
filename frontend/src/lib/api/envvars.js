@@ -4,7 +4,7 @@ import {
   ClearDataDirOverride,
   SetLogDirOverride,
   ClearLogDirOverride,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';
 
 let cachedEnvInfo = null;
 

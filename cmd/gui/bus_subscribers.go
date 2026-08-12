@@ -5,7 +5,6 @@ import (
 	"time"
 
 	consts "github.com/bishopfox/sliver/client/constants"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"siren/internal/bus"
 	"siren/internal/journal"
@@ -22,12 +21,12 @@ func (a *App) frontendBusSubscriber(ev bus.Event) {
 	case ev.Type == "sliver.stream-closed":
 		a.RPC.InvalidateAgentCache()
 		a.Console.ResetConsole()
-		runtime.EventsEmit(a.ctx, "sliver-event", map[string]interface{}{"type": "stream-closed"})
+		a.bridge.Emit("sliver-event", map[string]interface{}{"type": "stream-closed"})
 	case strings.HasPrefix(ev.Type, "sliver."):
 		if payload, ok := ev.Payload.(map[string]interface{}); ok {
 			p := copyPayload(payload)
 			p["type"] = strings.TrimPrefix(ev.Type, "sliver.")
-			runtime.EventsEmit(a.ctx, "sliver-event", p)
+			a.bridge.Emit("sliver-event", p)
 		}
 		switch ev.Type {
 		case "sliver." + consts.SessionOpenedEvent,
@@ -39,11 +38,11 @@ func (a *App) frontendBusSubscriber(ev bus.Event) {
 		if payload, ok := ev.Payload.(map[string]interface{}); ok {
 			p := copyPayload(payload)
 			p["type"] = ev.Type
-			runtime.EventsEmit(a.ctx, "gui-event", p)
+			a.bridge.Emit("gui-event", p)
 		}
 	case ev.Type == "journal.action-recorded":
 		if entry, ok := ev.Payload.(journal.Entry); ok {
-			runtime.EventsEmit(a.ctx, "journal-event", entryToMap(entry))
+			a.bridge.Emit("journal-event", entryToMap(entry))
 		}
 	}
 }

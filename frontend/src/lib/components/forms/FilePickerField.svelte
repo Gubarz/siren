@@ -1,14 +1,21 @@
 <script>
-  import { onFileDrop } from '../../api/runtime.js'
+  import { onFileDrop, OpenFileDialog } from '../../api/runtime.js'
   import Icon from '../ui/Icon.svelte'
 
   let { value = $bindable(''), label = 'File', description = '', accept = '' } = $props()
 
   let draggedOver = $state(false)
   let fileInput
+  let dropZone
+
+  const inWails = () => typeof window !== 'undefined' && window._wails?.flags != null
 
   // Drop subscription — cleanup lives on the effect return.
+  // v3 only fires for drops on data-file-drop-target elements; guard that
+  // the drop actually landed on this field's zone.
   $effect(() => onFileDrop((x, y, paths) => {
+    const target = document.elementFromPoint(x, y)
+    if (!dropZone?.contains(target)) return
     if (paths && paths.length > 0) {
       value = String(paths[0])
       draggedOver = false
@@ -16,8 +23,8 @@
   }))
 
   function handleBrowse() {
-    if (typeof window.go?.gui?.App?.OpenFileDialog === 'function') {
-      window.go.gui.App.OpenFileDialog(label || 'Select file').then((path) => {
+    if (inWails()) {
+      OpenFileDialog(label || 'Select file').then((path) => {
         if (path) value = path
       })
     }
@@ -32,7 +39,7 @@
   }
 
   function handleClick() {
-    if (typeof window.go?.gui?.App?.OpenFileDialog === 'function') {
+    if (inWails()) {
       handleBrowse()
       return
     }
@@ -54,6 +61,8 @@
   />
 
   <div
+    bind:this={dropZone}
+    data-file-drop-target
     class={`flex flex-col items-center justify-center gap-2 px-4 py-5 border-2 border-dashed rounded-md cursor-pointer transition-colors outline-none text-fg-muted hover:border-brand hover:bg-brand/10 focus-visible:border-brand focus-visible:bg-brand/10 ${draggedOver ? 'border-brand bg-brand/10' : 'border-line'}`}
     role="button"
     tabindex="0"

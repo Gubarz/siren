@@ -38,10 +38,11 @@ patterns/  ->  api/, stores/, ui/, utils/
 system/    ->  api/, stores/, patterns/, ui/
 ui/        ->  utils/
 stores/    ->  api/, utils/, stores/
-api/       ->  utils/ and wailsjs/
+api/       ->  utils/ and bindings/
 ```
 
-Only `src/lib/api/` should import from `wailsjs`. The lint rules enforce this
+Only `src/lib/api/` should import from `frontend/bindings` (the generated
+Wails v3 bindings). The lint rules enforce this
 with `eslint-plugin-boundaries` and `no-restricted-imports`.
 
 So if a feature needs a new App method, add a wrapper in the right

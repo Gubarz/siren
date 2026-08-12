@@ -15,10 +15,10 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"siren/internal/sliver/beacons"
 	"siren/internal/sliver/console"
+	"siren/internal/wailsadapter"
 )
 
 const discoveryTimeout = 10 * time.Minute
@@ -38,7 +38,7 @@ type NetworkDiscovery struct {
 type Service struct {
 	console     *console.Service
 	beacons     *beacons.Service
-	ctx         context.Context
+	ui          *wailsadapter.Bridge
 	mu          sync.RWMutex
 	discoveries map[string]map[string]NetworkDiscovery
 	path        string
@@ -55,8 +55,8 @@ func New(con *console.Service, beac *beacons.Service) *Service {
 	return s
 }
 
-func (s *Service) SetCtx(ctx context.Context) {
-	s.ctx = ctx
+func (s *Service) SetUI(ui *wailsadapter.Bridge) {
+	s.ui = ui
 }
 
 func (s *Service) GetNetworkDiscoveries() []NetworkDiscovery {
@@ -221,8 +221,8 @@ func (s *Service) persist() {
 }
 
 func (s *Service) emitDiscoveryUpdate() {
-	if s.ctx != nil {
-		runtime.EventsEmit(s.ctx, "network-discovery-updated", s.GetNetworkDiscoveries())
+	if s.ui != nil {
+		s.ui.Emit("network-discovery-updated", s.GetNetworkDiscoveries())
 	}
 }
 

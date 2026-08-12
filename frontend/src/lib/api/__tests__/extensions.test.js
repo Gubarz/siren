@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installWailsApp } from '../../../../test/mocks/wails.js'
 import { listExtensions, listWasmExtensions } from '../extensions.js'
 
-describe('extensions api', () => {
-  let app
+const app = vi.hoisted(() => ({
+  RegisterExtensionFromPath: vi.fn(),
+  ListExtensions: vi.fn(),
+  CallExtension: vi.fn(),
+  RegisterWasmExtensionFromPath: vi.fn(),
+  ListWasmExtensions: vi.fn(),
+  ExecWasmExtension: vi.fn(),
+}))
+vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
 
+describe('extensions api', () => {
   beforeEach(() => {
-    app = installWailsApp({
-      ListExtensions: vi.fn(),
-      ListWasmExtensions: vi.fn(),
-    })
+    vi.clearAllMocks()
   })
 
   it('passes the session ID to extension list bindings', async () => {

@@ -2,7 +2,6 @@ package gui
 
 import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"siren/internal/sliver/files"
 	"siren/internal/sliver/registry"
@@ -155,7 +154,7 @@ func (a *App) ReadRegistryValue(sessionID, hive, path, key string) (*registry.Va
 func (a *App) WriteRegistryValue(sessionID, hive, path, key, valueType, value string) error {
 	err := a.Registry.WriteValue(sessionID, hive, path, key, valueType, value)
 	if err == nil {
-		runtime.EventsEmit(a.ctx, "registry-updated", nil)
+		a.bridge.Emit("registry-updated", nil)
 	}
 	return err
 }
@@ -163,7 +162,7 @@ func (a *App) WriteRegistryValue(sessionID, hive, path, key, valueType, value st
 func (a *App) CreateRegistryKey(sessionID, hive, path, key string) error {
 	err := a.Registry.CreateKey(sessionID, hive, path, key)
 	if err == nil {
-		runtime.EventsEmit(a.ctx, "registry-updated", nil)
+		a.bridge.Emit("registry-updated", nil)
 	}
 	return err
 }
@@ -171,7 +170,7 @@ func (a *App) CreateRegistryKey(sessionID, hive, path, key string) error {
 func (a *App) DeleteRegistryEntry(sessionID, hive, path, key string) error {
 	err := a.Registry.DeleteEntry(sessionID, hive, path, key)
 	if err == nil {
-		runtime.EventsEmit(a.ctx, "registry-updated", nil)
+		a.bridge.Emit("registry-updated", nil)
 	}
 	return err
 }

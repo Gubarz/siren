@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installWailsApp } from '../../../../test/mocks/wails.js'
 import { listTrafficEncoders } from '../trafficEncoders.js'
 
-describe('trafficEncoders api', () => {
-  let app
+const app = vi.hoisted(() => ({
+  AddTrafficEncoder: vi.fn(),
+  GetTrafficEncoderMap: vi.fn(),
+  RemoveTrafficEncoder: vi.fn(),
+}))
+vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
 
+describe('trafficEncoders api', () => {
   beforeEach(() => {
-    app = installWailsApp({
-      GetTrafficEncoderMap: vi.fn(),
-    })
+    vi.clearAllMocks()
   })
 
   it('normalizes and sorts traffic encoders from the binding map', async () => {

@@ -1,8 +1,6 @@
 package gui
 
 import (
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-
 	"siren/internal/sliver/discovery"
 	"siren/internal/theme"
 )
@@ -30,5 +28,5 @@ func (a *App) GetSystemTheme() string {
 }
 
 func (a *App) Show() {
-	runtime.WindowShow(a.ctx)
+	a.window.Show()
 }

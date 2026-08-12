@@ -7,4 +7,4 @@ export {
   AddWebsiteContent,
   UpdateWebsiteContent,
   RemoveWebsiteContent,
-} from '../../../wailsjs/go/gui/App.js';
+} from '../../../bindings/siren/cmd/gui/app.js';

@@ -9,6 +9,6 @@
   "ignore": [
     "**/dist/**",
     "**/node_modules/**",
-    "**/wailsjs/**"
+    "**/bindings/**"
   ]
 }

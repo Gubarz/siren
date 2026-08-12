@@ -9,16 +9,17 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/wailsadapter"
 )
 
 const maxStageBytes = 64 * 1024 * 1024
 
 type Service struct {
 	rpc *rpc.Client
-	ctx context.Context
+	ui  *wailsadapter.Bridge
 }
 
 type GenerateStageRequest struct {
@@ -44,8 +45,8 @@ func New(rpc *rpc.Client) *Service {
 	return &Service{rpc: rpc}
 }
 
-func (s *Service) SetCtx(ctx context.Context) {
-	s.ctx = ctx
+func (s *Service) SetUI(ui *wailsadapter.Bridge) {
+	s.ui = ui
 }
 
 func (s *Service) Close() {}
@@ -55,7 +56,7 @@ func (s *Service) GenerateStage(req GenerateStageRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return saveGeneratedFile(s.ctx, resp)
+	return saveGeneratedFile(s.ui, resp)
 }
 
 func (s *Service) StageImplantBuilds(builds []string) error {
@@ -146,13 +147,13 @@ func stageFileData(req TCPListenerRequest) ([]byte, string, error) {
 	return maybePrepend(data, req.PrependSize), filepath.Base(path), nil
 }
 
-func saveGeneratedFile(ctx context.Context, resp *clientpb.Generate) (string, error) {
+func saveGeneratedFile(ui *wailsadapter.Bridge, resp *clientpb.Generate) (string, error) {
 	if resp.File == nil {
 		return "", fmt.Errorf("server returned no stage file")
 	}
-	localPath, err := runtime.SaveFileDialog(ctx, runtime.SaveDialogOptions{
-		Title:           "Save Stage",
-		DefaultFilename: resp.File.Name,
+	localPath, err := ui.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    "Save Stage",
+		Filename: resp.File.Name,
 	})
 	if err != nil || localPath == "" {
 		return localPath, err

@@ -1,4 +1,4 @@
-import { GetEventHistory, SetEventsAcknowledged } from '../../../wailsjs/go/gui/App.js'
+import { GetEventHistory, SetEventsAcknowledged } from '../../../bindings/siren/cmd/gui/app.js'
 
 export async function listEvents({ since = 0, limit = 300 } = {}) {
   return await GetEventHistory(since, limit)
