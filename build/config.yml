@@ -1,0 +1,45 @@
+# Wails v3 project configuration.
+# `info` is used to generate platform build assets; `dev_mode` drives
+# `wails3 dev` (file watching + process orchestration).
+version: '3'
+
+info:
+  companyName: "Gubarz"
+  productName: "siren"
+  productIdentifier: "com.github.gubarz.siren"
+  description: "A GUI for the Sliver C2 framework"
+  copyright: "(c) 2026, siren contributors"
+  comments: ""
+  version: "0.0.1"
+
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - node_modules
+      - frontend
+      - bin
+      - build/bin
+    file:
+      - .DS_Store
+      - .gitignore
+      - .gitkeep
+    watched_extension:
+      - "*.go"
+    git_ignore: true
+  executes:
+    - cmd: npm --prefix frontend install
+      type: once
+    - cmd: npm --prefix frontend run dev
+      type: background
+    - cmd: go mod tidy
+      type: blocking
+    - cmd: wails3 generate bindings
+      type: blocking
+    - cmd: go build -tags "$BUILD_TAGS" -gcflags=all="-l" -buildvcs=false -o bin/siren .
+      type: blocking
+    - cmd: ./bin/siren
+      type: primary
