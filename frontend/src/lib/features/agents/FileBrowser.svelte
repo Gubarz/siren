@@ -292,9 +292,9 @@
 <div
   bind:this={dropZone}
   class="group relative border-2 border-transparent"
-  style="--wails-drop-target: drop"
+  data-file-drop-target
 >
-  <div class="absolute inset-0 hidden flex-col items-center justify-center z-50 bg-black/80 text-brand group-[.wails-drop-target-active]:flex">
+  <div class="absolute inset-0 hidden flex-col items-center justify-center z-50 bg-black/80 text-brand group-[.file-drop-target-active]:flex">
     <Icon name="upload" size={32} />
     <h2 class="mt-5 text-white text-xl font-semibold">Drop files to upload to:</h2>
     <span class="font-mono">{staticData ? (staticData.path || '') : store.state.path}</span>

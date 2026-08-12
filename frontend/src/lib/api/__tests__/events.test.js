@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installWailsApp } from '../../../../test/mocks/wails.js'
 import { listEvents } from '../events.js'
 
-describe('events api', () => {
-  let app
+// The generated bindings are gitignored build output, and v3 bindings call
+// through Call.ByID rather than v2's window.go globals — mock the module.
+const app = vi.hoisted(() => ({
+  GetEventHistory: vi.fn(),
+  SetEventsAcknowledged: vi.fn(),
+}))
+vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
 
+describe('events api', () => {
   beforeEach(() => {
-    app = installWailsApp({
-      GetEventHistory: vi.fn(() => Promise.resolve([])),
-    })
+    vi.clearAllMocks()
+    app.GetEventHistory.mockResolvedValue([])
   })
 
   it('uses stable defaults for event history queries', async () => {

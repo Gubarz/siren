@@ -1,15 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installWailsApp } from '../../../../test/mocks/wails.js'
 import { listCrackFiles, listCrackstations } from '../crack.js'
 
-describe('crack api', () => {
-  let app
+const app = vi.hoisted(() => ({
+  Crackstations: vi.fn(),
+  CrackSubmitJob: vi.fn(),
+  CrackTaskByID: vi.fn(),
+  CrackTaskCancel: vi.fn(),
+  CrackFilesList: vi.fn(),
+  CrackFileDelete: vi.fn(),
+  CrackFileUploadFromPath: vi.fn(),
+}))
+vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
 
+describe('crack api', () => {
   beforeEach(() => {
-    app = installWailsApp({
-      Crackstations: vi.fn(),
-      CrackFilesList: vi.fn(),
-    })
+    vi.clearAllMocks()
   })
 
   it('returns crackstations from PascalCase or camelCase response fields', async () => {
