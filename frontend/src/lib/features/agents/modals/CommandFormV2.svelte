@@ -44,7 +44,7 @@
       if (inputType(flag) === 'password') continue;
       flags[flag.name] = flagValues[flag.name];
     }
-    return { args: { ...argumentValues }, flags };
+    return { args: { ...argumentValues }, flags, advanced: advancedLine };
   });
 
   function applyPreset(values) {
@@ -56,6 +56,10 @@
       }
       for (const [k, v] of Object.entries(values.flags)) {
         if (k in flagValues) flagValues[k] = v;
+      }
+      if (values.advanced != null) {
+        advancedLine = values.advanced;
+        if (values.advanced.trim()) advancedLineOpen = true;
       }
       return;
     }

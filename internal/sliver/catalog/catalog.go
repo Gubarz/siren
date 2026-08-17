@@ -152,23 +152,41 @@ func collectCommandSchemas(
 	}
 }
 
-var commandArgumentPattern = regexp.MustCompile(`(<[^>]+>|\[[^\]]+\])(\.\.\.)?`)
+var (
+	usageTokenPattern   = regexp.MustCompile(`<[^>]+>(\.\.\.)?|\[[^\]]+\](\.\.\.)?|\S+`)
+	bareArgumentPattern = regexp.MustCompile(`^[A-Z][A-Z0-9_-]*$`)
+)
 
+// commandArguments extracts positional arguments from the command's usage
+// string. Sliver built-ins declare them as `<required>` / `[optional]`, while
+// armory extensions and aliases render manifest arguments as bare UPPERCASE
+// words (required) or `[UPPERCASE]` (optional).
 func commandArguments(command *cobra.Command, usageTail string) []CommandArg {
-	matches := commandArgumentPattern.FindAllStringSubmatch(usageTail, -1)
-	arguments := make([]CommandArg, 0, len(matches))
-	for _, match := range matches {
-		token := match[1]
-		name := strings.Trim(token, "<>[]")
-		name = strings.TrimSuffix(name, "...")
-		if name == "" {
+	tokens := usageTokenPattern.FindAllString(usageTail, -1)
+	arguments := make([]CommandArg, 0, len(tokens))
+	for _, token := range tokens {
+		variadic := strings.HasSuffix(token, "...")
+		trimmed := strings.TrimSuffix(token, "...")
+		var argument CommandArg
+		switch {
+		case strings.HasPrefix(trimmed, "<") && strings.HasSuffix(trimmed, ">"):
+			argument = CommandArg{Name: trimmed[1 : len(trimmed)-1], Required: true, Variadic: variadic}
+		case strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]"):
+			argument = CommandArg{Name: trimmed[1 : len(trimmed)-1], Variadic: variadic}
+		case bareArgumentPattern.MatchString(trimmed):
+			argument = CommandArg{Name: trimmed, Required: true, Variadic: variadic}
+		default:
 			continue
 		}
-		arguments = append(arguments, CommandArg{
-			Name:     name,
-			Required: strings.HasPrefix(token, "<"),
-			Variadic: match[2] == "..." || strings.HasSuffix(token, "..."),
-		})
+		// Variadic markers may sit inside the brackets: `<args...>`, `[args...]`.
+		if strings.HasSuffix(argument.Name, "...") {
+			argument.Name = strings.TrimSuffix(argument.Name, "...")
+			argument.Variadic = true
+		}
+		if argument.Name == "" {
+			continue
+		}
+		arguments = append(arguments, argument)
 	}
 	if len(arguments) == 0 {
 		return inferredCommandArguments(command)
