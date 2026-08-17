@@ -7,6 +7,7 @@
   } from '../../api/console.js'
   import { onShellOutput } from '../../api/runtime.js'
   import { errorMessage } from '../../utils/errors.js'
+  import { createShellLineEditor } from '../../utils/shellLineEditor.js'
   import { createXterm } from '../../utils/xterm.js'
 
   let { shell = null } = $props()
@@ -25,9 +26,18 @@
     ;({ term, fit } = createXterm(hostEl))
     term.focus()
 
+    // For PTY shells, forward keystrokes verbatim — xterm produces correct
+    // VT sequences for arrows, control chars, meta. For non-PTY (Windows
+    // piped) shells the remote has no console line discipline: backspace is
+    // ignored and its echo trails the operator's keystrokes, so a local
+    // line editor echoes instantly, edits backspace locally, and submits
+    // completed lines on Enter. The remote echo of a submitted line is
+    // swallowed so it is not displayed twice.
+    const lineEditor = shellPTY ? null : createShellLineEditor()
+
     const stopOutput = onShellOutput((event) => {
       if (event.id !== shellID) return
-      if (event.data) term.write(event.data)
+      if (event.data) term.write(lineEditor ? lineEditor.output(event.data) : event.data)
       if (event.error) term.write(`\r\n\x1b[31m[!] ${event.error}\x1b[0m\r\n`)
       if (event.closed) {
         closed = true
@@ -35,12 +45,19 @@
       }
     })
 
-    // For PTY shells, forward keystrokes verbatim — xterm produces correct
-    // VT sequences for arrows, control chars, meta. For non-PTY (Windows
-    // piped) shells, forward too; readline libraries won't do much but
-    // basic input still works. Ctrl+C on piped falls back to the button.
     term.onData((data) => {
       if (closed) return
+      if (lineEditor) {
+        const { render, send } = lineEditor.input(data)
+        if (render) term.write(render)
+        if (send) {
+          WriteShell(shellID, send).catch((err) => {
+            term.write(`\r\n\x1b[31m[!] ${errorMessage(err)}\x1b[0m\r\n`)
+            closed = true
+          })
+        }
+        return
+      }
       WriteShell(shellID, data).catch((err) => {
         term.write(`\r\n\x1b[31m[!] ${errorMessage(err)}\x1b[0m\r\n`)
         closed = true

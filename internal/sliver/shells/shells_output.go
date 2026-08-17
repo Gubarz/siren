@@ -9,7 +9,11 @@ const (
 	maxShellOutputBytes = 4 * 1024 * 1024
 	shellTrimTarget     = 3 * 1024 * 1024
 	shellEventBatchSize = 512 * 1024
-	shellEventInterval  = 100 * time.Millisecond
+	// shellEventInterval bounds how long small trickles of output wait
+	// before reaching the frontend. 16ms matches the console subprocess
+	// path (subprocOutputInterval) and keeps echoes/short bursts snappy;
+	// large bursts still flush on shellEventBatchSize.
+	shellEventInterval = 16 * time.Millisecond
 )
 
 // emitShellOutput batches shell chunks onto the wails event bus, flushing
