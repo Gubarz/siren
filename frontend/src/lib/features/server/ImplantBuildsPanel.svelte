@@ -10,7 +10,8 @@
   import Button from '$components/ui/Button.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
   import { DeleteImplantBuild, RegenerateImplant } from '../../api/server.js'
-  import { StageImplantBuilds } from '../../api/staging.js'
+  import { StageImplantBuilds, UnstageImplantBuild } from '../../api/staging.js'
+  import { implantFormat } from '../../utils/formats.js'
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
   import { overlays } from '$stores/ui/overlays.svelte.js'
@@ -33,7 +34,7 @@
     _rowKey: build.name || index,
     _name: build.name || '-',
     _osArch: `${build.GOOS || build.goos || '?'}/${build.GOARCH || build.goarch || '?'}`,
-    _format: fmtFormat(build.Format ?? build.format),
+    _format: implantFormat(build.Format ?? build.format),
     _type: (build.IsBeacon ?? build.isBeacon) ? 'beacon' : 'session',
     _staged: Boolean(build.staged),
   })))
@@ -44,7 +45,7 @@
     { key: '_format', label: 'Format', width: 120 },
     { key: '_type', label: 'Type', width: 90 },
     { key: '_staged', label: 'Stage', width: 90 },
-    { key: '_actions', label: '', width: 210, sortable: false },
+    { key: '_actions', label: '', width: 280, sortable: false },
   ]
 
   async function delBuild(name) {
@@ -68,8 +69,16 @@
     }
   }
 
-  function fmtFormat(f) {
-    return ({ 0: 'shared lib', 1: 'shellcode', 2: 'executable', 3: 'service', 4: 'third-party' })[f] ?? f
+  async function unstageBuild(name) {
+    buildStatus = ''
+    buildError = ''
+    try {
+      await UnstageImplantBuild(name)
+      buildStatus = `${name} unstaged`
+      await implantBuilds.refresh()
+    } catch (err) {
+      buildError = errorMessage(err, 'Unstage failed: ')
+    }
   }
 </script>
 
@@ -111,6 +120,7 @@
           <div class="flex gap-2">
             <Button color="dark" size="xs" onclick={() => regen(build._name)}>Download</Button>
             <Button color="dark" size="xs" onclick={() => stageBuild(build._name)} disabled={build._staged}>Stage</Button>
+            <Button color="dark" size="xs" onclick={() => unstageBuild(build._name)} disabled={!build._staged}>Unstage</Button>
             <Button color="red" size="xs" onclick={() => delBuild(build._name)}>Delete</Button>
           </div>
         {:else}
