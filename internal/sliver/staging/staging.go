@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"siren/internal/sliver/rpc"
 	"siren/internal/wailsadapter"
@@ -18,7 +22,7 @@ import (
 const maxStageBytes = 64 * 1024 * 1024
 
 type Service struct {
-	rpc *rpc.Client
+	rpc stagingRPC
 	ui  *wailsadapter.Bridge
 }
 
@@ -42,7 +46,48 @@ type TCPListenerRequest struct {
 }
 
 func New(rpc *rpc.Client) *Service {
-	return &Service{rpc: rpc}
+	return &Service{rpc: liveStagingRPC{client: rpc}}
+}
+
+// stagingRPC is the slice of the Sliver RPC surface the staging service
+// needs. The adapter keeps the live client behind an interface so the
+// service can be unit tested with a fake (mirrors internal/sliver/server).
+type stagingRPC interface {
+	Connected() bool
+	StageImplantBuild(context.Context, *clientpb.ImplantStageReq) (*commonpb.Empty, error)
+	ImplantBuilds(context.Context, *commonpb.Empty) (*clientpb.ImplantBuilds, error)
+	GenerateStage(context.Context, *clientpb.GenerateStageReq) (*clientpb.Generate, error)
+	StartTCPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error)
+}
+
+type liveStagingRPC struct {
+	client *rpc.Client
+}
+
+func (r liveStagingRPC) Connected() bool {
+	return r.client != nil && r.client.Connected()
+}
+
+func (r liveStagingRPC) StageImplantBuild(
+	ctx context.Context,
+	req *clientpb.ImplantStageReq,
+) (*commonpb.Empty, error) {
+	return r.client.RPC.StageImplantBuild(ctx, req)
+}
+
+func (r liveStagingRPC) ImplantBuilds(ctx context.Context, req *commonpb.Empty) (*clientpb.ImplantBuilds, error) {
+	return r.client.RPC.ImplantBuilds(ctx, req)
+}
+
+func (r liveStagingRPC) GenerateStage(ctx context.Context, req *clientpb.GenerateStageReq) (*clientpb.Generate, error) {
+	return r.client.RPC.GenerateStage(ctx, req)
+}
+
+func (r liveStagingRPC) StartTCPStagerListener(
+	ctx context.Context,
+	req *clientpb.StagerListenerReq,
+) (*clientpb.StagerListener, error) {
+	return r.client.RPC.StartTCPStagerListener(ctx, req)
 }
 
 func (s *Service) SetUI(ui *wailsadapter.Bridge) {
@@ -50,6 +95,60 @@ func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 }
 
 func (s *Service) Close() {}
+
+// isEmptyRecordErr reports whether err is the gRPC NotFound Sliver returns
+// when the implant_builds table has no rows — treat it as an empty list.
+func isEmptyRecordErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if s, ok := status.FromError(err); ok && s.Code() == codes.NotFound {
+		return true
+	}
+	return false
+}
+
+// UnstageImplantBuild unstages one build while keeping every other staged
+// build staged. Sliver's StageImplantBuild RPC first clears Stage on every
+// build, so we re-submit the names that must remain staged.
+func (s *Service) UnstageImplantBuild(name string) error {
+	if !s.rpc.Connected() {
+		return rpc.ErrNotConnected
+	}
+	target := strings.TrimSpace(name)
+	if target == "" {
+		return fmt.Errorf("build name is required")
+	}
+	builds, err := s.rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
+	if isEmptyRecordErr(err) {
+		builds = &clientpb.ImplantBuilds{}
+		err = nil
+	}
+	if err != nil {
+		return err
+	}
+	if builds.Staged == nil || !builds.Staged[target] {
+		return fmt.Errorf("build %q is not staged", target)
+	}
+	remaining := make([]string, 0, len(builds.Staged))
+	for buildName, staged := range builds.Staged {
+		if staged && buildName != target {
+			remaining = append(remaining, buildName)
+		}
+	}
+	sort.Strings(remaining)
+	_, err = s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{Build: remaining})
+	return err
+}
+
+// UnstageAllImplantBuilds clears the Stage flag on every implant build.
+func (s *Service) UnstageAllImplantBuilds() error {
+	if !s.rpc.Connected() {
+		return rpc.ErrNotConnected
+	}
+	_, err := s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{})
+	return err
+}
 
 func (s *Service) GenerateStage(req GenerateStageRequest) (string, error) {
 	resp, err := s.generateStage(req)
@@ -67,7 +166,7 @@ func (s *Service) StageImplantBuilds(builds []string) error {
 	if len(names) == 0 {
 		return fmt.Errorf("at least one build is required")
 	}
-	_, err := s.rpc.RPC.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{
+	_, err := s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{
 		Build: names,
 	})
 	return err
@@ -81,7 +180,7 @@ func (s *Service) StartTCPStagerListener(req TCPListenerRequest) (*clientpb.Stag
 	if err != nil {
 		return nil, err
 	}
-	return s.rpc.RPC.StartTCPStagerListener(context.Background(), &clientpb.StagerListenerReq{
+	return s.rpc.StartTCPStagerListener(context.Background(), &clientpb.StagerListenerReq{
 		Protocol:    clientpb.StageProtocol_TCP,
 		Host:        strings.TrimSpace(req.Host),
 		Port:        req.Port,
@@ -120,7 +219,7 @@ func (s *Service) generateStage(req GenerateStageRequest) (*clientpb.Generate, e
 	if profile == "" {
 		return nil, fmt.Errorf("profile is required")
 	}
-	return s.rpc.RPC.GenerateStage(context.Background(), &clientpb.GenerateStageReq{
+	return s.rpc.GenerateStage(context.Background(), &clientpb.GenerateStageReq{
 		Profile:       profile,
 		Name:          strings.TrimSpace(req.Name),
 		AESEncryptKey: req.AESEncryptKey,
