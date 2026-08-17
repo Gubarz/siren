@@ -52,6 +52,18 @@ export function shortAgentID(id) {
   return String(id || '').split('-')[0];
 }
 
+// ID → agent lookup across sessions and beacons. Entries are annotated with
+// `_kind` so consumers (e.g. ReconfigureAgentModal) get the same agent shape
+// the table/graph paths hand out — raw store objects carry no `_kind`, and
+// without it a beacon renders as a session. On collision the beacon entry
+// wins, matching the resolution order the agent dropdowns have always used.
+export function buildAgentMap(sessionsList, beaconsList) {
+  const map = new Map();
+  for (const session of sessionsList || []) map.set(session.ID, { ...session, _kind: 'session' });
+  for (const beacon of beaconsList || []) map.set(beacon.ID, { ...beacon, _kind: 'beacon' });
+  return map;
+}
+
 export function isHighPrivilege(username) {
   const lower = String(username || '').toLowerCase();
   const account = lower.split(/[\\/]/).pop() || '';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { shortAgentID, isAgentOnline, pivotParentMap } from '../agents.js'
+import { shortAgentID, isAgentOnline, pivotParentMap, buildAgentMap } from '../agents.js'
 
 describe('shortAgentID', () => {
   it('returns first segment of a UUID', () => {
@@ -65,5 +65,28 @@ describe('pivotParentMap', () => {
     }
     const map = pivotParentMap(graph)
     expect(map.size).toBe(0) // no parent for root-level entries
+  })
+})
+
+describe('buildAgentMap', () => {
+  it('indexes sessions and beacons by ID, annotated with _kind', () => {
+    const map = buildAgentMap([{ ID: 's-1', Hostname: 'ws1' }], [{ ID: 'b-1', Hostname: 'ws2' }])
+    expect(map.get('s-1')).toMatchObject({ ID: 's-1', Hostname: 'ws1', _kind: 'session' })
+    expect(map.get('b-1')).toMatchObject({ ID: 'b-1', Hostname: 'ws2', _kind: 'beacon' })
+  })
+
+  it('does not mutate the source objects', () => {
+    const session = { ID: 's-1' }
+    buildAgentMap([session], [])
+    expect(session._kind).toBeUndefined()
+  })
+
+  it('lets beacons win on ID collision (matches dropdown lookup order)', () => {
+    const map = buildAgentMap([{ ID: 'x', Hostname: 'as-session' }], [{ ID: 'x', Hostname: 'as-beacon' }])
+    expect(map.get('x')).toMatchObject({ Hostname: 'as-beacon', _kind: 'beacon' })
+  })
+
+  it('tolerates null/undefined lists', () => {
+    expect(buildAgentMap(null, undefined).size).toBe(0)
   })
 })

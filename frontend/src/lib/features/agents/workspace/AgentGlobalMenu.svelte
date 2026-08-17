@@ -24,6 +24,7 @@
   import { errorMessage } from '../../../utils/errors.js'
   import { runGuiAction } from '../../palette/GuiActions.js'
   import { ROW_COLORS, colorHex } from '../../../utils/agentColors.js'
+  import { buildAgentMap } from '../../../utils/agents.js'
 
   useResource(sessions, beacons, agentColors)
 
@@ -34,12 +35,9 @@
   let guiCommands = $derived((categories.find((category) => category.category === 'GUI')?.commands || []).filter(isAgentWorkspaceCommand))
   let commandCategories = $derived(categories.filter((category) => category.category !== 'GUI' && category.category !== 'Generic'))
 
-  let agentMap = $derived(() => {
-    const map = new Map()
-    for (const s of (sessions.data || [])) map.set(s.ID, s)
-    for (const b of (beacons.data || [])) map.set(b.ID, b)
-    return map
-  })
+  // NOTE: must be $derived.by — plain $derived would store the function
+  // itself as the value and agentMap.get(...) would throw.
+  let agentMap = $derived.by(() => buildAgentMap(sessions.data, beacons.data))
 
   function getAgentLabel(id) {
     const a = agentMap.get(id)
