@@ -18,6 +18,7 @@
   import CrackingPanel from './CrackingPanel.svelte';
   import BuildFarmPanel from './BuildFarmPanel.svelte';
   import CasesPanel from './CasesPanel.svelte';
+  import StagingPanel from './StagingPanel.svelte';
   import AliasesPanel from './AliasesPanel.svelte';
   import Console from '$components/patterns/Console/Console.svelte';
   import Button from '$components/ui/Button.svelte';
@@ -31,6 +32,7 @@
     { id: 'console', label: 'Console', icon: 'terminal' },
     { id: 'listeners', label: 'Listeners', icon: 'headphones' },
     { id: 'builds', label: 'Builds', icon: 'factory' },
+    { id: 'staging', label: 'Staging', icon: 'bolt' },
     { id: 'profiles', label: 'Profiles', icon: 'sliders' },
     { id: 'events', label: 'Events', icon: 'history' },
     { id: 'loot', label: 'Loot', icon: 'database' },
@@ -51,7 +53,7 @@
     { id: 'server', label: 'Server', icon: 'cog' },
   ];
 
-  const primaryTabs = tabs.slice(0, 5);
+  const primaryTabs = tabs.slice(0, 6);
   const tabGroups = [
     {
       id: 'ops',
@@ -197,6 +199,8 @@
       <EventsLog />
     {:else if active === 'builds'}
       <ImplantBuildsPanel embedded />
+    {:else if active === 'staging'}
+      <StagingPanel embedded />
     {:else if active === 'profiles'}
       <ProfilesPanel embedded />
     {/if}
