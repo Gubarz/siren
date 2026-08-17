@@ -114,6 +114,73 @@ func TestUnstageAllImplantBuildsSubmitsEmptyBuildList(t *testing.T) {
 	}
 }
 
+func TestStageImplantBuildsRequiresConnection(t *testing.T) {
+	fake := &fakeStagingRPC{}
+	svc := &Service{rpc: fake}
+
+	err := svc.StageImplantBuilds([]string{"alpha"})
+
+	if !errors.Is(err, rpc.ErrNotConnected) {
+		t.Fatalf("StageImplantBuilds() error = %v, want %v", err, rpc.ErrNotConnected)
+	}
+	if fake.stageReq != nil {
+		t.Fatal("StageImplantBuild was called while disconnected")
+	}
+}
+
+func TestStageImplantBuildsRequiresAtLeastOneBuild(t *testing.T) {
+	fake := &fakeStagingRPC{connected: true}
+	svc := &Service{rpc: fake}
+
+	err := svc.StageImplantBuilds([]string{"  "})
+
+	if err == nil || err.Error() != "at least one build is required" {
+		t.Fatalf("StageImplantBuilds() error = %v, want at least one build is required", err)
+	}
+	if fake.stageReq != nil {
+		t.Fatal("StageImplantBuild was called with no builds")
+	}
+}
+
+func TestStageImplantBuildsKeepsExistingStagedBuilds(t *testing.T) {
+	fake := &fakeStagingRPC{
+		connected: true,
+		builds: &clientpb.ImplantBuilds{Staged: map[string]bool{
+			"alpha": true,
+			"gamma": false,
+		}},
+	}
+	svc := &Service{rpc: fake}
+
+	err := svc.StageImplantBuilds([]string{" beta ", "beta"})
+
+	if err != nil {
+		t.Fatalf("StageImplantBuilds() returned error: %v", err)
+	}
+	if fake.stageReq == nil {
+		t.Fatal("StageImplantBuild was not called")
+	}
+	assertStrings(t, fake.stageReq.Build, []string{"alpha", "beta"})
+}
+
+func TestStageImplantBuildsWorksWithEmptyBuildTable(t *testing.T) {
+	fake := &fakeStagingRPC{
+		connected: true,
+		buildsErr: status.Error(codes.NotFound, "record not found"),
+	}
+	svc := &Service{rpc: fake}
+
+	err := svc.StageImplantBuilds([]string{"alpha"})
+
+	if err != nil {
+		t.Fatalf("StageImplantBuilds() returned error: %v", err)
+	}
+	if fake.stageReq == nil {
+		t.Fatal("StageImplantBuild was not called")
+	}
+	assertStrings(t, fake.stageReq.Build, []string{"alpha"})
+}
+
 func TestUnstageImplantBuildPropagatesRPCError(t *testing.T) {
 	wantErr := errors.New("listing failed")
 	fake := &fakeStagingRPC{connected: true, buildsErr: wantErr}

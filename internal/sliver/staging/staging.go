@@ -162,6 +162,10 @@ func (s *Service) GenerateStage(req GenerateStageRequest) (string, error) {
 	return saveGeneratedFile(s.ui, resp)
 }
 
+// StageImplantBuilds marks the named builds as staged without unstaging any
+// builds already staged. Sliver's StageImplantBuild RPC replaces the entire
+// staged set (it clears Stage on every build first), so we merge the new
+// names with the currently staged builds before submitting.
 func (s *Service) StageImplantBuilds(builds []string) error {
 	if !s.rpc.Connected() {
 		return rpc.ErrNotConnected
@@ -170,9 +174,29 @@ func (s *Service) StageImplantBuilds(builds []string) error {
 	if len(names) == 0 {
 		return fmt.Errorf("at least one build is required")
 	}
-	_, err := s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{
-		Build: names,
-	})
+	current, err := s.rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
+	if isEmptyRecordErr(err) {
+		current = &clientpb.ImplantBuilds{}
+		err = nil
+	}
+	if err != nil {
+		return err
+	}
+	seen := make(map[string]bool, len(names)+len(current.Staged))
+	for name, staged := range current.Staged {
+		if staged {
+			seen[name] = true
+		}
+	}
+	for _, name := range names {
+		seen[name] = true
+	}
+	merged := make([]string, 0, len(seen))
+	for name := range seen {
+		merged = append(merged, name)
+	}
+	sort.Strings(merged)
+	_, err = s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{Build: merged})
 	return err
 }
 
