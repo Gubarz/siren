@@ -75,8 +75,13 @@ jobs:
       # frontend/dist is embedded via go:embed, so it must exist first.
       # frontend/bindings is gitignored — bindings must be generated from
       # the Go service before vite can build the frontend.
+      # The CLI links Wails' Linux windowing stack, so it must be built
+      # with the same toolkit tag as the app: the gtk3 job only installs
+      # GTK3/webkit2gtk-4.1 headers and the CLI would otherwise fail to
+      # link against GTK4/webkitgtk-6.0.
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.7
+        shell: bash
+        run: go install -tags "${{ matrix.build_tags }}" github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.7
 
       - name: Generate Wails bindings
         run: wails3 generate bindings
