@@ -1,0 +1,12 @@
+version: '3'
+
+# `wails3 build` is a thin wrapper around `wails3 task build` (embedded
+# go-task — no separate `task` binary needed). The canonical build pipeline
+# lives in the Makefile, so the task simply delegates to it, keeping one
+# source of truth for the build. `-tags` given to `wails3 build` arrives as
+# EXTRA_TAGS and is forwarded to the Makefile's BUILD_TAGS.
+tasks:
+  build:
+    desc: Build the application (delegates to the Makefile)
+    cmds:
+      - make build BUILD_TAGS="{{.EXTRA_TAGS | default ``}}"

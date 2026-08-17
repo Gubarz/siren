@@ -8,6 +8,10 @@ export default defineConfig({
   // `wails3 dev` hands the dev-server port to both the app
   // (FRONTEND_DEVSERVER_URL) and vite (WAILS_VITE_PORT).
   server: {
+    // wails3's dev proxy dials the dev server over IPv4 (127.0.0.1). On hosts
+    // where localhost resolves to ::1 first, vite would bind IPv6-only and the
+    // proxy gets ECONNREFUSED — pin IPv4 loopback so `wails3 dev` works.
+    host: '127.0.0.1',
     port: Number(process.env.WAILS_VITE_PORT) || 5173,
     strictPort: true,
   },
