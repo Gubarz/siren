@@ -21,6 +21,12 @@ const subprocCommandTerminator = "\n"
 // Interactive prompts work because the subprocess owns fd 0/1/2 outright
 // — no in-process hijack. Returns a jobID the frontend uses for I/O.
 func (s *Service) StartConsole(sessionID string) (string, error) {
+	s.subprocStart.Lock()
+	defer s.subprocStart.Unlock()
+	if id := s.subproc.acquireSession(sessionID); id != "" {
+		return id, nil
+	}
+
 	self, err := os.Executable()
 	if err != nil {
 		return "", err

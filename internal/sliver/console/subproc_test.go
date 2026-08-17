@@ -207,6 +207,40 @@ type recordingEmitter struct {
 	names []string
 }
 
+func TestSubprocSessionLeasesShareOneJob(t *testing.T) {
+	mgr := &subprocMgr{}
+	job := &subprocJob{id: "job-1", sessionID: "session-1"}
+	mgr.add(job)
+
+	if got := mgr.acquireSession("session-1"); got != "job-1" {
+		t.Fatalf("acquireSession() = %q, want job-1", got)
+	}
+	if _, shouldStop := mgr.release("job-1"); shouldStop {
+		t.Fatal("first release stopped a console with another window lease")
+	}
+	if _, shouldStop := mgr.release("job-1"); !shouldStop {
+		t.Fatal("final release did not stop the console")
+	}
+	if _, shouldStop := mgr.release("job-1"); shouldStop {
+		t.Fatal("repeated release tried to stop the same console again")
+	}
+}
+
+func TestSubprocOutputSnapshotReplaysAndBoundsHistory(t *testing.T) {
+	job := &subprocJob{}
+	job.appendOutput([]byte("first"))
+	job.appendOutput([]byte(" second"))
+	if got := string(job.outputSnapshot()); got != "first second" {
+		t.Fatalf("outputSnapshot() = %q, want first second", got)
+	}
+
+	large := bytes.Repeat([]byte{'x'}, consoleOutputReplayMaxBytes+10)
+	job.appendOutput(large)
+	if got := len(job.outputSnapshot()); got != consoleOutputReplayMaxBytes {
+		t.Fatalf("bounded snapshot length = %d, want %d", got, consoleOutputReplayMaxBytes)
+	}
+}
+
 func (e *recordingEmitter) Emit(name string, _ any) {
 	e.names = append(e.names, name)
 }

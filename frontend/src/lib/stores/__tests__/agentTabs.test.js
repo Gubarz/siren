@@ -57,6 +57,43 @@ describe('agentTabs store', () => {
     expect(CloseShell).toHaveBeenCalledWith('shell-1')
   })
 
+  it('keeps a shell alive while its tab is detached and closes it with the window', () => {
+    const sessionID = 'abcdef123456'
+    const tabID = `${sessionID}-shell-1`
+
+    agentTabs.registerShell({ id: 'shell-1', sessionID })
+    agentTabs.openTab(sessionID, 'shell-1', 'left')
+    expect(agentTabs.detachTab('left', tabID)).toBe(true)
+
+    expect(getState().panes.left.tabs).toEqual([])
+    expect(getState().detachedTypeCounts['shell-1']).toBe(1)
+    expect(CloseShell).not.toHaveBeenCalled()
+
+    agentTabs.releaseDetachedTab('shell-1')
+
+    expect(CloseShell).toHaveBeenCalledWith('shell-1')
+    expect(getState().shellsByID['shell-1']).toBeUndefined()
+  })
+
+  it('restores a detached tab to the focused pane', () => {
+    const sessionID = 'abcdef123456'
+    const tab = {
+      id: `${sessionID}-tasks`,
+      sessionId: sessionID,
+      type: 'tasks',
+      label: 'abcdef12 - Tasks',
+      meta: null,
+    }
+
+    agentTabs.openTab(sessionID, 'tasks', 'left')
+    agentTabs.detachTab('left', tab.id)
+    expect(agentTabs.restoreDetachedTab({ tab })).toBe(true)
+
+    expect(getState().panes.left.tabs).toEqual([tab])
+    expect(getState().panes.left.activeTabId).toBe(tab.id)
+    expect(getState().detachedTypeCounts.tasks).toBeUndefined()
+  })
+
   it('keeps the active tab pointed at an existing tab after close', () => {
     const sessionID = 'abcdef123456'
 

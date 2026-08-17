@@ -80,22 +80,23 @@ type Service struct {
 	rpc *rpc.Client
 	bus bus.Bus
 
-	mu           sync.Mutex
-	sliverCon    *console.SliverClient
-	sliverCmds   func() *cobra.Command
-	serverCmds   func() *cobra.Command
-	sliverRoot   *cobra.Command
-	serverRoot   *cobra.Command
-	sliverCmpl   *completionTrie
-	serverCmpl   *completionTrie
-	menuSession  string
-	output       outputSink
-	consoleInit  bool
-	consoleOnce  sync.Once
-	consoleErr   error
+	mu          sync.Mutex
+	sliverCon   *console.SliverClient
+	sliverCmds  func() *cobra.Command
+	serverCmds  func() *cobra.Command
+	sliverRoot  *cobra.Command
+	serverRoot  *cobra.Command
+	sliverCmpl  *completionTrie
+	serverCmpl  *completionTrie
+	menuSession string
+	output      outputSink
+	consoleInit bool
+	consoleOnce sync.Once
+	consoleErr  error
 
-	emitter Emitter
-	subproc subprocMgr
+	emitter      Emitter
+	subproc      subprocMgr
+	subprocStart sync.Mutex
 
 	routedCommand RoutedCommandHandler
 }

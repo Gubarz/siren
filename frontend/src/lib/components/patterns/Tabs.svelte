@@ -83,7 +83,12 @@
         data-tab-button="true"
         draggable={!!tab.ondragstart}
         ondragstart={tab.ondragstart}
+        ondrag={tab.ondrag}
         ondragend={tab.ondragend}
+        onpointerdown={tab.onpointerdown}
+        onpointermove={tab.onpointermove}
+        onpointerup={tab.onpointerup}
+        onpointercancel={tab.onpointercancel}
         class="{base} {variantClass} {fullWidth ? 'flex-1 text-center' : ''} {active === tab.id ? 'text-brand border-brand' : 'text-fg-muted border-transparent hover:text-fg hover:border-fg-muted'}"
         onclick={() => selectTab(tab)}
         oncontextmenu={(e) => handleContextMenu(e, tab)}
@@ -100,7 +105,9 @@
             <span
               role="button"
               tabindex="0"
+              data-tab-close="true"
               class="ml-1 px-1 rounded text-xs opacity-60 hover:opacity-100 hover:bg-danger-500 hover:text-white"
+              onpointerdown={(e) => e.stopPropagation()}
               onclick={(e) => closeTab(e, tab)}
               onkeydown={(e) => handleCloseKeydown(e, tab)}
             >&times;</span>

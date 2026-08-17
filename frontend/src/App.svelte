@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { onSliverEvent } from './lib/api/runtime.js'
+  import { onSliverEvent, onWailsEvent } from './lib/api/runtime.js'
   import AppShell from '$components/layout/AppShell.svelte'
   import TitleBar from './lib/components/layout/TitleBar.svelte'
   import StatusBar from './lib/components/layout/StatusBar.svelte'
@@ -23,6 +23,7 @@
   import { beacons } from '$stores/resources/beacons.svelte.js'
   import { pushEvent } from '$stores/resources/events.svelte.js'
   import { navigation } from '$stores/ui/navigation.svelte.js'
+  import { agentTabs } from '$stores/agentTabs.svelte.js'
   import { applyThemePreference, watchSystemThemePreference } from '$stores/ui/theme.svelte.js'
   import { installClientLogHandlers } from './lib/utils/clientLog.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
@@ -54,6 +55,15 @@
     applyThemePreference()
     const stopWatchingTheme = watchSystemThemePreference()
     const stopClientLogHandlers = installClientLogHandlers()
+    const stopTabReattach = onWailsEvent('agent-tab-reattach', (payload) => {
+      try {
+        const envelope = typeof payload === 'string' ? JSON.parse(payload) : payload
+        if (agentTabs.restoreDetachedTab(envelope)) navigation.setView('agents')
+      } catch { /* Ignore malformed cross-window payloads. */ }
+    })
+    const stopDetachedTabClosed = onWailsEvent('agent-tab-window-closed', (payload) => {
+      agentTabs.releaseDetachedTab(payload?.type)
+    })
     const stopSliverEvents = onSliverEvent((event) => {
       const type = event.type || ''
       if (type === 'stream-closed') {
@@ -66,6 +76,8 @@
     return () => {
       stopWatchingTheme()
       stopClientLogHandlers()
+      stopTabReattach?.()
+      stopDetachedTabClosed?.()
       stopSliverEvents?.()
     }
   })

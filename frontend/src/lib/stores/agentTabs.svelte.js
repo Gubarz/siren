@@ -76,10 +76,18 @@ function panesHaveTabType(panes, type) {
   return Object.values(panes).some((pane) => pane.tabs.some((tab) => tab.type === type))
 }
 
-function closeRemovedShells(shellsByID, removedTabs, panesAfterRemoval) {
+function decrementDetachedCount(counts, type) {
+  const next = { ...counts }
+  const count = next[type] || 0
+  if (count <= 1) delete next[type]
+  else next[type] = count - 1
+  return next
+}
+
+function closeRemovedShells(shellsByID, removedTabs, panesAfterRemoval, detachedTypeCounts = {}) {
   let nextShells = shellsByID
   for (const tab of removedTabs) {
-    if (!isShellTab(tab) || panesHaveTabType(panesAfterRemoval, tab.type)) continue
+    if (!isShellTab(tab) || panesHaveTabType(panesAfterRemoval, tab.type) || detachedTypeCounts[tab.type] > 0) continue
     CloseShell(tab.type).catch(() => {})
     if (nextShells === shellsByID) nextShells = { ...shellsByID }
     delete nextShells[tab.type]
@@ -91,6 +99,7 @@ const INITIAL = {
   panes: { left: { tabs: [], activeTabId: '' } },
   focusPane: 'left',
   shellsByID: {},
+  detachedTypeCounts: {},
 }
 
 const SHELL_LAUNCH_DEDUPE_MS = 2000
@@ -104,6 +113,7 @@ class AgentTabs {
   get panes() { return this.#state.panes }
   get focusPane() { return this.#state.focusPane }
   get shellsByID() { return this.#state.shellsByID }
+  get detachedTypeCounts() { return this.#state.detachedTypeCounts }
   get state() { return this.#state }
 
   #update(fn) {
@@ -266,7 +276,7 @@ class AgentTabs {
         focusPane = 'left'
       }
       const next = normalizeState({ ...s, panes: newPanes, focusPane }, focusPane)
-      const shellsByID = closeRemovedShells(s.shellsByID, closedTab ? [closedTab] : [], next.panes)
+      const shellsByID = closeRemovedShells(s.shellsByID, closedTab ? [closedTab] : [], next.panes, s.detachedTypeCounts)
       return { ...next, shellsByID }
     })
   }
@@ -280,7 +290,7 @@ class AgentTabs {
       const removed = pane.tabs.filter((t) => t.id !== tabId)
       const newPanes = { ...s.panes, [paneId]: { tabs: [tab], activeTabId: tabId } }
       const next = normalizeState({ ...s, panes: newPanes }, paneId)
-      const shellsByID = closeRemovedShells(s.shellsByID, removed, next.panes)
+      const shellsByID = closeRemovedShells(s.shellsByID, removed, next.panes, s.detachedTypeCounts)
       return { ...next, shellsByID }
     })
   }
@@ -298,8 +308,87 @@ class AgentTabs {
         ...s,
         panes: { ...s.panes, [paneId]: { tabs: keep, activeTabId: newActive } },
       }, paneId)
-      const shellsByID = closeRemovedShells(s.shellsByID, removed, next.panes)
+      const shellsByID = closeRemovedShells(s.shellsByID, removed, next.panes, s.detachedTypeCounts)
       return { ...next, shellsByID }
+    })
+  }
+
+  detachTab(paneId, tabId) {
+    let detached = false
+    this.#update((s) => {
+      const pane = s.panes[paneId]
+      const tab = pane?.tabs.find((candidate) => candidate.id === tabId)
+      if (!tab) return s
+
+      detached = true
+      const tabs = pane.tabs.filter((candidate) => candidate.id !== tabId)
+      const newPanes = {
+        ...s.panes,
+        [paneId]: {
+          tabs,
+          activeTabId: pane.activeTabId === tabId
+            ? (tabs[tabs.length - 1]?.id || '')
+            : pane.activeTabId,
+        },
+      }
+      if (paneId === 'right' && tabs.length === 0) delete newPanes.right
+
+      const detachedTypeCounts = {
+        ...s.detachedTypeCounts,
+        [tab.type]: (s.detachedTypeCounts[tab.type] || 0) + 1,
+      }
+      const focusPane = newPanes[s.focusPane] ? s.focusPane : 'left'
+      return normalizeState({ ...s, panes: newPanes, focusPane, detachedTypeCounts }, focusPane)
+    })
+    return detached
+  }
+
+  restoreDetachedTab(envelope) {
+    const tab = envelope?.tab
+    if (!tab?.id || !tab?.type || !tab?.sessionId) return false
+    if (envelope.shell) this.registerShell(envelope.shell)
+
+    let restored = false
+    this.#update((s) => {
+      const detachedTypeCounts = decrementDetachedCount(s.detachedTypeCounts, tab.type)
+      for (const [paneId, pane] of Object.entries(s.panes)) {
+        if (!pane.tabs.some((candidate) => candidate.id === tab.id)) continue
+        restored = true
+        return {
+          ...s,
+          detachedTypeCounts,
+          panes: { ...s.panes, [paneId]: { ...pane, activeTabId: tab.id } },
+          focusPane: paneId,
+        }
+      }
+
+      restored = true
+      const paneId = s.panes[s.focusPane] ? s.focusPane : 'left'
+      const pane = s.panes[paneId] || { tabs: [], activeTabId: '' }
+      return normalizeState({
+        ...s,
+        detachedTypeCounts,
+        panes: {
+          ...s.panes,
+          [paneId]: { tabs: [...pane.tabs, tab], activeTabId: tab.id },
+        },
+        focusPane: paneId,
+      }, paneId)
+    })
+    return restored
+  }
+
+  releaseDetachedTab(type) {
+    if (!type) return
+    this.#update((s) => {
+      const detachedTypeCounts = decrementDetachedCount(s.detachedTypeCounts, type)
+      let shellsByID = s.shellsByID
+      if (type.startsWith('shell-') && !panesHaveTabType(s.panes, type) && !detachedTypeCounts[type]) {
+        CloseShell(type).catch(() => {})
+        shellsByID = { ...s.shellsByID }
+        delete shellsByID[type]
+      }
+      return { ...s, detachedTypeCounts, shellsByID }
     })
   }
 

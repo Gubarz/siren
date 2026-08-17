@@ -42,6 +42,7 @@ export function onWailsEvent(name, callback) {
 
 const fileDropListeners = new Set();
 let fileDropRegistered = false;
+let currentWindowName = '';
 
 // v3 only delivers drops that land on elements carrying the
 // data-file-drop-target attribute; the Go backend re-emits them as the
@@ -49,7 +50,10 @@ let fileDropRegistered = false;
 export function onFileDrop(callback) {
   fileDropListeners.add(callback);
   if (!fileDropRegistered) {
-    subscribe('files-dropped', (data) => {
+    Window.Name().then((name) => { currentWindowName = name }).catch(() => {});
+    Events.On('files-dropped', (event) => {
+      if (event?.sender && currentWindowName && event.sender !== currentWindowName) return;
+      const data = event?.data;
       if (!data) return;
       for (const listener of fileDropListeners) listener(data.x, data.y, data.files);
     });
@@ -70,6 +74,10 @@ export function minimizeWindow() {
 
 export function toggleMaximizeWindow() {
   Window.ToggleMaximise();
+}
+
+export function closeWindow() {
+  Window.Close();
 }
 
 export function quitApplication() {

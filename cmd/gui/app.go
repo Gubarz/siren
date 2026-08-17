@@ -46,6 +46,8 @@ type App struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	connectionMu sync.Mutex
+	detachedMu   sync.Mutex
+	detachedTabs map[string]*detachedAgentTab
 	wails        *application.App
 	window       *application.WebviewWindow
 	bridge       *wailsadapter.Bridge
@@ -88,36 +90,37 @@ func NewApp(wailsApp *application.App, window *application.WebviewWindow) *App {
 
 	tun := tunneling.New(shared.RPC)
 	app := &App{
-		SharedStack: shared,
-		wails:       wailsApp,
-		window:      window,
-		bridge:      wailsadapter.New(wailsApp),
-		Catalog:     catalog.New(shared.Console),
-		Agents:      agents.New(shared.RPC, shared.Console),
-		Armory:      armory.New(shared.Console),
-		Implants:    implants.New(shared.RPC),
-		Listeners:   listeners.New(shared.RPC),
-		Files:       files.New(shared.RPC),
-		Procs:       procs.New(shared.RPC),
-		Registry:    registry.New(shared.RPC),
-		Shells:      shells.New(shared.RPC, shared.Console),
-		Pivots:      pivots.New(shared.RPC),
-		Services:    services.New(shared.RPC),
-		Tunneling:   tun,
-		Loot:        loot.New(shared.RPC),
-		Server:      server.New(shared.RPC),
-		Discovery:   discovery.New(shared.Console, shared.Beacons),
-		ClientLog:   clientlog.New(shared.RPC),
-		Websites:    websites.New(shared.RPC),
-		Staging:     staging.New(shared.RPC),
-		Hosts:       hosts.New(shared.RPC),
-		Monitor:     monitor.New(shared.RPC),
-		Extensions:  extensions.New(shared.RPC),
-		Memfiles:    memfiles.New(shared.RPC),
-		WireGuard:   wireguard.New(shared.RPC),
-		Crack:       crack.New(shared.RPC),
-		Builders:    builders.New(shared.RPC),
-		Env:         env.New(shared.RPC),
+		SharedStack:  shared,
+		wails:        wailsApp,
+		window:       window,
+		bridge:       wailsadapter.New(wailsApp),
+		detachedTabs: make(map[string]*detachedAgentTab),
+		Catalog:      catalog.New(shared.Console),
+		Agents:       agents.New(shared.RPC, shared.Console),
+		Armory:       armory.New(shared.Console),
+		Implants:     implants.New(shared.RPC),
+		Listeners:    listeners.New(shared.RPC),
+		Files:        files.New(shared.RPC),
+		Procs:        procs.New(shared.RPC),
+		Registry:     registry.New(shared.RPC),
+		Shells:       shells.New(shared.RPC, shared.Console),
+		Pivots:       pivots.New(shared.RPC),
+		Services:     services.New(shared.RPC),
+		Tunneling:    tun,
+		Loot:         loot.New(shared.RPC),
+		Server:       server.New(shared.RPC),
+		Discovery:    discovery.New(shared.Console, shared.Beacons),
+		ClientLog:    clientlog.New(shared.RPC),
+		Websites:     websites.New(shared.RPC),
+		Staging:      staging.New(shared.RPC),
+		Hosts:        hosts.New(shared.RPC),
+		Monitor:      monitor.New(shared.RPC),
+		Extensions:   extensions.New(shared.RPC),
+		Memfiles:     memfiles.New(shared.RPC),
+		WireGuard:    wireguard.New(shared.RPC),
+		Crack:        crack.New(shared.RPC),
+		Builders:     builders.New(shared.RPC),
+		Env:          env.New(shared.RPC),
 	}
 	app.Files.SetBus(shared.Bus)
 	app.Procs.SetBus(shared.Bus)

@@ -49,6 +49,10 @@ func (a *App) StopConsole(jobID string) error {
 	return a.Console.StopConsole(jobID)
 }
 
+func (a *App) GetConsoleOutput(jobID string) (string, error) {
+	return a.Console.GetConsoleOutput(jobID)
+}
+
 // SendToSessionConsole is what GUI actions (palette, right-click,
 // panels) should call to run a command against a session — it routes
 // via the session's live subprocess console so any interactive prompt

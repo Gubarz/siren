@@ -5,7 +5,7 @@ const app = vi.hoisted(() => ({
 }))
 const runtime = vi.hoisted(() => ({
   Events: { On: vi.fn(() => vi.fn()) },
-  Window: { Minimise: vi.fn(), ToggleMaximise: vi.fn() },
+  Window: { Close: vi.fn(), Minimise: vi.fn(), Name: vi.fn(() => Promise.resolve('main')), ToggleMaximise: vi.fn() },
   Application: { Quit: vi.fn() },
 }))
 vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
@@ -40,7 +40,7 @@ describe('runtime api', () => {
     expect(callback).toHaveBeenCalledWith({ type: 'session-opened' })
   })
 
-  it('multiplexes file-drop listeners onto one Wails subscription', () => {
+  it('multiplexes file-drop listeners onto one window-scoped Wails subscription', async () => {
     const first = vi.fn()
     const second = vi.fn()
 
@@ -58,15 +58,21 @@ describe('runtime api', () => {
     handler({ data: { x: 1, y: 2, files: [] } })
     expect(first).toHaveBeenCalledTimes(1)
     expect(second).toHaveBeenCalledTimes(2)
+
+    await Promise.resolve()
+    handler({ sender: 'agent-tab-other', data: { x: 1, y: 2, files: ['/tmp/other.bin'] } })
+    expect(second).toHaveBeenCalledTimes(2)
   })
 
   it('routes window controls through the v3 runtime', () => {
     api.minimizeWindow()
     api.toggleMaximizeWindow()
+    api.closeWindow()
     api.quitApplication()
 
     expect(runtime.Window.Minimise).toHaveBeenCalledOnce()
     expect(runtime.Window.ToggleMaximise).toHaveBeenCalledOnce()
+    expect(runtime.Window.Close).toHaveBeenCalledOnce()
     expect(runtime.Application.Quit).toHaveBeenCalledOnce()
   })
 })

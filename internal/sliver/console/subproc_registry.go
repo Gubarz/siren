@@ -60,9 +60,15 @@ type subprocJob struct {
 	sessionID  string
 	proc       consoleProc
 	pty        consolePTY
+	refs       int
+	stopping   bool
+	outputMu   sync.RWMutex
+	output     []byte
 	promptMu   sync.Mutex
 	promptLine string
 }
+
+const consoleOutputReplayMaxBytes = 8 * 1024 * 1024
 
 func (m *subprocMgr) newJobID() string {
 	return "console-" + strconv.FormatUint(m.next.Add(1), 10)
@@ -77,10 +83,42 @@ func (m *subprocMgr) add(j *subprocJob) {
 		m.bySession = make(map[string]string)
 	}
 	m.jobs[j.id] = j
+	if j.refs == 0 {
+		j.refs = 1
+	}
 	if j.sessionID != "" {
 		m.bySession[j.sessionID] = j.id
 	}
 	m.mu.Unlock()
+}
+
+func (m *subprocMgr) acquireSession(sessionID string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	id := m.bySession[sessionID]
+	job := m.jobs[id]
+	if job == nil {
+		return ""
+	}
+	job.refs++
+	return id
+}
+
+func (m *subprocMgr) release(id string) (*subprocJob, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	job := m.jobs[id]
+	if job == nil {
+		return nil, false
+	}
+	if job.refs > 0 {
+		job.refs--
+	}
+	if job.refs != 0 || job.stopping {
+		return job, false
+	}
+	job.stopping = true
+	return job, true
 }
 
 func (m *subprocMgr) remove(id string) {
@@ -115,6 +153,26 @@ func (m *subprocMgr) get(id string) *subprocJob {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.jobs[id]
+}
+
+func (j *subprocJob) appendOutput(data []byte) {
+	if len(data) == 0 {
+		return
+	}
+	j.outputMu.Lock()
+	j.output = append(j.output, data...)
+	if len(j.output) > consoleOutputReplayMaxBytes {
+		trim := len(j.output) - consoleOutputReplayMaxBytes
+		copy(j.output, j.output[trim:])
+		j.output = j.output[:consoleOutputReplayMaxBytes]
+	}
+	j.outputMu.Unlock()
+}
+
+func (j *subprocJob) outputSnapshot() []byte {
+	j.outputMu.RLock()
+	defer j.outputMu.RUnlock()
+	return append([]byte(nil), j.output...)
 }
 
 // writeConfigForSubproc dumps the operator config to a private temp file

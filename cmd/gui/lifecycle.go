@@ -35,14 +35,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	// v3 delivers file drops to the backend (only for elements marked with
 	// data-file-drop-target); re-emit to the frontend with the v2 event shape.
-	a.window.OnWindowEvent(wailsevents.Common.WindowFilesDropped, func(event *application.WindowEvent) {
-		files := event.Context().DroppedFiles()
-		x, y := 0, 0
-		if details := event.Context().DropTargetDetails(); details != nil {
-			x, y = details.X, details.Y
-		}
-		a.bridge.Emit("files-dropped", map[string]interface{}{"files": files, "x": x, "y": y})
-	})
+	a.registerFileDropWindow(a.window)
 
 	a.startBusSubscribers()
 
@@ -51,6 +44,17 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 		a.window.Show()
 	}()
 	return nil
+}
+
+func (a *App) registerFileDropWindow(window *application.WebviewWindow) {
+	window.OnWindowEvent(wailsevents.Common.WindowFilesDropped, func(event *application.WindowEvent) {
+		files := event.Context().DroppedFiles()
+		x, y := 0, 0
+		if details := event.Context().DropTargetDetails(); details != nil {
+			x, y = details.X, details.Y
+		}
+		window.EmitEvent("files-dropped", map[string]interface{}{"files": files, "x": x, "y": y})
+	})
 }
 
 func (a *App) ServiceShutdown() error {

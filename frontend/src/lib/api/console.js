@@ -1,6 +1,7 @@
 export {
   CloseShell,
   GetCommandCatalog,
+  GetConsoleOutput,
   GetShellOutput,
   InterruptShell,
   ListArmoryPackages,

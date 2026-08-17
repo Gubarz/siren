@@ -1,4 +1,5 @@
 import {
+  GetConsoleOutput,
   ResizeConsole,
   StartConsole,
   StopConsole,
@@ -12,6 +13,21 @@ const RELEASE_DELAY_MS = 3000
 const STOP_CONSOLE_ON_DISPOSE = !import.meta.hot
 const sessionState = globalThis.__sliverGuiConsolePtySessionState ||= { sessions: new Map() }
 const { sessions } = sessionState
+
+if (!sessionState.pageHideInstalled) {
+  sessionState.pageHideInstalled = true
+  globalThis.addEventListener?.('pagehide', () => {
+    for (const record of sessions.values()) {
+      releaseConsoleLease(record)
+    }
+  })
+}
+
+function releaseConsoleLease(record) {
+  if (!record.jobID || record.leaseReleased || !STOP_CONSOLE_ON_DISPOSE) return
+  record.leaseReleased = true
+  StopConsole(record.jobID).catch(() => {})
+}
 
 function decodeBase64(b64) {
   const bin = atob(b64)
@@ -56,7 +72,9 @@ function promptAction(record, data) {
 function installRuntimeListeners(record) {
   record.stopOutput = onConsoleOutput((ev) => {
     if (ev.jobID !== record.jobID) return
-    record.term.write(decodeBase64(ev.data))
+    const output = decodeBase64(ev.data)
+    if (record.replaying) record.replayQueue.push(output)
+    else record.term.write(output)
   })
   record.stopExit = onConsoleExit((ev) => {
     if (ev.jobID !== record.jobID) return
@@ -80,15 +98,37 @@ function startConsole(record) {
         if (STOP_CONSOLE_ON_DISPOSE) StopConsole(id).catch(() => {})
         return
       }
+      record.replaying = true
       record.jobID = id
+      record.leaseReleased = false
       record.term.focus()
       resizeConsole(record)
+      GetConsoleOutput(id)
+        .then((output) => replayConsoleOutput(record, output))
+        .catch(() => finishConsoleReplay(record))
     })
     .catch((err) => {
       record.starting = false
       if (record.disposed) return
       record.term.write(`\r\n\x1b[31m[!] ${errorMessage(err)}\x1b[0m\r\n`)
     })
+}
+
+function replayConsoleOutput(record, output) {
+  if (record.disposed) return
+  const buffered = output ? decodeBase64(output) : null
+  if (!buffered?.length) {
+    finishConsoleReplay(record)
+    return
+  }
+  record.term.write(buffered, () => finishConsoleReplay(record))
+}
+
+function finishConsoleReplay(record) {
+  if (record.disposed) return
+  for (const output of record.replayQueue) record.term.write(output)
+  record.replayQueue = []
+  record.replaying = false
 }
 
 function createRecord(sessionID, hostEl, onshell) {
@@ -98,8 +138,11 @@ function createRecord(sessionID, hostEl, onshell) {
     term,
     fit,
     jobID: null,
+    leaseReleased: false,
     starting: false,
     disposed: false,
+    replaying: false,
+    replayQueue: [],
     refs: 0,
     releaseTimer: null,
     promptLine: '',
@@ -155,7 +198,7 @@ function disposeRecord(key, record) {
   record.stopExit?.()
   record.stopOpenShell?.()
   record.dataDisposable?.dispose()
-  if (record.jobID && STOP_CONSOLE_ON_DISPOSE) StopConsole(record.jobID).catch(() => {})
+  releaseConsoleLease(record)
   record.term.dispose()
   sessions.delete(key)
 }

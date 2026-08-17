@@ -180,11 +180,19 @@ func (s *Service) emitTunnelsChanged() {
 }
 
 func (s *Service) StopConsole(jobID string) error {
-	job := s.subproc.get(jobID)
-	if job == nil {
+	job, shouldStop := s.subproc.release(jobID)
+	if job == nil || !shouldStop {
 		return nil
 	}
 	return job.proc.Kill()
+}
+
+func (s *Service) GetConsoleOutput(jobID string) (string, error) {
+	job := s.subproc.get(jobID)
+	if job == nil {
+		return "", os.ErrClosed
+	}
+	return base64.StdEncoding.EncodeToString(job.outputSnapshot()), nil
 }
 
 // CloseSubprocs kills every running console subprocess. Called at app
@@ -278,6 +286,9 @@ func readPTYChunks(ptyFile consolePTY, chunks chan<- []byte) {
 }
 
 func (s *Service) emitConsoleOutput(jobID string, data []byte) {
+	if job := s.subproc.get(jobID); job != nil {
+		job.appendOutput(data)
+	}
 	if s.emitter == nil {
 		return
 	}
