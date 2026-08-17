@@ -66,7 +66,7 @@ func TestUnstageImplantBuildErrorsWhenNotStaged(t *testing.T) {
 	}
 }
 
-func TestUnstageImplantBuildTreatsEmptyTableAsNotStaged(t *testing.T) {
+func TestUnstageImplantBuildTreatsNotFoundAsNotStaged(t *testing.T) {
 	fake := &fakeStagingRPC{
 		connected: true,
 		buildsErr: status.Error(codes.NotFound, "record not found"),
@@ -117,6 +117,55 @@ func TestUnstageAllImplantBuildsSubmitsEmptyBuildList(t *testing.T) {
 func TestUnstageImplantBuildPropagatesRPCError(t *testing.T) {
 	wantErr := errors.New("listing failed")
 	fake := &fakeStagingRPC{connected: true, buildsErr: wantErr}
+	svc := &Service{rpc: fake}
+
+	err := svc.UnstageImplantBuild("alpha")
+
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("UnstageImplantBuild() error = %v, want %v", err, wantErr)
+	}
+}
+
+func TestUnstageImplantBuildRejectsBlankName(t *testing.T) {
+	fake := &fakeStagingRPC{connected: true}
+	svc := &Service{rpc: fake}
+
+	err := svc.UnstageImplantBuild("  ")
+
+	if err == nil || err.Error() != "build name is required" {
+		t.Fatalf("UnstageImplantBuild() error = %v, want build name is required", err)
+	}
+	if fake.stageReq != nil {
+		t.Fatal("StageImplantBuild was called for a blank name")
+	}
+}
+
+func TestUnstageImplantBuildSortsRemainingBuilds(t *testing.T) {
+	fake := &fakeStagingRPC{
+		connected: true,
+		builds: &clientpb.ImplantBuilds{Staged: map[string]bool{
+			"alpha": true,
+			"beta":  true,
+			"zeta":  true,
+		}},
+	}
+	svc := &Service{rpc: fake}
+
+	err := svc.UnstageImplantBuild("alpha")
+
+	if err != nil {
+		t.Fatalf("UnstageImplantBuild() returned error: %v", err)
+	}
+	assertStrings(t, fake.stageReq.Build, []string{"beta", "zeta"})
+}
+
+func TestUnstageImplantBuildPropagatesStageError(t *testing.T) {
+	wantErr := errors.New("stage failed")
+	fake := &fakeStagingRPC{
+		connected: true,
+		builds:    &clientpb.ImplantBuilds{Staged: map[string]bool{"alpha": true}},
+		stageErr:  wantErr,
+	}
 	svc := &Service{rpc: fake}
 
 	err := svc.UnstageImplantBuild("alpha")

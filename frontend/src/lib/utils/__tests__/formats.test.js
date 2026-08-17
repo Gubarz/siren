@@ -14,4 +14,9 @@ describe('implantFormat', () => {
     expect(implantFormat(9)).toBe(9)
     expect(implantFormat(undefined)).toBe(undefined)
   })
+
+  it('passes through string values untouched', () => {
+    expect(implantFormat('executable')).toBe('executable')
+    expect(implantFormat('')).toBe('')
+  })
 })

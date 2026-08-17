@@ -175,7 +175,7 @@
 
 <Panel {embedded} {onclose}>
   <Toolbar class="justify-end">
-    <Button color="dark" size="sm" onclick={() => { implantBuilds.refresh(); jobs.refresh() }}>Refresh</Button>
+    <Button color="dark" size="sm" onclick={() => { implantBuilds.refresh(); jobs.refresh(); profiles.refresh() }}>Refresh</Button>
   </Toolbar>
   {#if status || error}
     <div class="flex flex-wrap items-center gap-3 border-b border-line px-3 py-2 text-xs">

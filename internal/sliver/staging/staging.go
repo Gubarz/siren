@@ -97,7 +97,8 @@ func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 func (s *Service) Close() {}
 
 // isEmptyRecordErr reports whether err is the gRPC NotFound Sliver returns
-// when the implant_builds table has no rows — treat it as an empty list.
+// for a malformed implant_builds table (e.g. orphaned build rows). Treat it
+// as an empty list rather than surfacing it to the UI.
 func isEmptyRecordErr(err error) bool {
 	if err == nil {
 		return false
@@ -110,7 +111,10 @@ func isEmptyRecordErr(err error) bool {
 
 // UnstageImplantBuild unstages one build while keeping every other staged
 // build staged. Sliver's StageImplantBuild RPC first clears Stage on every
-// build, so we re-submit the names that must remain staged.
+// build, so we re-submit the names that must remain staged. This
+// read-modify-write is not atomic; a concurrent operator staging a build
+// between the list and the re-submit will have their staging cleared —
+// accepted per design (no server-side changes).
 func (s *Service) UnstageImplantBuild(name string) error {
 	if !s.rpc.Connected() {
 		return rpc.ErrNotConnected

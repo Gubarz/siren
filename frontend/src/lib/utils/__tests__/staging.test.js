@@ -63,3 +63,21 @@ describe('stagerListenerRows', () => {
     ])
   })
 })
+
+describe('row shapers camelCase fallback', () => {
+  it('stagedBuildRows falls back to camelCase build fields', () => {
+    const rows = stagedBuildRows([
+      { name: 'x', staged: true, goos: 'windows', goarch: 'amd64', format: 1, isBeacon: false },
+    ])
+    expect(rows[0]._osArch).toBe('windows/amd64')
+    expect(rows[0]._format).toBe('shellcode')
+    expect(rows[0]._type).toBe('session')
+  })
+
+  it('stagerListenerRows falls back to camelCase job fields', () => {
+    const rows = stagerListenerRows([
+      { id: 3, Description: STAGER_JOB_DESCRIPTION, port: 8080, profileName: 'win64' },
+    ])
+    expect(rows).toEqual([{ _rowKey: 3, _id: 3, _port: 8080, _profile: 'win64' }])
+  })
+})
