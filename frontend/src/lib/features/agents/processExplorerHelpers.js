@@ -42,36 +42,40 @@ export function buildProcessTree(procs) {
 // commandInvoker returns an on-handler that opens the command modal with
 // a canned config + initial values. Every entry in the ProcessExplorer
 // menu uses the same pattern, so factoring it out kills a lot of
-// boilerplate.
-function commandInvoker(commandModal, name, initialValues) {
+// boilerplate. The modal must be bound to the agent the explorer belongs
+// to — without targetIDs, AgentWorkspace falls back to the server-scoped
+// console and session commands like migrate silently no-op.
+function commandInvoker(commandModal, name, initialValues, sessionID = '') {
   return () => commandModal.open({
     command: { name, path: name, arguments: [], flags: [], supported: true },
     initialValues,
+    useSession: Boolean(sessionID),
+    targetIDs: sessionID ? [sessionID] : [],
     sourceContext: 'process-explorer',
   })
 }
 
-export function buildProcessContextSections({ pid, procName, commandModal, killProcess }) {
+export function buildProcessContextSections({ pid, procName, commandModal, killProcess, sessionID = '' }) {
   return [
     {
       title: 'Injection',
       items: [
         { icon: 'syringe', label: 'Execute Assembly…',
-          on: commandInvoker(commandModal, 'execute-assembly', { ppid: pid, process: procName }) },
+          on: commandInvoker(commandModal, 'execute-assembly', { ppid: pid, process: procName }, sessionID) },
         { icon: 'syringe', label: 'Sideload DLL…',
-          on: commandInvoker(commandModal, 'sideload', { 'process-name': procName }) },
+          on: commandInvoker(commandModal, 'sideload', { 'process-name': procName }, sessionID) },
       ],
     },
     {
       title: 'Process',
       items: [
         { icon: 'arrow-left-right', label: 'Migrate Into…',
-          on: commandInvoker(commandModal, 'migrate', { pid, arch: '' }) },
+          on: commandInvoker(commandModal, 'migrate', { pid, arch: '' }, sessionID) },
         { icon: 'download', label: 'Dump Memory…',
-          on: commandInvoker(commandModal, 'procdump', { pid }) },
+          on: commandInvoker(commandModal, 'procdump', { pid }, sessionID) },
         { icon: 'shield-user', label: 'Get System…',
           on: () => {
-            if (procName) commandInvoker(commandModal, 'getsystem', { process: procName })()
+            if (procName) commandInvoker(commandModal, 'getsystem', { process: procName }, sessionID)()
           } },
         { icon: 'tag', label: 'Tags / Color…',
           on: () => tagsModal.openTags('process', String(pid), `${procName || 'PID'} (${pid})`) },

@@ -71,9 +71,9 @@ export const flagOverrides = {
     args: [],
     flags: {
       'pid': { group: 'process', label: 'Target PID', widgetHint: 'pidPicker', default: '' },
-      'arch': { group: 'process', label: 'Architecture' },
-      'disable-sgn': { group: 'advanced', label: 'Disable Shellcode Generation' },
-      'config': { group: 'advanced', label: 'Configuration' },
+      'process-name': { group: 'process', label: 'Process name' },
+      'shellcode-encoder': { group: 'evasion', label: 'Shellcode encoder' },
+      'timeout': { group: 'advanced', label: 'Timeout (seconds)' },
     },
   },
   'procdump': {

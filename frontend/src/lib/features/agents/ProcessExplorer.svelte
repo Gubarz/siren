@@ -125,7 +125,7 @@
     contextMenu.open({
       x: event.clientX, y: event.clientY,
       sections: buildProcessContextSections({
-        pid, procName, commandModal,
+        pid, procName, commandModal, sessionID,
         killProcess: staticData ? () => dialog.alert('Process kill unavailable for snapshot data.', 'Snapshot') : killProcess,
       }),
     });

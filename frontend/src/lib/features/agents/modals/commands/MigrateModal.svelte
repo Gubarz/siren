@@ -4,10 +4,11 @@
   import Button from '../../../../components/ui/Button.svelte'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
-  import CheckboxField from '../../../../components/forms/CheckboxField.svelte'
   import SelectField from '../../../../components/forms/SelectField.svelte'
   import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
   import PidPickerField from '../pickers/PidPickerField.svelte'
+  import { useResource } from '../../../../stores/lib/createResource.svelte.js'
+  import { shellcodeEncoders } from '../../../../stores/resources/shellcodeEncoders.svelte.js'
 
   let {
     firstSessionID = '',
@@ -17,12 +18,23 @@
     initialValues = {},
   } = $props()
 
+  useResource(shellcodeEncoders)
+
   let pid = $state(0)
   let processName = $state('')
-  let arch = $state('')
-  let configName = $state('')
-  let disableSgn = $state(false)
+  let encoder = $state('none')
   let timeout = $state('')
+
+  // The remote console can only answer the encoder question interactively
+  // (it renders a forms.Select prompt in xterm), so the modal must always
+  // pass --shellcode-encoder explicitly. "none" matches the default choice
+  // of sliver's own interactive prompt.
+  let encoderOptions = $derived([
+    { value: 'none', label: 'None' },
+    ...[...new Set((shellcodeEncoders.data || []).map((item) => item.name))]
+      .sort()
+      .map((name) => ({ value: name, label: name })),
+  ])
 
   $effect.pre(() => {
     resetForm(initialValues)
@@ -31,9 +43,7 @@
   function resetForm(values) {
     pid = values['pid'] || 0
     processName = values['process-name'] || ''
-    arch = values['arch'] || ''
-    configName = values['config'] || ''
-    disableSgn = values['disable-sgn'] || false
+    encoder = values['shellcode-encoder'] || 'none'
     timeout = values['timeout'] || ''
   }
 
@@ -42,9 +52,7 @@
     const parts = ['migrate']
     if (pid) parts.push('--pid', String(pid))
     if (processName) parts.push('--process-name', quote(processName))
-    if (arch) parts.push('--arch', arch)
-    if (configName) parts.push('--config', quote(configName))
-    if (disableSgn) parts.push('--disable-sgn')
+    parts.push('--shellcode-encoder', encoder)
     if (timeout) parts.push('--timeout', String(timeout))
     return parts.filter(Boolean).join(' ')
   })
@@ -73,28 +81,14 @@
 
     <div class="mb-3">
       <SelectField
-        bind:value={arch}
-        label="Architecture"
-        placeholder="Auto-detect"
-        options={[
-          { value: 'amd64', label: 'amd64 (64-bit)' },
-          { value: '386', label: '386 (32-bit)' },
-        ]}
-        description="Match the target process. Leave blank to auto-detect."
-      />
-    </div>
-
-    <div class="mb-3">
-      <TextField
-        bind:value={configName}
-        label="Implant profile"
-        placeholder="Name of an existing implant profile"
-        description="Which implant configuration to migrate as. Blank re-uses the current implant."
+        bind:value={encoder}
+        label="Shellcode encoder"
+        options={encoderOptions}
+        description="Encoding applied to the migration shellcode. None matches the console default."
       />
     </div>
 
     <CollapsibleGroup title="Advanced" open={false}>
-      <CheckboxField bind:checked={disableSgn} label="Disable SGN encoding" description="Skip Shikata Ga Nai encoding of the migration shellcode" />
       <TextField bind:value={timeout} label="Timeout (seconds)" type="number" />
     </CollapsibleGroup>
 
@@ -107,13 +101,12 @@
     <div class="flex justify-between items-center">
     <PresetPicker
       commandPath="migrate"
-      currentValues={{ 'pid': pid, 'process-name': processName, 'arch': arch, 'config': configName, 'disable-sgn': disableSgn }}
+      currentValues={{ 'pid': pid, 'process-name': processName, 'shellcode-encoder': encoder, 'timeout': timeout }}
       onapply={(values) => {
         if (values['pid'] != null) pid = values['pid']
         if (values['process-name'] != null) processName = values['process-name']
-        if (values['arch'] != null) arch = values['arch']
-        if (values['config'] != null) configName = values['config']
-        if (values['disable-sgn'] != null) disableSgn = values['disable-sgn']
+        if (values['shellcode-encoder'] != null) encoder = values['shellcode-encoder'] || 'none'
+        if (values['timeout'] != null) timeout = values['timeout']
       }}
     />
     <div class="flex gap-2">
