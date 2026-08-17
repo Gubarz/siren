@@ -7,9 +7,8 @@
   import DataTable from '$components/patterns/DataTable.svelte'
   import Toolbar from '$components/patterns/Toolbar.svelte'
   import Button from '$components/ui/Button.svelte'
-  import Checkbox from '$components/ui/Checkbox.svelte'
   import { DeleteProfile, GenerateImplantFromProfile } from '../../api/server.js'
-  import { GenerateStage } from '../../api/staging.js'
+  import { implantFormat } from '../../utils/formats.js'
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
   import { overlays } from '$stores/ui/overlays.svelte.js'
@@ -21,7 +20,6 @@
 
   let profSuccess = $state('')
   let profError = $state('')
-  let stagePrependSize = $state(true)
   let profileRows = $derived((profiles.data || []).map((profile, index) => {
     const config = profile.Config || profile.config || {}
     const name = profile.Name || profile.name || '-'
@@ -30,7 +28,7 @@
       _name: name,
       _configID: config.ID || config.id,
       _osArch: `${config.GOOS || config.goos || '?'}/${config.GOARCH || config.goarch || '?'}`,
-      _format: fmtFormat(config.Format ?? config.format),
+      _format: implantFormat(config.Format ?? config.format),
       _formatValue: config.Format ?? config.format ?? 0,
       _type: (config.IsBeacon ?? config.isBeacon) ? 'beacon' : 'session',
     }
@@ -61,26 +59,10 @@
     }
   }
 
-  async function generateStage(name) {
-    try {
-      profError = ''
-      profSuccess = 'Generating stage...'
-      const path = await GenerateStage({ profile: name, prependSize: stagePrependSize })
-      profSuccess = path ? 'Stage saved to ' + path : ''
-    } catch (err) {
-      profSuccess = ''
-      profError = errorMessage(err, 'Stage failed: ')
-    }
-  }
-
-  function fmtFormat(f) {
-    return ({ 0: 'shared lib', 1: 'shellcode', 2: 'executable', 3: 'service', 4: 'third-party' })[f] ?? f
-  }
 </script>
 
 <Panel {embedded} {onclose}>
   <Toolbar class="justify-end">
-    <Checkbox bind:checked={stagePrependSize} label="Prepend stage size" />
     <Button color="dark" size="sm" onclick={() => profiles.refresh()}>Refresh</Button>
     <Button color="primary" size="sm" icon="plus" onclick={() => overlays.open('generate', { initialValues: { name: '' } })}>New Profile</Button>
   </Toolbar>
@@ -107,7 +89,6 @@
         {:else if col.key === '_actions'}
           <div class="flex gap-2">
             <Button color="dark" size="xs" onclick={() => generateProfile(profile._configID, profile._name, profile._formatValue)}>Generate</Button>
-            <Button color="dark" size="xs" onclick={() => generateStage(profile._name)}>Stage</Button>
             <Button color="red" size="xs" onclick={() => delProfile(profile._name)}>Delete</Button>
           </div>
         {:else}
