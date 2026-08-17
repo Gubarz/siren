@@ -16,6 +16,7 @@ export function stagedBuildRows(builds = []) {
     .map((build) => ({
       _rowKey: build.name,
       _name: build.name,
+      _nonce: build.nonce ?? build.Nonce ?? null,
       _osArch: `${build.GOOS ?? build.goos ?? '?'}/${build.GOARCH ?? build.goarch ?? '?'}`,
       _format: implantFormat(build.Format ?? build.format),
       _type: (build.IsBeacon ?? build.isBeacon) ? 'beacon' : 'session',

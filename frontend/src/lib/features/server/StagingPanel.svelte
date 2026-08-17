@@ -59,6 +59,7 @@
   let stagerRows = $derived(stagerListenerRows(jobs.data || []))
   const buildColumns = [
     { key: '_name', label: 'Build' },
+    { key: '_nonce', label: 'Nonce', width: 170, sortable: false },
     { key: '_osArch', label: 'OS / Arch', width: 120 },
     { key: '_format', label: 'Format', width: 120 },
     { key: '_type', label: 'Type', width: 90 },
@@ -205,6 +206,15 @@
           {#snippet children(row, col)}
             {#if col.key === '_name'}
               <span class="font-mono">{row._name}</span>
+            {:else if col.key === '_nonce'}
+              {#if row._nonce != null}
+                <span class="flex items-center gap-2 font-mono">
+                  {row._nonce}
+                  <Button color="dark" size="xs" icon="copy" onclick={() => navigator.clipboard?.writeText(String(row._nonce))}>Copy</Button>
+                </span>
+              {:else}
+                <span class="text-fg-muted">-</span>
+              {/if}
             {:else if col.key === '_actions'}
               <div class="flex justify-end">
                 <Button color="red" size="xs" onclick={() => unstageOne(row._name)}>Unstage</Button>

@@ -33,6 +33,7 @@
   let buildRows = $derived(filtered.map((build, index) => ({
     _rowKey: build.name || index,
     _name: build.name || '-',
+    _nonce: build.nonce ?? null,
     _osArch: `${build.GOOS || build.goos || '?'}/${build.GOARCH || build.goarch || '?'}`,
     _format: implantFormat(build.Format ?? build.format),
     _type: (build.IsBeacon ?? build.isBeacon) ? 'beacon' : 'session',
@@ -41,6 +42,7 @@
 
   const columns = [
     { key: '_name', label: 'Name' },
+    { key: '_nonce', label: 'Nonce', width: 170, sortable: false },
     { key: '_osArch', label: 'OS / Arch', width: 120 },
     { key: '_format', label: 'Format', width: 120 },
     { key: '_type', label: 'Type', width: 90 },
@@ -110,6 +112,15 @@
       {#snippet children(build, col)}
         {#if col.key === '_name'}
           <span class="font-mono">{build._name}</span>
+        {:else if col.key === '_nonce'}
+          {#if build._nonce != null}
+            <span class="flex items-center gap-2 font-mono">
+              {build._nonce}
+              <Button color="dark" size="xs" icon="copy" onclick={() => navigator.clipboard?.writeText(String(build._nonce))}>Copy</Button>
+            </span>
+          {:else}
+            <span class="text-fg-muted">-</span>
+          {/if}
         {:else if col.key === '_staged'}
           {#if build._staged}
             <Badge variant="success" size="xs">serving</Badge>

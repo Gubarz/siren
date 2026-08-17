@@ -55,9 +55,11 @@ export async function listImplantBuilds() {
   const response = await GetImplantBuilds();
   const configs = responseField(response, 'Configs', {});
   const staged = responseField(response, 'Staged', {});
+  const resourceIds = responseField(response, 'ResourceIDs', {});
   return Object.entries(configs).map(([name, config]) => ({
     name,
     staged: Boolean(staged[name]),
+    nonce: resourceIds[name]?.Value ?? resourceIds[name]?.value ?? null,
     ...config,
   }));
 }

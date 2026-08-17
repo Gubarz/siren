@@ -38,18 +38,24 @@ describe('stagerListeners', () => {
 describe('stagedBuildRows', () => {
   it('shapes only staged builds with derived columns', () => {
     const rows = stagedBuildRows([
-      { name: 'a', staged: true, GOOS: 'linux', GOARCH: 'amd64', Format: 2, IsBeacon: true },
+      { name: 'a', staged: true, nonce: 4242, GOOS: 'linux', GOARCH: 'amd64', Format: 2, IsBeacon: true },
       { name: 'b', staged: false },
     ])
     expect(rows).toEqual([
       {
         _rowKey: 'a',
         _name: 'a',
+        _nonce: 4242,
         _osArch: 'linux/amd64',
         _format: 'executable',
         _type: 'beacon',
       },
     ])
+  })
+
+  it('defaults nonce to null when absent', () => {
+    const rows = stagedBuildRows([{ name: 'a', staged: true }])
+    expect(rows[0]._nonce).toBeNull()
   })
 })
 
@@ -67,11 +73,12 @@ describe('stagerListenerRows', () => {
 describe('row shapers camelCase fallback', () => {
   it('stagedBuildRows falls back to camelCase build fields', () => {
     const rows = stagedBuildRows([
-      { name: 'x', staged: true, goos: 'windows', goarch: 'amd64', format: 1, isBeacon: false },
+      { name: 'x', staged: true, nonce: 555, goos: 'windows', goarch: 'amd64', format: 1, isBeacon: false },
     ])
     expect(rows[0]._osArch).toBe('windows/amd64')
     expect(rows[0]._format).toBe('shellcode')
     expect(rows[0]._type).toBe('session')
+    expect(rows[0]._nonce).toBe(555)
   })
 
   it('stagerListenerRows falls back to camelCase job fields', () => {
