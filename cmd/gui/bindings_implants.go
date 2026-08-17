@@ -59,6 +59,14 @@ func (a *App) StageImplantBuilds(builds []string) error {
 	return a.Staging.StageImplantBuilds(builds)
 }
 
+func (a *App) UnstageImplantBuild(name string) error {
+	return a.Staging.UnstageImplantBuild(name)
+}
+
+func (a *App) UnstageAllImplantBuilds() error {
+	return a.Staging.UnstageAllImplantBuilds()
+}
+
 func (a *App) GenerateSpoofMetadata(req implants.SpoofMetadataRequest) error {
 	return a.Implants.GenerateSpoofMetadata(req)
 }
