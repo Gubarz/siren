@@ -1,22 +1,20 @@
 <script>
   import { KillJob, StartListener } from '../../api/server.js'
-  import { StartTCPStagerListener } from '../../api/staging.js'
+  import { isStagerJob } from '../../utils/staging.js'
   import { StartWGListener, GenerateUniqueWGIP, GenerateWGClientConfig } from '../../api/wireguard.js'
   import { jobs } from '$stores/resources/jobs.svelte.js'
-  import { profiles } from '$stores/resources/profiles.svelte.js'
   import { entityColors } from '$stores/resources/entityColors.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
 
-  useResource(jobs, profiles, entityColors)
+  useResource(jobs, entityColors)
   import { errorMessage } from '../../utils/errors.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
   import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
-  import { OpenFileDialog } from '../../api/runtime.js'
   import Select from '$components/ui/Select.svelte'
   import Button from '$components/ui/Button.svelte'
-  import Checkbox from '$components/ui/Checkbox.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
   import Panel from '$components/patterns/Panel.svelte'
+  import Badge from '$components/ui/Badge.svelte'
   import DataTable from '$components/patterns/DataTable.svelte'
   import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import { entityColorStyle } from '../../utils/entityTags.js'
@@ -31,9 +29,6 @@
   let port = $state(443)
   let domains = $state('')
   let starting = $state(false)
-  let stageProfile = $state('')
-  let stagePath = $state('')
-  let prependSize = $state(true)
   let listenerError = $state('')
   let listenerStatus = $state('')
   let wgTunIP = $state('')
@@ -47,32 +42,24 @@
     _protocol: job.Protocol ?? job.protocol ?? '-',
     _port: job.Port ?? job.port ?? '-',
     _description: job.Description ?? job.description ?? '-',
+    _isStager: isStagerJob(job),
+    _profile: job.ProfileName ?? job.profileName ?? '',
   })))
-  const DEFAULT_PORTS = { mtls: 443, http: 80, https: 443, dns: 53, 'tcp-stager': 8080, wireguard: 1337 }
-  const PROTO_OPTIONS = ['mtls', 'http', 'https', 'dns', 'tcp-stager', 'wireguard'].map((p) => ({ value: p, label: p }))
+  const DEFAULT_PORTS = { mtls: 443, http: 80, https: 443, dns: 53, wireguard: 1337 }
+  const PROTO_OPTIONS = ['mtls', 'http', 'https', 'dns', 'wireguard'].map((p) => ({ value: p, label: p }))
   const columns = [
     { key: '_id', label: 'ID', width: 80 },
     { key: '_name', label: 'Name' },
     { key: '_tags', label: 'Tags', width: 108, sortable: false },
     { key: '_protocol', label: 'Protocol', width: 100 },
     { key: '_port', label: 'Port', width: 80 },
+    { key: '_profile', label: 'Profile', width: 150 },
     { key: '_description', label: 'Description' },
     { key: '_actions', label: '', width: 220, sortable: false },
   ]
 
   let isDNS = $derived(proto === 'dns')
-  let isStager = $derived(proto === 'tcp-stager')
   let isWG = $derived(proto === 'wireguard')
-  let profileOptions = $derived(
-    (profiles.data || []).map((profile) => ({
-      value: profile.Name || profile.name,
-      label: profile.Name || profile.name,
-    })).filter((profile) => profile.value)
-  )
-
-  $effect(() => {
-    if (!stageProfile && profileOptions.length > 0) stageProfile = profileOptions[0].value
-  })
 
   function onProtoChange() {
     port = DEFAULT_PORTS[proto] ?? port
@@ -85,8 +72,7 @@
     listenerError = ''
     listenerStatus = ''
     try {
-      if (isStager) await startTCPStager()
-      else if (isWG) await startWG()
+      if (isWG) await startWG()
       else await StartListener(proto, host, Number(port), domains)
       await jobs.refresh()
     } catch (err) {
@@ -113,23 +99,6 @@
     }
   }
 
-  async function startTCPStager() {
-    if (!stagePath && !stageProfile) throw new Error('Pick an implant profile or local stage file')
-    const listener = await StartTCPStagerListener({
-      host,
-      port: Number(port),
-      profile: stagePath ? '' : stageProfile,
-      stagePath,
-      prependSize,
-    })
-    listenerStatus = `Job ${listener?.JobID ?? listener?.jobID ?? '?'} started`
-  }
-
-  async function pickStageFile() {
-    const path = await OpenFileDialog('Select stage file')
-    if (path) stagePath = path
-  }
-
   async function kill(id) {
     try { await KillJob(id); await jobs.refresh() } catch (err) { listenerError = errorMessage(err, 'Kill failed: ') }
   }
@@ -151,16 +120,6 @@
         <TextInput size="sm" aria-label="DNS domains" bind:value={domains} placeholder="domains (comma-separated)" class="font-mono" />
       </div>
     {/if}
-    {#if isStager}
-      <div class="min-w-40">
-        <Select bind:value={stageProfile} options={profileOptions} disabled={Boolean(stagePath)} placeholder="Profile" aria-label="Stage profile" />
-      </div>
-      <Button color="dark" size="sm" onclick={pickStageFile}>Pick File</Button>
-      {#if stagePath}
-        <Button color="dark" size="sm" onclick={() => { stagePath = '' }}>Use Profile</Button>
-      {/if}
-      <Checkbox bind:checked={prependSize} label="Prepend size" />
-    {/if}
     {#if isWG}
       <TextInput size="sm" aria-label="WG tun IP" bind:value={wgTunIP} placeholder="Tun IP (auto)" class="font-mono w-30" />
       <TextInput type="number" size="sm" aria-label="WG nport" bind:value={wgNPort} placeholder="NPort" class="font-mono w-15" />
@@ -171,9 +130,8 @@
     </Button>
   </div>
 
-  {#if listenerError || listenerStatus || (isStager && stagePath) || (isWG && wgTunIP)}
+  {#if listenerError || listenerStatus || (isWG && wgTunIP)}
     <div class="flex flex-wrap items-center gap-3 border-b border-line px-3 py-2 text-xs">
-      {#if stagePath}<span class="break-all text-fg-muted">Stage file: {stagePath}</span>{/if}
       {#if isWG && wgTunIP && !wgClientConfig}
         <Button color="dark" size="xs" onclick={downloadWGConfig}>Download Client Config</Button>
       {/if}
@@ -202,7 +160,12 @@
         {#if col.key === '_id' || col.key === '_port'}
           <span class="font-mono">{job[col.key]}</span>
         {:else if col.key === '_name'}
-          {job._name}
+          <span class="flex items-center gap-2">
+            {job._name}
+            {#if job._isStager}<Badge variant="warning" size="xs">stager</Badge>{/if}
+          </span>
+        {:else if col.key === '_profile'}
+          {#if job._profile}<span class="font-mono">{job._profile}</span>{:else}<span class="text-fg-muted">-</span>{/if}
         {:else if col.key === '_tags'}
           <EntityTagBadges entityType="listener" entityID={String(job._id)} showEmpty />
         {:else if col.key === '_actions'}
