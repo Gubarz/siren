@@ -37,6 +37,19 @@ func (a *App) StartConsole(sessionID string) (string, error) {
 	return a.Console.StartConsole(sessionID)
 }
 
+type consoleLease struct {
+	JobID    string `json:"jobID"`
+	Existing bool   `json:"existing"`
+}
+
+// AcquireConsole distinguishes a new console from another view attaching to
+// the one per-session console. Attached views replay output with stdin muted so
+// historical terminal queries cannot inject responses into the live prompt.
+func (a *App) AcquireConsole(sessionID string) (consoleLease, error) {
+	jobID, existing, err := a.Console.AcquireConsole(sessionID)
+	return consoleLease{JobID: jobID, Existing: existing}, err
+}
+
 func (a *App) WriteConsole(jobID, data string) error {
 	return a.Console.WriteConsole(jobID, []byte(data))
 }

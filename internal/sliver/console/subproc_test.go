@@ -226,6 +226,19 @@ func TestSubprocSessionLeasesShareOneJob(t *testing.T) {
 	}
 }
 
+func TestAcquireConsoleReportsExistingJob(t *testing.T) {
+	svc := New(nil)
+	svc.subproc.add(&subprocJob{id: "job-1", sessionID: "session-1"})
+
+	id, existing, err := svc.AcquireConsole("session-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != "job-1" || !existing {
+		t.Fatalf("AcquireConsole() = %q, %v; want job-1, true", id, existing)
+	}
+}
+
 func TestSubprocOutputSnapshotReplaysAndBoundsHistory(t *testing.T) {
 	job := &subprocJob{}
 	job.appendOutput([]byte("first"))

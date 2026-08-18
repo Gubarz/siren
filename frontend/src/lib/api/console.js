@@ -1,4 +1,5 @@
 export {
+  AcquireConsole,
   CloseShell,
   GetCommandCatalog,
   GetConsoleOutput,

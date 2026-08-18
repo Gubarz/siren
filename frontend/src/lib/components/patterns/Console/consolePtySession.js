@@ -1,7 +1,7 @@
 import {
+  AcquireConsole,
   GetConsoleOutput,
   ResizeConsole,
-  StartConsole,
   StopConsole,
   WriteConsole,
 } from '../../../api/console.js'
@@ -91,14 +91,15 @@ function installRuntimeListeners(record) {
 function startConsole(record) {
   if (record.starting || record.jobID) return
   record.starting = true
-  StartConsole(record.sessionID)
-    .then((id) => {
+  AcquireConsole(record.sessionID)
+    .then(({ jobID: id, existing }) => {
       record.starting = false
       if (record.disposed) {
         if (STOP_CONSOLE_ON_DISPOSE) StopConsole(id).catch(() => {})
         return
       }
       record.replaying = true
+      record.muteReplayInput = existing
       record.jobID = id
       record.leaseReleased = false
       record.term.focus()
@@ -121,11 +122,14 @@ function replayConsoleOutput(record, output) {
     finishConsoleReplay(record)
     return
   }
+  if (record.muteReplayInput) record.term.options.disableStdin = true
   record.term.write(buffered, () => finishConsoleReplay(record))
 }
 
 function finishConsoleReplay(record) {
   if (record.disposed) return
+  if (record.muteReplayInput) record.term.options.disableStdin = false
+  record.muteReplayInput = false
   for (const output of record.replayQueue) record.term.write(output)
   record.replayQueue = []
   record.replaying = false
@@ -142,6 +146,7 @@ function createRecord(sessionID, hostEl, onshell) {
     starting: false,
     disposed: false,
     replaying: false,
+    muteReplayInput: false,
     replayQueue: [],
     refs: 0,
     releaseTimer: null,

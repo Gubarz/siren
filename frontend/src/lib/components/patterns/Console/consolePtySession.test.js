@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocked = vi.hoisted(() => ({
+  AcquireConsole: vi.fn(() => Promise.resolve({ jobID: 'job-1', existing: false })),
   element: { parentElement: null },
   fit: { fit: vi.fn() },
   term: null,
   GetConsoleOutput: vi.fn(() => Promise.resolve('')),
-  StartConsole: vi.fn(() => Promise.resolve('job-1')),
   StopConsole: vi.fn(() => Promise.resolve()),
   ResizeConsole: vi.fn(() => Promise.resolve()),
   WriteConsole: vi.fn(() => Promise.resolve()),
@@ -17,9 +17,9 @@ const mocked = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../api/console.js', () => ({
+  AcquireConsole: mocked.AcquireConsole,
   GetConsoleOutput: mocked.GetConsoleOutput,
   ResizeConsole: mocked.ResizeConsole,
-  StartConsole: mocked.StartConsole,
   StopConsole: mocked.StopConsole,
   WriteConsole: mocked.WriteConsole,
 }))
@@ -51,6 +51,7 @@ describe('console PTY session cache', () => {
     mocked.term = {
       cols: 100,
       rows: 30,
+      options: { disableStdin: false },
       element: mocked.element,
       dispose: vi.fn(),
       focus: vi.fn(),
@@ -80,7 +81,7 @@ describe('console PTY session cache', () => {
     const second = acquireConsolePty('session-1', secondHost)
     await vi.advanceTimersByTimeAsync(3100)
 
-    expect(mocked.StartConsole).toHaveBeenCalledTimes(1)
+    expect(mocked.AcquireConsole).toHaveBeenCalledTimes(1)
     expect(mocked.StopConsole).not.toHaveBeenCalled()
     expect(secondHost.appendChild).toHaveBeenCalledWith(mocked.element)
 
@@ -102,6 +103,22 @@ describe('console PTY session cache', () => {
 
     const replayed = mocked.term.write.mock.calls[0][0]
     expect(new TextDecoder().decode(replayed)).toBe('existing console output')
+  })
+
+  it('mutes terminal replies while replaying history into an existing console', async () => {
+    mocked.AcquireConsole.mockResolvedValueOnce({ jobID: 'job-1', existing: true })
+    mocked.GetConsoleOutput.mockResolvedValueOnce(btoa('\x1b[6n'))
+    let mutedDuringReplay = false
+    mocked.term.write.mockImplementationOnce((_data, callback) => {
+      mutedDuringReplay = mocked.term.options.disableStdin
+      callback?.()
+    })
+
+    acquireConsolePty('session-1', host())
+    await vi.waitFor(() => expect(mocked.GetConsoleOutput).toHaveBeenCalledWith('job-1'))
+
+    expect(mutedDuringReplay).toBe(true)
+    expect(mocked.term.options.disableStdin).toBe(false)
   })
 
   it('releases a window lease only once during page teardown', async () => {

@@ -21,22 +21,31 @@ const subprocCommandTerminator = "\n"
 // Interactive prompts work because the subprocess owns fd 0/1/2 outright
 // — no in-process hijack. Returns a jobID the frontend uses for I/O.
 func (s *Service) StartConsole(sessionID string) (string, error) {
+	id, _, err := s.AcquireConsole(sessionID)
+	return id, err
+}
+
+// AcquireConsole starts or attaches to the session console and reports whether
+// the returned job was already running. A newly started console still needs a
+// terminal to answer its startup capability queries; an attached terminal must
+// not answer queries found in replayed history.
+func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
 	s.subprocStart.Lock()
 	defer s.subprocStart.Unlock()
 	if id := s.subproc.acquireSession(sessionID); id != "" {
-		return id, nil
+		return id, true, nil
 	}
 
 	self, err := os.Executable()
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	// The subprocess needs the operator config to reconnect. We pass the
 	// serialized ClientConfig via a $TMPDIR file, deleted after read.
 	cfgPath, err := writeConfigForSubproc(s.rpc.Config)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	cmd := exec.Command(self, ConsoleModeFlag, cfgPath, sessionID)
@@ -55,7 +64,7 @@ func (s *Service) StartConsole(sessionID string) (string, error) {
 	master, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: 100, Rows: 30})
 	if err != nil {
 		_ = os.Remove(cfgPath)
-		return "", err
+		return "", false, err
 	}
 
 	id := s.subproc.newJobID()
@@ -64,7 +73,7 @@ func (s *Service) StartConsole(sessionID string) (string, error) {
 	s.drainPendingCommands(job)
 	go s.pumpSubproc(job)
 	go s.watchConsole(job, cfgPath)
-	return id, nil
+	return id, false, nil
 }
 
 func (s *Service) ResizeConsole(jobID string, cols, rows int) error {
