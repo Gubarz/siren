@@ -210,7 +210,7 @@ func TestQueryVerbsFilter(t *testing.T) {
 	}
 	_ = store.InsertBatch(ctx, entries)
 
-	entries, total, _ := store.Query(ctx, journalv1.Filter{Verbs: []string{"Ps"}})
+	_, total, _ := store.Query(ctx, journalv1.Filter{Verbs: []string{"Ps"}})
 	if total != 2 {
 		t.Fatalf("Verbs=['Ps']: got %d, want 2", total)
 	}

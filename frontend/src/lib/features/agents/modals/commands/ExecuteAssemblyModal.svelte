@@ -1,14 +1,14 @@
 <script>
   import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
-  import Button from '../../../../components/ui/Button.svelte'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
   import CheckboxField from '../../../../components/forms/CheckboxField.svelte'
   import SelectField from '../../../../components/forms/SelectField.svelte'
   import FilePickerField from '../../../../components/forms/FilePickerField.svelte'
-  import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
   import PidPickerField from '../pickers/PidPickerField.svelte'
+  import CommandPreview from './CommandPreview.svelte'
+  import CommandModalFooter from './CommandModalFooter.svelte'
 
   let {
     firstSessionID = '',
@@ -168,14 +168,10 @@
       {/if}
     </CollapsibleGroup>
 
-    <div class="mb-4">
-      <span class="block text-sm font-semibold text-fg mb-1">Command preview</span>
-      <code class="block p-2 border border-line rounded bg-chrome text-fg break-all">{cmdPreview}</code>
-    </div>
-  
+  <CommandPreview cmd={cmdPreview} />
+
   {#snippet footer()}
-    <div class="flex justify-between items-center">
-    <PresetPicker
+    <CommandModalFooter
       commandPath="execute-assembly"
       currentValues={{
         'local path to assembly': assemblyPath,
@@ -211,11 +207,10 @@
         if (values['loot'] != null) saveToLoot = values['loot']
         if (values['name'] != null) lootName = values['name']
       }}
+      primaryLabel="Execute"
+      onprimary={execute}
+      primaryDisabled={!assemblyPath}
+      oncancel={() => open = false}
     />
-    <div class="flex gap-2">
-      <Button color="dark" onclick={() => open = false}>Cancel</Button>
-      <Button color="primary" onclick={execute} disabled={!assemblyPath}>Execute</Button>
-    </div>
-  </div>
   {/snippet}
 </Modal>

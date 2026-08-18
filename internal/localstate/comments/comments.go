@@ -1,20 +1,18 @@
 package comments
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+
+	"siren/internal/localstate/jsonstore"
 )
 
-const persistFilename = "gui-entity-comments.json"
+const persistPrefix = "gui-entity-comments"
 
 type Comment struct {
 	ID         string `json:"id"`
@@ -27,8 +25,7 @@ type Comment struct {
 
 type Service struct {
 	mu       sync.RWMutex
-	rootDir  string
-	path     string
+	store    *jsonstore.ScopedStore[persisted]
 	comments map[string][]Comment
 }
 
@@ -38,20 +35,17 @@ type persisted struct {
 
 func New(rootDir string) *Service {
 	s := &Service{
-		rootDir:  rootDir,
-		path:     filepath.Join(rootDir, persistFilename),
+		store:    jsonstore.New[persisted](rootDir, persistPrefix),
 		comments: map[string][]Comment{},
 	}
-	if err := s.load(); err != nil {
-		s.comments = map[string][]Comment{}
-	}
+	_ = s.load()
 	return s
 }
 
 func (s *Service) SetServer(host string, port uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.path = filepath.Join(s.rootDir, fmt.Sprintf("gui-entity-comments-%s_%d.json", host, port))
+	s.store.SetServer(host, port)
 	s.comments = map[string][]Comment{}
 	_ = s.loadLocked()
 }
@@ -67,16 +61,12 @@ func (s *Service) load() error {
 }
 
 func (s *Service) loadLocked() error {
-	data, err := os.ReadFile(s.path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
+	p, ok, err := s.store.Load()
 	if err != nil {
 		return err
 	}
-	var p persisted
-	if err := json.Unmarshal(data, &p); err != nil {
-		return err
+	if !ok {
+		return nil
 	}
 	if p.Comments != nil {
 		s.comments = p.Comments
@@ -85,15 +75,7 @@ func (s *Service) loadLocked() error {
 }
 
 func (s *Service) persistLocked() error {
-	data, err := json.MarshalIndent(persisted{Comments: s.comments}, "", "  ")
-	if err != nil {
-		return err
-	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, s.path)
+	return s.store.Save(persisted{Comments: s.comments})
 }
 
 func (s *Service) GetComments(entityType, entityID string) []Comment {

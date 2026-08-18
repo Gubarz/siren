@@ -1,12 +1,12 @@
 <script>
   import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
-  import Button from '../../../../components/ui/Button.svelte'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
   import CheckboxField from '../../../../components/forms/CheckboxField.svelte'
-  import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
   import CredentialPicker from '../CredentialPicker.svelte'
+  import CommandPreview from './CommandPreview.svelte'
+  import CommandModalFooter from './CommandModalFooter.svelte'
 
   let {
     open = $bindable(false),
@@ -71,24 +71,24 @@
     <CheckboxField bind:checked={netonly} label="Net-only (don't validate credentials locally)" description="Uses these creds only for network resource access. Quieter — no local logon event." />
   </CollapsibleGroup>
 
+  <CommandPreview cmd={cmdPreview} />
+
   {#snippet footer()}
-    <div class="flex justify-between items-center">
-      <PresetPicker
-        commandPath="runas"
-        currentValues={{ username, domain, program, 'args': programArgs, 'net-only': netonly, 'show-window': showWindow }}
-        onapply={(values) => {
-          if (values['username'] != null) username = values['username']
-          if (values['domain'] != null) domain = values['domain']
-          if (values['program'] != null) program = values['program']
-          if (values['args'] != null) programArgs = values['args']
-          if (values['net-only'] != null) netonly = values['net-only']
-          if (values['show-window'] != null) showWindow = values['show-window']
-        }}
-      />
-      <div class="flex gap-2">
-        <Button color="dark" onclick={() => open = false}>Cancel</Button>
-        <Button color="primary" onclick={execute} disabled={!username || !password || !program}>Run</Button>
-      </div>
-    </div>
+    <CommandModalFooter
+      commandPath="runas"
+      currentValues={{ username, domain, program, 'args': programArgs, 'net-only': netonly, 'show-window': showWindow }}
+      onapply={(values) => {
+        if (values['username'] != null) username = values['username']
+        if (values['domain'] != null) domain = values['domain']
+        if (values['program'] != null) program = values['program']
+        if (values['args'] != null) programArgs = values['args']
+        if (values['net-only'] != null) netonly = values['net-only']
+        if (values['show-window'] != null) showWindow = values['show-window']
+      }}
+      primaryLabel="Run"
+      onprimary={execute}
+      primaryDisabled={!username || !password || !program}
+      oncancel={() => open = false}
+    />
   {/snippet}
 </Modal>

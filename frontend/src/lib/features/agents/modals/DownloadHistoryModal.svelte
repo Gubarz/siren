@@ -6,6 +6,7 @@
   import DataTable from '$components/patterns/DataTable.svelte'
   import { GetDownloadHistory, GetAllDownloadHistory, ClearDownloadHistory } from '../../../api/agents.js'
   import { dialog } from '../../../stores/ui/dialog.svelte.js'
+  import { formatBytes, formatDateTime } from '../../../utils/formats.js'
 
   let {
     isOpen = false,
@@ -55,14 +56,6 @@
     }
   }
 
-  function formatSize(bytes) {
-    if (!bytes || bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
   let tableColumns = [
     { key: 'timestampStr', label: 'Time', width: 180 },
     { key: 'remotePath', label: 'Remote Path', width: 250 },
@@ -75,8 +68,8 @@
   let normalizedRows = $derived((records || []).map((r, idx) => ({
     ...r,
     _key: r.id || idx,
-    timestampStr: r.timestamp ? new Date(r.timestamp).toLocaleString() : '-',
-    sizeStr: formatSize(r.size),
+    timestampStr: formatDateTime(r.timestamp),
+    sizeStr: formatBytes(r.size),
   })))
 
   let filteredRows = $derived(

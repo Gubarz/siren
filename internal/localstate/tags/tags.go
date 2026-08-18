@@ -5,25 +5,19 @@
 package tags
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+
+	"siren/internal/localstate/jsonstore"
 )
 
-const persistFilename = "gui-agent-tags.json"
+const persistPrefix = "gui-agent-tags"
 
 type Service struct {
-	mu      sync.RWMutex
-	rootDir string
-	path    string
-	// tags maps entity key -> sorted+dedup'd tag list. A missing key means
-	// the entity has no operator tags. colors maps entity key -> color from
-	// the closed RowColorNames palette.
+	mu     sync.RWMutex
+	store  *jsonstore.ScopedStore[persisted]
 	tags   map[string][]string
 	colors map[string]string
 }
@@ -67,16 +61,11 @@ func isAgentEntityKey(key string) (string, bool) {
 
 func New(rootDir string) *Service {
 	s := &Service{
-		rootDir: rootDir,
-		path:    filepath.Join(rootDir, persistFilename),
-		tags:    map[string][]string{},
-		colors:  map[string]string{},
+		store:  jsonstore.New[persisted](rootDir, persistPrefix),
+		tags:   map[string][]string{},
+		colors: map[string]string{},
 	}
-	if err := s.load(); err != nil {
-		// Startup shouldn't fatal on a missing/corrupt file — treat as empty.
-		s.tags = map[string][]string{}
-		s.colors = map[string]string{}
-	}
+	_ = s.load()
 	return s
 }
 
@@ -87,7 +76,7 @@ func (s *Service) Close() {}
 func (s *Service) SetServer(host string, port uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.path = filepath.Join(s.rootDir, fmt.Sprintf("gui-agent-tags-%s_%d.json", host, port))
+	s.store.SetServer(host, port)
 	s.tags = map[string][]string{}
 	s.colors = map[string]string{}
 	_ = s.loadLocked()
@@ -100,16 +89,12 @@ func (s *Service) load() error {
 }
 
 func (s *Service) loadLocked() error {
-	data, err := os.ReadFile(s.path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
+	p, ok, err := s.store.Load()
 	if err != nil {
 		return err
 	}
-	var p persisted
-	if err := json.Unmarshal(data, &p); err != nil {
-		return err
+	if !ok {
+		return nil
 	}
 	if p.Tags != nil {
 		s.tags = p.Tags
@@ -121,15 +106,7 @@ func (s *Service) loadLocked() error {
 }
 
 func (s *Service) persistLocked() error {
-	data, err := json.MarshalIndent(persisted{Tags: s.tags, Colors: s.colors}, "", "  ")
-	if err != nil {
-		return err
-	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, s.path)
+	return s.store.Save(persisted{Tags: s.tags, Colors: s.colors})
 }
 
 // GetEntityTags returns the tag list for one entity, empty slice if none.

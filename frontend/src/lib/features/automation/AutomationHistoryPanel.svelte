@@ -1,14 +1,11 @@
 <script>
   import Badge from '$components/ui/Badge.svelte'
   import EmptyState from '$components/ui/EmptyState.svelte'
+  import { formatDateTime } from '../../utils/formats.js'
 
   let {
     selectedRun = null,
   } = $props()
-
-  function formatTime(value) {
-    return value ? new Date(value).toLocaleString() : '-'
-  }
 
   let output = $derived(
     selectedRun?.output || (selectedRun?.status === 'running' ? 'Running...' : 'No command output.'),
@@ -21,7 +18,7 @@
       <div class="min-w-0">
         <h2 class="m-0 truncate text-lg font-semibold">{selectedRun.ruleName}</h2>
         <p class="m-0 mt-1 text-xs text-fg-muted">
-          {selectedRun.targetKind || 'target'} {selectedRun.targetName || 'No target'} &middot; {selectedRun.trigger || 'manual'} &middot; {formatTime(selectedRun.startedAt)}
+          {selectedRun.targetKind || 'target'} {selectedRun.targetName || 'No target'} &middot; {selectedRun.trigger || 'manual'} &middot; {formatDateTime(selectedRun.startedAt)}
         </p>
       </div>
       <Badge variant={selectedRun.status} class="shrink-0">{String(selectedRun.status || 'unknown').toUpperCase()}</Badge>

@@ -2,72 +2,41 @@ package automation
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
-	"sync"
 
 	"siren/internal/automation"
+	"siren/internal/localstate/jsonstore"
 )
 
 type JSONStore struct {
-	mu   sync.Mutex
-	dir  string
-	path string
+	store *jsonstore.ScopedStore[automation.State]
 }
 
-const stateFilename = "gui-automation.json"
+const statePrefix = "gui-automation"
 
 func New(rootDir string) *JSONStore {
 	return &JSONStore{
-		dir:  rootDir,
-		path: filepath.Join(rootDir, stateFilename),
+		store: jsonstore.New[automation.State](rootDir, statePrefix),
 	}
 }
 
 func (s *JSONStore) Load(_ context.Context) (*automation.State, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.loadLocked()
-}
-
-func (s *JSONStore) loadLocked() (*automation.State, error) {
-	data, err := os.ReadFile(s.path)
-	if errors.Is(err, os.ErrNotExist) {
-		return &automation.State{}, nil
-	}
+	state, ok, err := s.store.Load()
 	if err != nil {
 		return nil, err
 	}
-	var state automation.State
-	if err := json.Unmarshal(data, &state); err != nil {
-		return nil, err
+	if !ok {
+		return &automation.State{}, nil
 	}
 	return &state, nil
 }
 
 func (s *JSONStore) Save(_ context.Context, state *automation.State) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.persistLocked(state)
-}
-
-func (s *JSONStore) persistLocked(state *automation.State) error {
-	data, err := json.MarshalIndent(state, "", "  ")
-	if err != nil {
-		return err
+	if state == nil {
+		return s.store.Save(automation.State{})
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, s.path)
+	return s.store.Save(*state)
 }
 
 func (s *JSONStore) SetServer(host string, port uint32) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.path = filepath.Join(s.dir, fmt.Sprintf("gui-automation-%s_%d.json", host, port))
+	s.store.SetServer(host, port)
 }

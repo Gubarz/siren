@@ -1,4 +1,4 @@
-import { ListCommands, RunSessionCommand, SendToSessionConsole } from '../api/console.js'
+import { RunSessionCommand, SendToSessionConsole } from '../api/console.js'
 import { errorMessage } from '../utils/errors.js'
 
 // Per-session console state, keyed by sessionID.
@@ -15,15 +15,6 @@ function createSession() {
   return { lines: [], history: [], histIdx: 0, busy: false }
 }
 
-// The real implant command list, fetched once from the backend.
-let commandsPromise = null
-export function getCommands() {
-  if (!commandsPromise) {
-    commandsPromise = ListCommands().catch(() => [])
-  }
-  return commandsPromise
-}
-
 export function peekSession(id) {
   return sessions[sessionKey(id)]
 }
@@ -36,15 +27,11 @@ export function ensureSession(id) {
   return sessions[key]
 }
 
-export function getSession(id) {
-  return ensureSession(id)
-}
-
 export function emptySession() {
   return EMPTY_SESSION
 }
 
-export function pushLine(id, line) {
+function pushLine(id, line) {
   ensureSession(id).lines.push(line)
 }
 

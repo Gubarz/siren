@@ -1,5 +1,4 @@
 <script>
-  import Button from '$components/ui/Button.svelte'
   import Icon from '$components/ui/Icon.svelte'
   import Modal from '$components/patterns/Modal.svelte'
   import Tabs from '$components/patterns/Tabs.svelte'
@@ -82,48 +81,46 @@
 </script>
 
 <Modal bind:open title={titleText} icon="eye" size="lg">
-  {#snippet children()}
-    {#if loading}
-      <div class="flex items-center justify-center py-12 gap-2">
-        <Icon name="loader" size={24} class="animate-spin text-brand" />
-        <span class="text-sm text-fg-muted">Loading preview...</span>
-      </div>
-    {:else if error}
-      <div class="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">{error}</div>
-    {:else}
-      <div class="flex items-center gap-3 pb-2 text-xs text-fg-muted">
-        <span>Server: {fileTypeLabel(lootFileType)}</span>
-        {#if mimeInfo}
-          <span class="px-1.5 py-0.5 rounded bg-brand/10 text-brand font-medium">{mimeInfo.label}</span>
-        {:else}
-          <span>No magic match</span>
-        {/if}
-        <span>{rawBytes.length.toLocaleString()} bytes</span>
-      </div>
+  {#if loading}
+    <div class="flex items-center justify-center py-12 gap-2">
+      <Icon name="loader" size={24} class="animate-spin text-brand" />
+      <span class="text-sm text-fg-muted">Loading preview...</span>
+    </div>
+  {:else if error}
+    <div class="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">{error}</div>
+  {:else}
+    <div class="flex items-center gap-3 pb-2 text-xs text-fg-muted">
+      <span>Server: {fileTypeLabel(lootFileType)}</span>
+      {#if mimeInfo}
+        <span class="px-2 py-1 rounded bg-brand/10 text-brand font-medium">{mimeInfo.label}</span>
+      {:else}
+        <span>No magic match</span>
+      {/if}
+      <span>{rawBytes.length.toLocaleString()} bytes</span>
+    </div>
 
-      <Tabs {tabs} bind:active={activeTab} />
+    <Tabs {tabs} bind:active={activeTab} />
 
-      <div class="mt-2 max-h-96 overflow-auto">
-        {#if activeTab === 'text'}
-          <pre class="text-xs font-mono whitespace-pre-wrap break-all p-2 bg-surface rounded">{textContent}</pre>
-        {:else if activeTab === 'hex'}
-          <pre class="text-xs font-mono leading-relaxed p-2 bg-surface rounded whitespace-pre">
-            {#each hexRows as row}
-              <span class="text-fg-muted">{row.offset}</span>  {row.hex}  |{row.ascii}|
+    <div class="mt-2 max-h-96 overflow-auto">
+      {#if activeTab === 'text'}
+        <pre class="text-xs font-mono whitespace-pre-wrap break-all p-2 bg-surface rounded">{textContent}</pre>
+      {:else if activeTab === 'hex'}
+        <pre class="text-xs font-mono leading-relaxed p-2 bg-surface rounded whitespace-pre">
+          {#each hexRows as row}
+            <span class="text-fg-muted">{row.offset}</span>  {row.hex}  |{row.ascii}|
+          {/each}
+        </pre>
+      {:else}
+        <div class="p-2 bg-surface rounded">
+          {#if extractedStrings.length === 0}
+            <span class="text-xs text-fg-muted">No printable strings found</span>
+          {:else}
+            {#each extractedStrings as str}
+              <div class="text-xs font-mono py-1 border-b border-line/50 last:border-0">{str}</div>
             {/each}
-          </pre>
-        {:else}
-          <div class="p-2 bg-surface rounded">
-            {#if extractedStrings.length === 0}
-              <span class="text-xs text-fg-muted">No printable strings found</span>
-            {:else}
-              {#each extractedStrings as str}
-                <div class="text-xs font-mono py-0.5 border-b border-line/50 last:border-0">{str}</div>
-              {/each}
-            {/if}
-          </div>
-        {/if}
-      </div>
-    {/if}
-  {/snippet}
+          {/if}
+        </div>
+      {/if}
+    </div>
+  {/if}
 </Modal>

@@ -14,6 +14,7 @@
   import { OpenFileDialog } from '../../api/runtime.js'
   import { dialog } from '../../stores/ui/dialog.svelte.js'
   import { errorMessage } from '../../utils/errors.js'
+  import { formatBytes } from '../../utils/formats.js'
 
   let { embedded = false, onclose } = $props()
 
@@ -90,13 +91,6 @@
     const value = Number(test?.Duration ?? test?.duration ?? 0)
     if (!value) return '0 ms'
     return `${Math.round(value / 1000000)} ms`
-  }
-
-  function formatBytes(size) {
-    if (!size) return '0 B'
-    const units = ['B', 'KiB', 'MiB']
-    const index = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1)
-    return `${(size / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 1)} ${units[index]}`
   }
 </script>
 

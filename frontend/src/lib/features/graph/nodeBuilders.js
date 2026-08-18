@@ -3,8 +3,10 @@
 
 import {
   agentRemoteAddress,
+  collectAgents,
   isAgentOnline,
   isHighPrivilege,
+  osIcon,
   shortAgentID,
 } from '../../utils/agents.js'
 import {
@@ -32,12 +34,7 @@ function listenerWidth(label) {
   )
 }
 
-export function collectAgents({ sessions, beacons }) {
-  return [
-    ...(sessions || []).map((agent) => ({ ...agent, _kind: 'session' })),
-    ...(beacons || []).map((agent) => ({ ...agent, _kind: 'beacon' })),
-  ]
-}
+export { collectAgents }
 
 export function indexAgents(allAgents) {
   const allAgentIds = new Set(allAgents.map((agent) => agent.ID))
@@ -54,14 +51,6 @@ export function indexAgents(allAgents) {
     }
   }
   return { allAgentIds, agentsByName, agentsByAddress }
-}
-
-function osIcon(os) {
-  const value = (os || '').toLowerCase()
-  if (value.includes('win')) return 'monitor'
-  if (value.includes('darwin') || value.includes('mac')) return 'apple'
-  if (value.includes('linux')) return 'terminal'
-  return 'cpu'
 }
 
 export function agentNode(impl, ctx) {

@@ -17,7 +17,6 @@
   "ignoreDependencies": [
     "@lucide/svelte",
     "@tailwindcss/vite",
-    "@tanstack/svelte-table",
     "@tanstack/svelte-virtual",
     "eslint-plugin-boundaries",
     "eslint-plugin-tailwindcss",

@@ -1,7 +1,6 @@
 package tags
 
 import (
-	"path/filepath"
 	"testing"
 )
 
@@ -100,7 +99,7 @@ func TestTagsPersistAndLoad(t *testing.T) {
 		t.Fatalf("SetAgentTags returned error: %v", err)
 	}
 
-	loaded := &Service{path: s.path, tags: map[string][]string{}}
+	loaded := &Service{store: s.store, tags: map[string][]string{}, colors: map[string]string{}}
 	if err := loaded.load(); err != nil {
 		t.Fatalf("load returned error: %v", err)
 	}
@@ -169,7 +168,7 @@ func TestColorsPersistAndLoad(t *testing.T) {
 		t.Fatalf("SetAgentColor returned error: %v", err)
 	}
 
-	loaded := &Service{path: s.path, tags: map[string][]string{}}
+	loaded := &Service{store: s.store, tags: map[string][]string{}, colors: map[string]string{}}
 	if err := loaded.load(); err != nil {
 		t.Fatalf("load returned error: %v", err)
 	}
@@ -192,11 +191,7 @@ func TestLegacyAgentColorsLoadThroughAgentAndEntityApis(t *testing.T) {
 
 func newTestService(t *testing.T) *Service {
 	t.Helper()
-	return &Service{
-		path:   filepath.Join(t.TempDir(), "tags.json"),
-		tags:   map[string][]string{},
-		colors: map[string]string{},
-	}
+	return New(t.TempDir())
 }
 
 func assertStringSlice(t *testing.T, got, want []string) {

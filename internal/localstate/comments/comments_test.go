@@ -1,22 +1,12 @@
 package comments
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 func TestCommentsService(t *testing.T) {
-	dir, err := os.MkdirTemp("", "comments-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
-	svc := &Service{
-		path:     filepath.Join(dir, "comments.json"),
-		comments: map[string][]Comment{},
-	}
+	dir := t.TempDir()
+	svc := New(dir)
 
 	c1, err := svc.AddComment("agent", "session-1", "Alice", "First agent note")
 	if err != nil {

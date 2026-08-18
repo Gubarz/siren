@@ -5,77 +5,32 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	"siren/internal/bus"
 	"siren/internal/sliver/rpc"
 	"siren/internal/wailsadapter"
 )
 
 type Service struct {
+	rpc.Emitter
 	rpc *rpc.Client
 	ui  *wailsadapter.Bridge
-	bus bus.Bus
 }
 
-func New(rpc *rpc.Client) *Service {
-	return &Service{rpc: rpc}
+func New(rpcClient *rpc.Client) *Service {
+	return &Service{
+		rpc:     rpcClient,
+		Emitter: rpc.NewEmitter(rpcClient),
+	}
 }
 
 func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 	s.ui = ui
 }
 
-func (s *Service) SetBus(b bus.Bus) {
-	s.bus = b
-}
 
-func (s *Service) publish(eventType string, payload map[string]any) {
-	if s.bus == nil {
-		return
-	}
-	s.bus.Publish(bus.Event{
-		Type:         eventType,
-		Source:       "gui",
-		ConnectionID: s.rpc.ConnectionID(),
-		Payload:      payload,
-	})
-}
-
-func newImplantConfig(goos, goarch, format, c2url string, isBeacon bool, beaconInterval int64) (*clientpb.ImplantConfig, error) {
-	formats := map[string]clientpb.OutputFormat{
-		"exe":       clientpb.OutputFormat_EXECUTABLE,
-		"shared":    clientpb.OutputFormat_SHARED_LIB,
-		"shellcode": clientpb.OutputFormat_SHELLCODE,
-		"service":   clientpb.OutputFormat_SERVICE,
-	}
-	outFmt, ok := formats[strings.ToLower(format)]
-	if !ok {
-		return nil, fmt.Errorf("unknown format %q (use exe, shared, shellcode, or service)", format)
-	}
-
-	c2url = strings.TrimSpace(c2url)
-	if c2url == "" {
-		return nil, fmt.Errorf("a C2 URL is required, e.g. mtls://10.0.0.1:443")
-	}
-
-	return &clientpb.ImplantConfig{
-		GOOS:               strings.ToLower(goos),
-		GOARCH:             strings.ToLower(goarch),
-		Format:             outFmt,
-		IsBeacon:           isBeacon,
-		BeaconInterval:     beaconInterval * int64(time.Second),
-		BeaconJitter:       30 * int64(time.Second),
-		ReconnectInterval:   60 * int64(time.Second),
-		PollTimeout:         360 * int64(time.Second),
-		MaxConnectionErrors: 1000,
-		C2:                 []*clientpb.ImplantC2{{Priority: 0, URL: c2url}},
-		HTTPC2ConfigName:   "default",
-	}, nil
-}
 
 // GenerateRequest is the full option set exposed by the advanced generate
 // modal. Fields left at their zero value are omitted from the ImplantConfig
@@ -159,21 +114,7 @@ func (s *Service) GenerateAdvanced(req GenerateRequest) (string, error) {
 	if resp.File == nil {
 		return "", fmt.Errorf("server returned no implant file")
 	}
-	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
-		Title:           "Save Implant",
-		Filename: resp.File.Name,
-	})
-	if err != nil {
-		return "", fmt.Errorf("dialog error: %w", err)
-	}
-	if localPath == "" {
-		return "", nil
-	}
-	if err := os.WriteFile(localPath, resp.File.Data, 0755); err != nil {
-		return "", fmt.Errorf("failed to save implant: %w", err)
-	}
-	s.publish("gui.payload-built", map[string]any{"name": req.Name, "builder": "sliver"})
-	return localPath, nil
+	return s.saveImplantFile("Save Implant", resp.File.Name, resp.File.Data, req.Name)
 }
 
 // SaveProfileAdvanced saves an implant profile with the full option set.
@@ -192,63 +133,6 @@ func (s *Service) SaveProfileAdvanced(req GenerateRequest) error {
 		Name:   req.Name,
 		Config: cfg,
 	})
-	return err
-}
-
-func (s *Service) Generate(goos, goarch, format, c2url, name string, isBeacon bool, beaconInterval int64) (string, error) {
-	if !s.rpc.Connected() {
-		return "", rpc.ErrNotConnected
-	}
-
-	cfg, err := newImplantConfig(goos, goarch, format, c2url, isBeacon, beaconInterval)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := s.rpc.RPC.Generate(context.Background(), &clientpb.GenerateReq{
-		Name:   name,
-		Config: cfg,
-	})
-	if err != nil {
-		return "", err
-	}
-	if resp.File == nil {
-		return "", fmt.Errorf("server returned no implant file")
-	}
-
-	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
-		Title:           "Save Implant",
-		Filename: resp.File.Name,
-	})
-	if err != nil {
-		return "", fmt.Errorf("dialog error: %w", err)
-	}
-	if localPath == "" {
-		return "", nil
-	}
-	if err := os.WriteFile(localPath, resp.File.Data, 0755); err != nil {
-		return "", fmt.Errorf("failed to save implant: %w", err)
-	}
-	s.publish("gui.payload-built", map[string]any{"name": name, "builder": "sliver"})
-	return localPath, nil
-}
-
-func (s *Service) SaveProfile(name, goos, goarch, format, c2url string, isBeacon bool, beaconInterval int64) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-
-	cfg, err := newImplantConfig(goos, goarch, format, c2url, isBeacon, beaconInterval)
-	if err != nil {
-		return err
-	}
-
-	profile := &clientpb.ImplantProfile{
-		Name:   name,
-		Config: cfg,
-	}
-
-	_, err = s.rpc.RPC.SaveImplantProfile(context.Background(), profile)
 	return err
 }
 
@@ -274,9 +158,16 @@ func (s *Service) GenerateFromProfile(profileConfigID string, name string, forma
 		return "", fmt.Errorf("server returned no implant file")
 	}
 
+	return s.saveImplantFile("Save Implant from Profile", resp.File.Name, resp.File.Data, name)
+}
+
+func (s *Service) saveImplantFile(title, defaultName string, data []byte, payloadName string) (string, error) {
+	if s.ui == nil {
+		return "", fmt.Errorf("ui bridge is unavailable")
+	}
 	localPath, err := s.ui.SaveFileDialog(&application.SaveFileDialogOptions{
-		Title:           "Save Implant from Profile",
-		Filename: resp.File.Name,
+		Title:    title,
+		Filename: defaultName,
 	})
 	if err != nil {
 		return "", fmt.Errorf("dialog error: %w", err)
@@ -284,9 +175,9 @@ func (s *Service) GenerateFromProfile(profileConfigID string, name string, forma
 	if localPath == "" {
 		return "", nil
 	}
-	if err := os.WriteFile(localPath, resp.File.Data, 0755); err != nil {
+	if err := os.WriteFile(localPath, data, 0o755); err != nil {
 		return "", fmt.Errorf("failed to save implant: %w", err)
 	}
-	s.publish("gui.payload-built", map[string]any{"name": name, "builder": "sliver"})
+	s.Publish("gui.payload-built", map[string]any{"name": payloadName, "builder": "sliver"})
 	return localPath, nil
 }

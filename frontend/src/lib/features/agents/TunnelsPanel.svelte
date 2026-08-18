@@ -8,6 +8,7 @@
     StopRportfwd,
   } from '../../api/agents.js';
   import { errorMessage } from '../../utils/errors.js';
+  import { formatBytes } from '../../utils/formats.js';
   import { dialog } from '$stores/ui/dialog.svelte.js';
   import { tunnels } from '$stores/resources/tunnels.svelte.js';
   import { useResource } from '$stores/lib/createResource.svelte.js';
@@ -19,14 +20,6 @@
 
   let proxies = $derived(tunnels.data?.proxies || []);
   let rportfwds = $derived(tunnels.data?.rportfwds || []);
-
-  function formatBytes(v) {
-    if (!v) return '0 B';
-    const k = 1024;
-    const s = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(v) / Math.log(k));
-    return parseFloat((v / Math.pow(k, i)).toFixed(1)) + ' ' + s[i];
-  }
 
   async function doStartSocks() {
     const port = await dialog.prompt('Local SOCKS port:', 'Start SOCKS Proxy', '1080');

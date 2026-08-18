@@ -7,8 +7,9 @@
   import TextInput from '$components/ui/TextInput.svelte'
   import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
   import {
-    agentRemoteAddress, isAgentOnline, isHighPrivilege, pivotParentMap, shortAgentID,
+    agentKind, agentRemoteAddress, isAgentOnline, isHighPrivilege, osIcon, pivotParentMap, shortAgentID,
   } from '../../utils/agents.js'
+  import { formatRelativeTime } from '../../utils/formats.js'
   import { now } from '../../stores/ui/now.svelte.js'
   import { sessionNotes } from '$stores/resources/sessionNotes.svelte.js'
   import { agentTags } from '$stores/resources/agentTags.svelte.js'
@@ -129,28 +130,6 @@
     return event.ctrlKey || event.metaKey || event.shiftKey
   }
 
-  function getOsIcon(osName) {
-    const lower = (osName || '').toLowerCase()
-    if (lower.includes('win')) return 'monitor'
-    if (lower.includes('linux')) return 'terminal'
-    if (lower.includes('darwin') || lower.includes('mac')) return 'apple'
-    return 'monitor'
-  }
-
-  function getTypeStr(item) {
-    return item._kind || (item.NextCheckin !== undefined ? 'beacon' : 'session')
-  }
-
-  function fmtCheckin(ts, nowSec) {
-    if (!ts) return '-'
-    const s = nowSec - ts
-    if (s < 2) return 'just now'
-    if (s < 60) return `${s}s ago`
-    if (s < 3600) return `${Math.floor(s / 60)}m ago`
-    if (s < 86400) return `${Math.floor(s / 3600)}h ago`
-    return `${Math.floor(s / 86400)}d ago`
-  }
-
   let pivotParents = $derived(pivotParentMap(pivotGraph))
 
   let discoveredByAgent = $derived(discoveries.reduce((groups, device) => {
@@ -158,13 +137,6 @@
     ;(groups[key] ??= []).push(device)
     return groups
   }, {}))
-
-  function deviceOsIcon(osHint) {
-    const s = (osHint || '').toLowerCase()
-    if (s.includes('windows')) return 'monitor'
-    if (s.includes('linux') || s.includes('unix')) return 'terminal'
-    return 'wifi'
-  }
 
   function deviceRow(device, observer) {
     const observerCount = device.observerIDs?.length || 1
@@ -181,7 +153,7 @@
       _remoteHost: device.ip,
       Hostname: device.hostname || '-',
       Username: device.mac || '-',
-      _osIcon: deviceOsIcon(device.osHint),
+      _osIcon: osIcon(device.osHint),
       OS: device.osHint || '',
       Filename: device.vendor || '-',
       PID: '-',
@@ -202,8 +174,8 @@
       _implantName: agent.Name || '-',
       _remoteHost: agentRemoteAddress(agent, pivotParents, data),
       _lastCheckin: agent.LastCheckin ?? agent.lastCheckin ?? 0,
-      _type: getTypeStr(agent),
-      _osIcon: getOsIcon(agent.OS),
+      _type: agentKind(agent),
+      _osIcon: osIcon(agent.OS),
     }
     const devices = (discoveredByAgent[agent.ID] || []).map((d) => deviceRow(d, agent))
     return [agentRow, ...devices]
@@ -259,7 +231,7 @@
         {#if !item._isDevice && item._type === 'session' && isAgentOnline(item, now.value)}
           Active
         {:else}
-          {fmtCheckin(item._lastCheckin, now.value)}
+          {formatRelativeTime(item._lastCheckin, now.value)}
         {/if}
       </span>
     {:else if col.key === '_tags'}

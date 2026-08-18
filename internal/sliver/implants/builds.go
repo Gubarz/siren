@@ -86,6 +86,6 @@ func (s *Service) Regenerate(name string) (string, error) {
 	if err := os.WriteFile(localPath, resp.File.Data, 0755); err != nil {
 		return "", err
 	}
-	s.publish("gui.payload-built", map[string]any{"name": name, "builder": "sliver"})
+	s.Publish("gui.payload-built", map[string]any{"name": name, "builder": "sliver"})
 	return localPath, nil
 }

@@ -23,8 +23,6 @@ export {
   PivotStopListener,
   GetScreenshotData,
   KillJob,
-  LootAdd,
-  LootUpdate,
   RegenerateImplant,
   RemoveCredential,
   RemoveLoot,

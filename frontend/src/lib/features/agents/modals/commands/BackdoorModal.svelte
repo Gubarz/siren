@@ -1,11 +1,11 @@
 <script>
   import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
-  import Button from '../../../../components/ui/Button.svelte'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
-  import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
   import RemoteFilePickerField from '../pickers/RemoteFilePickerField.svelte'
+  import CommandPreview from './CommandPreview.svelte'
+  import CommandModalFooter from './CommandModalFooter.svelte'
 
   let {
     sessionID = '',
@@ -30,7 +30,6 @@
     timeout = values['timeout'] || ''
   }
 
-
   let cmdPreview = $derived.by(() => {
     const parts = ['backdoor']
     if (profile) parts.push('--profile', quote(profile))
@@ -45,55 +44,49 @@
 </script>
 
 <Modal bind:open title="Backdoor Remote Binary" size="2xl" {onclose}>
-  
-    <p class="text-fg-muted text-sm mb-4">
-      Infect an existing binary on the target with implant shellcode. Sliver downloads the file, patches in the shellcode from the chosen profile, and uploads it back to the same path.
-      Persistence idea: pick a legitimate service binary or a scheduled-task target.
-    </p>
+  <p class="text-fg-muted text-sm mb-4">
+    Infect an existing binary on the target with implant shellcode. Sliver downloads the file, patches in the shellcode from the chosen profile, and uploads it back to the same path.
+    Persistence idea: pick a legitimate service binary or a scheduled-task target.
+  </p>
 
-    <div class="mb-3">
-      <RemoteFilePickerField
-        bind:value={remoteFilePath}
-        sessionID={firstSessionID || sessionID}
-        label="Remote file to backdoor"
-        placeholder="C:\\Windows\\System32\\some.exe"
-        description="Path on the target — must already exist and be writable by the implant"
-        mode="file"
-      />
-    </div>
+  <div class="mb-3">
+    <RemoteFilePickerField
+      bind:value={remoteFilePath}
+      sessionID={firstSessionID || sessionID}
+      label="Remote file to backdoor"
+      placeholder="C:\\Windows\\System32\\some.exe"
+      description="Path on the target — must already exist and be writable by the implant"
+      mode="file"
+    />
+  </div>
 
-    <div class="mb-3">
-      <TextField
-        bind:value={profile}
-        label="Implant profile"
-        placeholder="Name of an existing implant profile"
-        description="Which implant config to embed as shellcode. Blank uses the default profile."
-      />
-    </div>
+  <div class="mb-3">
+    <TextField
+      bind:value={profile}
+      label="Implant profile"
+      placeholder="Name of an existing implant profile"
+      description="Which implant config to embed as shellcode. Blank uses the default profile."
+    />
+  </div>
 
-    <CollapsibleGroup title="Advanced" open={false}>
-      <TextField bind:value={timeout} label="Timeout (seconds)" type="number" />
-    </CollapsibleGroup>
+  <CollapsibleGroup title="Advanced" open={false}>
+    <TextField bind:value={timeout} label="Timeout (seconds)" type="number" />
+  </CollapsibleGroup>
 
-    <div class="mb-4">
-      <span class="block text-sm font-semibold text-fg mb-1">Command preview</span>
-      <code class="block p-2 border border-line rounded bg-chrome text-fg break-all">{cmdPreview}</code>
-    </div>
-  
+  <CommandPreview cmd={cmdPreview} />
+
   {#snippet footer()}
-    <div class="flex justify-between items-center">
-    <PresetPicker
+    <CommandModalFooter
       commandPath="backdoor"
       currentValues={{ 'remote file': remoteFilePath, 'profile': profile }}
       onapply={(values) => {
         if (values['remote file'] != null) remoteFilePath = values['remote file']
         if (values['profile'] != null) profile = values['profile']
       }}
+      primaryLabel="Backdoor"
+      onprimary={execute}
+      primaryDisabled={!remoteFilePath}
+      oncancel={() => open = false}
     />
-    <div class="flex gap-2">
-      <Button color="dark" onclick={() => open = false}>Cancel</Button>
-      <Button color="primary" onclick={execute} disabled={!remoteFilePath}>Backdoor</Button>
-    </div>
-  </div>
   {/snippet}
 </Modal>

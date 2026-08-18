@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { shortAgentID, isAgentOnline, pivotParentMap, buildAgentMap } from '../agents.js'
+import {
+  shortAgentID,
+  isAgentOnline,
+  pivotParentMap,
+  buildAgentMap,
+  agentKind,
+  osIcon,
+  collectAgents,
+} from '../agents.js'
 
 describe('shortAgentID', () => {
   it('returns first segment of a UUID', () => {
@@ -88,5 +96,46 @@ describe('buildAgentMap', () => {
 
   it('tolerates null/undefined lists', () => {
     expect(buildAgentMap(null, undefined).size).toBe(0)
+  })
+})
+
+describe('agentKind', () => {
+  it('identifies session and beacon objects correctly', () => {
+    expect(agentKind({ _kind: 'session' })).toBe('session')
+    expect(agentKind({ _kind: 'beacon' })).toBe('beacon')
+    expect(agentKind({ NextCheckin: 12345 })).toBe('beacon')
+    expect(agentKind({ ID: 's-1' })).toBe('session')
+    expect(agentKind(null)).toBe('session')
+  })
+})
+
+describe('osIcon', () => {
+  it('maps common operating system strings to icons', () => {
+    expect(osIcon('windows')).toBe('monitor')
+    expect(osIcon('win10')).toBe('monitor')
+    expect(osIcon('linux')).toBe('terminal')
+    expect(osIcon('darwin')).toBe('apple')
+    expect(osIcon('macOS')).toBe('apple')
+    expect(osIcon('android')).toBe('smartphone')
+    expect(osIcon('ios')).toBe('smartphone')
+    expect(osIcon('unknown')).toBe('cpu')
+    expect(osIcon('')).toBe('cpu')
+  })
+})
+
+describe('collectAgents', () => {
+  it('merges sessions and beacons into a unified array tagged with _kind', () => {
+    const list = collectAgents({
+      sessions: [{ ID: 's-1' }],
+      beacons: [{ ID: 'b-1' }],
+    })
+    expect(list).toEqual([
+      { ID: 's-1', _kind: 'session' },
+      { ID: 'b-1', _kind: 'beacon' },
+    ])
+  })
+
+  it('handles empty input gracefully', () => {
+    expect(collectAgents()).toEqual([])
   })
 })

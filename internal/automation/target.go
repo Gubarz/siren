@@ -55,19 +55,6 @@ func matchAutomationPattern(value, patterns string) bool {
 	return false
 }
 
-func renderAutomationCommand(command string, target Target) string {
-	replacer := strings.NewReplacer(
-		"{{id}}", target.ID,
-		"{{name}}", target.Name,
-		"{{hostname}}", target.Hostname,
-		"{{username}}", target.Username,
-		"{{os}}", target.OS,
-		"{{arch}}", target.Arch,
-		"{{kind}}", target.Kind,
-	)
-	return replacer.Replace(command)
-}
-
 const (
 	ExecutionModeJavaScript = "javascript"
 	ExecutionModeCommands   = "commands"

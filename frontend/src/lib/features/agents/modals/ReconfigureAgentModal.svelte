@@ -3,13 +3,11 @@
   import Modal from '../../../components/patterns/Modal.svelte'
   import Button from '../../../components/ui/Button.svelte'
   import TextField from '../../../components/forms/TextField.svelte'
-  import TextInput from '../../../components/ui/TextInput.svelte'
-  import Icon from '../../../components/ui/Icon.svelte'
-  import Menu from '../../../components/ui/Menu.svelte'
-  import MenuItem from '../../../components/ui/MenuItem.svelte'
+  import C2UriInput from '../../../components/forms/C2UriInput.svelte'
   import { ReconfigureAgent } from '../../../api/operatorControls.js'
   import { GetServerInfo } from '../../../api/server.js'
   import { errorMessage } from '../../../utils/errors.js'
+  import { listenerHost, listenerProtocol } from '../../../utils/listeners.js'
   import { jobs } from '../../../stores/resources/jobs.svelte.js'
   import { useResource } from '../../../stores/lib/createResource.svelte.js'
 
@@ -30,10 +28,6 @@
   let error = $state('')
 
   const C2_PROTOCOLS = ['mtls', 'http', 'https', 'dns', 'wg']
-  const PROTO_PRESETS = ['mtls://', 'https://', 'http://', 'dns://', 'wg://', 'tcp-pivot://', 'namedpipe://']
-
-  let listenerOpen = $state(false)
-  let protoOpen = $state(false)
 
   let c2Listeners = $derived.by(() => {
     const list = jobs?.data || []
@@ -97,53 +91,6 @@
       submitting = false
     }
   }
-
-  function listenerProtocol(job) {
-    const candidates = [
-      job.Protocol ?? job.protocol,
-      job.Name ?? job.name,
-      job.Description ?? job.description,
-    ].map((v) => String(v ?? '').toLowerCase())
-    for (const text of candidates) {
-      if (text.includes('mtls')) return 'mtls'
-      if (text.includes('https')) return 'https'
-      if (text.includes('http')) return 'http'
-      if (text.includes('dns')) return 'dns'
-      if (text.includes('wireguard') || /\bwg\b/.test(text)) return 'wg'
-    }
-    return ''
-  }
-
-  function listenerHost(job, fallback = '') {
-    const domains = job.Domains ?? job.domains ?? []
-    const firstDomain = Array.isArray(domains) ? domains.find(Boolean) : ''
-    if (firstDomain && !['', '0.0.0.0', '::', '[::]', '*'].includes(String(firstDomain).trim())) return firstDomain
-    const candidates = [job.Host ?? job.host, job.BindHost ?? job.bindHost, job.BindAddr ?? job.bindAddr]
-    for (const c of candidates) {
-      const host = String(c ?? '').trim()
-      if (host && !['0.0.0.0', '::', '[::]', '*'].includes(host)) return host
-    }
-    return fallback || ''
-  }
-
-  function setProto(prefix) {
-    const stripped = c2Uri.replace(/^(mtls|https?|dns|wg|tcp-pivot|namedpipe):\/\//i, '')
-    c2Uri = prefix + stripped
-    protoOpen = false
-  }
-
-  function pickListener(listener) {
-    if (listener.protocol === 'dns') {
-      c2Uri = `dns://${listener.host || ''}`
-    } else {
-      c2Uri = `${listener.protocol}://${listener.host || serverHost || '<server>'}:${listener.port}`
-    }
-    listenerOpen = false
-  }
-
-  function protocolLabel(url) {
-    return (url?.match(/^([a-z-]+):\/\//i) || ['', 'proto'])[1]
-  }
 </script>
 
 <Modal bind:open title="Reconfigure Agent" size="lg" {onclose}>
@@ -178,57 +125,11 @@
       />
       <div class="md:col-span-2 mt-1">
         <label class="text-xs font-medium text-fg-muted mb-1 block">C2 URI to switch to</label>
-        <div class="flex items-center gap-2">
-          <div class="relative inline-flex items-center">
-            <Button color="dark" size="xs" class="!font-mono">
-              <span class="lowercase">{protocolLabel(c2Uri)}</span>
-              <Icon name="chevron-down" size={10} />
-            </Button>
-            <Menu bind:isOpen={protoOpen} minWidth="9rem">
-              {#each PROTO_PRESETS as prefix}
-                <MenuItem onclick={() => setProto(prefix)}>
-                  <span class="font-mono">{prefix}</span>
-                </MenuItem>
-              {/each}
-            </Menu>
-          </div>
-          <div class="flex-1 min-w-0">
-            <TextInput
-              size="sm"
-              bind:value={c2Uri}
-              placeholder="mtls://10.0.0.1:443"
-              spellcheck="false"
-              autocomplete="off"
-              class="font-mono"
-            />
-          </div>
-          <div class="relative inline-flex items-center">
-            <Button
-              color="dark"
-              size="xs"
-              icon="headphones"
-              aria-haspopup="true"
-              aria-expanded={listenerOpen}
-              title={c2Listeners.length === 0 ? 'No active listeners' : 'Pick from an active listener'}
-            >
-              Listener
-              <Icon name="chevron-down" size={10} />
-            </Button>
-            <Menu bind:isOpen={listenerOpen} placement="bottom-end" minWidth="15rem">
-              {#if c2Listeners.length === 0}
-                <div class="px-3 py-2 text-center text-xs text-fg-muted">No active listeners</div>
-              {:else}
-                {#each c2Listeners as listener}
-                  <MenuItem onclick={() => pickListener(listener)} class="justify-between">
-                    <span class="uppercase font-mono">{listener.protocol}</span>
-                    <span class="font-mono text-fg-muted">{listener.host || '<server>'}{listener.protocol === 'dns' ? '' : `:${listener.port}`}</span>
-                    {#if listener.name}<span class="truncate text-xs text-fg-muted">{listener.name}</span>{/if}
-                  </MenuItem>
-                {/each}
-              {/if}
-            </Menu>
-          </div>
-        </div>
+        <C2UriInput
+          bind:value={c2Uri}
+          listeners={c2Listeners}
+          {serverHost}
+        />
       </div>
     {/if}
   </div>

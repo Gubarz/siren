@@ -8,7 +8,6 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 
-	"siren/internal/bus"
 	"siren/internal/sliver/rpc"
 	"siren/internal/wailsadapter"
 )
@@ -16,34 +15,19 @@ import (
 const defaultRPCTimeout = 5 * time.Minute
 
 type Service struct {
+	rpc.Emitter
 	rpc     *rpc.Client
 	ui      *wailsadapter.Bridge
 	history *HistoryStore
 	dl      func(ctx context.Context, in *sliverpb.DownloadReq) (*sliverpb.Download, error)
-	bus     bus.Bus
 }
 
-func New(rpc *rpc.Client) *Service {
+func New(rpcClient *rpc.Client) *Service {
 	return &Service{
-		rpc:     rpc,
+		rpc:     rpcClient,
+		Emitter: rpc.NewEmitter(rpcClient),
 		history: NewHistoryStore(),
 	}
-}
-
-func (s *Service) SetBus(b bus.Bus) {
-	s.bus = b
-}
-
-func (s *Service) publish(eventType string, payload map[string]any) {
-	if s.bus == nil {
-		return
-	}
-	s.bus.Publish(bus.Event{
-		Type:         eventType,
-		Source:       "gui",
-		ConnectionID: s.rpc.ConnectionID(),
-		Payload:      payload,
-	})
 }
 
 func (s *Service) SetUI(ui *wailsadapter.Bridge) {

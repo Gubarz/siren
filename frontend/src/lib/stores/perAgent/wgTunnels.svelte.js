@@ -1,19 +1,17 @@
 import { listWGSocks, listWGForwarders } from '../../api/wireguard.js'
-import { createPerKeyStore } from '../lib/createPerKeyStore.svelte.js'
+import { createPollingPerKeyStore } from '../lib/createPerKeyStore.svelte.js'
 
 const POLL_INTERVAL = 5000
 
 // WireGuard tunnels are per-session — one refresh cadence per agent, torn
 // down when the last consumer for that session releases.
-export const useWGTunnels = createPerKeyStore((sessionID) => {
+export const useWGTunnels = createPollingPerKeyStore((sessionID) => {
   const state = $state({
     socksServers: [],
     forwarders: [],
     loading: false,
     error: null,
   })
-
-  let pollTimer = null
 
   async function refresh() {
     state.loading = true
@@ -32,23 +30,8 @@ export const useWGTunnels = createPerKeyStore((sessionID) => {
     }
   }
 
-  function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
-    }
-  }
-
-  function startPolling() {
-    stopPolling()
-    refresh()
-    pollTimer = setInterval(refresh, POLL_INTERVAL)
-  }
-
   return {
     state,
-    onActivate: startPolling,
-    onDeactivate: stopPolling,
     refresh,
   }
-})
+}, { pollInterval: POLL_INTERVAL })

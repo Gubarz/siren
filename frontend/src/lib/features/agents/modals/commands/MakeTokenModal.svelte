@@ -1,11 +1,11 @@
 <script>
   import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
-  import Button from '../../../../components/ui/Button.svelte'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import SelectField from '../../../../components/forms/SelectField.svelte'
-  import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
   import CredentialPicker from '../CredentialPicker.svelte'
+  import CommandPreview from './CommandPreview.svelte'
+  import CommandModalFooter from './CommandModalFooter.svelte'
 
   let {
     open = $bindable(false),
@@ -71,21 +71,21 @@
     />
   </CollapsibleGroup>
 
+  <CommandPreview cmd={cmdPreview} />
+
   {#snippet footer()}
-    <div class="flex justify-between items-center">
-      <PresetPicker
-        commandPath="make-token"
-        currentValues={{ username, domain, 'logon-type': logonType }}
-        onapply={(values) => {
-          if (values['username'] != null) username = values['username']
-          if (values['domain'] != null) domain = values['domain']
-          if (values['logon-type'] != null) logonType = values['logon-type']
-        }}
-      />
-      <div class="flex gap-2">
-        <Button color="dark" onclick={() => open = false}>Cancel</Button>
-        <Button color="primary" onclick={execute} disabled={!username || !password}>Make Token</Button>
-      </div>
-    </div>
+    <CommandModalFooter
+      commandPath="make-token"
+      currentValues={{ username, domain, 'logon-type': logonType }}
+      onapply={(values) => {
+        if (values['username'] != null) username = values['username']
+        if (values['domain'] != null) domain = values['domain']
+        if (values['logon-type'] != null) logonType = values['logon-type']
+      }}
+      primaryLabel="Make Token"
+      onprimary={execute}
+      primaryDisabled={!username || !password}
+      oncancel={() => open = false}
+    />
   {/snippet}
 </Modal>

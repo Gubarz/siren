@@ -31,7 +31,7 @@ func (s *Service) AddCredential(username, plaintext, hash, collection string) er
 	if err != nil {
 		return err
 	}
-	s.publish("gui.loot-added", map[string]any{"kind": "credential", "username": username, "collection": collection})
+	s.Publish("gui.loot-added", map[string]any{"kind": "credential", "username": username, "collection": collection})
 	return nil
 }
 

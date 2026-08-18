@@ -7,35 +7,21 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
-	"siren/internal/bus"
 	"siren/internal/sliver/rpc"
 )
 
 const defaultRPCTimeout = 5 * time.Minute
 
 type Service struct {
+	rpc.Emitter
 	rpc *rpc.Client
-	bus bus.Bus
 }
 
-func New(rpc *rpc.Client) *Service {
-	return &Service{rpc: rpc}
-}
-
-func (s *Service) SetBus(b bus.Bus) {
-	s.bus = b
-}
-
-func (s *Service) publish(eventType string, payload map[string]any) {
-	if s.bus == nil {
-		return
+func New(rpcClient *rpc.Client) *Service {
+	return &Service{
+		rpc:     rpcClient,
+		Emitter: rpc.NewEmitter(rpcClient),
 	}
-	s.bus.Publish(bus.Event{
-		Type:         eventType,
-		Source:       "gui",
-		ConnectionID: s.rpc.ConnectionID(),
-		Payload:      payload,
-	})
 }
 
 func (s *Service) GetProcessList(sessionID string, fullInfo bool) (*sliverpb.Ps, error) {
@@ -113,6 +99,6 @@ func (s *Service) TakeScreenshot(sessionID string) (string, error) {
 		return "", err
 	}
 
-	s.publish("gui.screenshot-taken", map[string]any{"sessionID": sessionID, "bytes": len(resp.Data)})
+	s.Publish("gui.screenshot-taken", map[string]any{"sessionID": sessionID, "bytes": len(resp.Data)})
 	return base64.StdEncoding.EncodeToString(resp.Data), nil
 }

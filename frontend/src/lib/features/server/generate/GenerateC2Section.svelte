@@ -9,6 +9,7 @@
 
   useResource(jobs, httpC2Profiles)
   import { profileName } from '../../../api/httpc2.js'
+  import { listenerHost, listenerProtocol } from '../../../utils/listeners.js'
   import GenerateC2Row from './GenerateC2Row.svelte'
 
   let {
@@ -51,62 +52,6 @@
     if (httpC2ConfigName) names.add(httpC2ConfigName)
     return [...names].sort().map((name) => ({ value: name, label: name }))
   })
-
-  function listenerProtocol(job) {
-    const candidates = [
-      job.Protocol ?? job.protocol,
-      job.Name ?? job.name,
-      job.Description ?? job.description,
-    ].map((value) => String(value ?? '').toLowerCase())
-
-    for (const text of candidates) {
-      if (text.includes('mtls')) return 'mtls'
-      if (text.includes('https')) return 'https'
-      if (text.includes('http')) return 'http'
-      if (text.includes('dns')) return 'dns'
-      if (text.includes('wireguard') || /\bwg\b/.test(text)) return 'wg'
-    }
-    return ''
-  }
-
-  function listenerHost(job, fallback = '') {
-    const domains = job.Domains ?? job.domains ?? []
-    const firstDomain = Array.isArray(domains) ? domains.find(Boolean) : ''
-    if (firstDomain && !isWildcardHost(firstDomain)) return firstDomain
-
-    const candidates = [
-      job.Host ?? job.host,
-      job.BindHost ?? job.bindHost,
-      job.BindAddr ?? job.bindAddr,
-      job.ListenAddr ?? job.listenAddr,
-      job.Description ?? job.description,
-    ]
-    for (const candidate of candidates) {
-      const host = extractHost(candidate)
-      if (host && !isWildcardHost(host)) return host
-    }
-    return fallback || ''
-  }
-
-  function extractHost(value) {
-    const text = String(value ?? '').trim()
-    if (!text) return ''
-    try {
-      const parsed = new URL(text)
-      return parsed.hostname || ''
-    } catch {
-      // Most Sliver job descriptions are prose, not URLs.
-    }
-    const bracketed = text.match(/\[([^\]]+)\](?::\d+)?/)
-    if (bracketed) return bracketed[1]
-    const hostPort = text.match(/(?:^|\s)([a-z0-9_.:-]+):\d+(?:\s|$)/i)
-    if (hostPort) return hostPort[1]
-    return ''
-  }
-
-  function isWildcardHost(host) {
-    return ['', '0.0.0.0', '::', '[::]', '*'].includes(String(host || '').trim())
-  }
 
   function setC2Urls(next) {
     c2Urls = next.length ? next : ['']

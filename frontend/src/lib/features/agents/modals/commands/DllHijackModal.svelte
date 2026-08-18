@@ -1,13 +1,13 @@
 <script>
   import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
-  import Button from '../../../../components/ui/Button.svelte'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
   import SelectField from '../../../../components/forms/SelectField.svelte'
   import FilePickerField from '../../../../components/forms/FilePickerField.svelte'
-  import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
   import RemoteFilePickerField from '../pickers/RemoteFilePickerField.svelte'
+  import CommandPreview from './CommandPreview.svelte'
+  import CommandModalFooter from './CommandModalFooter.svelte'
 
   let {
     sessionID = '',
@@ -125,14 +125,10 @@
       <TextField bind:value={timeout} label="Timeout (seconds)" type="number" />
     </CollapsibleGroup>
 
-    <div class="mb-4">
-      <span class="block text-sm font-semibold text-fg mb-1">Command preview</span>
-      <code class="block p-2 border border-line rounded bg-chrome text-fg break-all">{cmdPreview}</code>
-    </div>
+    <CommandPreview cmd={cmdPreview} />
   
   {#snippet footer()}
-    <div class="flex justify-between items-center">
-    <PresetPicker
+    <CommandModalFooter
       commandPath="dllhijack"
       currentValues={{
         'target': targetPath,
@@ -145,14 +141,19 @@
         if (values['target'] != null) targetPath = values['target']
         if (values['reference-path'] != null) refPath = values['reference-path']
         if (values['reference-file'] != null) referenceFile = values['reference-file']
-        if (values['file']) { dllFile = values['file']; sourceMode = 'file' }
-        else if (values['profile']) { profile = values['profile']; sourceMode = 'profile' }
+        if (values['file'] != null) {
+          dllFile = values['file']
+          sourceMode = 'file'
+        }
+        if (values['profile'] != null) {
+          profile = values['profile']
+          sourceMode = 'profile'
+        }
       }}
+      primaryLabel="Hijack"
+      onprimary={execute}
+      primaryDisabled={!canExecute}
+      oncancel={() => open = false}
     />
-    <div class="flex gap-2">
-      <Button color="dark" onclick={() => open = false}>Cancel</Button>
-      <Button color="primary" onclick={execute} disabled={!canExecute}>Plant</Button>
-    </div>
-  </div>
   {/snippet}
 </Modal>

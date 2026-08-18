@@ -34,22 +34,44 @@ export function agentRemoteAddress(agent, parents, agents = []) {
     : shortAgentID(parentID);
 }
 
+export function agentKind(agent) {
+  if (!agent) return 'session'
+  return agent._kind || (agent.NextCheckin !== undefined ? 'beacon' : 'session')
+}
+
 export function isAgentOnline(agent, nowSeconds = Math.floor(Date.now() / 1000)) {
-  if (agent.IsDead || agent.isDead) return false;
-  const kind = agent._kind || (agent.NextCheckin !== undefined ? 'beacon' : 'session');
-  if (kind !== 'beacon') return true;
+  if (agent.IsDead || agent.isDead) return false
+  const kind = agentKind(agent)
+  if (kind !== 'beacon') return true
 
-  const nextCheckin = Number(agent.NextCheckin ?? agent.nextCheckin ?? 0);
-  if (nextCheckin <= 0) return false;
+  const nextCheckin = Number(agent.NextCheckin ?? agent.nextCheckin ?? 0)
+  if (nextCheckin <= 0) return false
 
-  const interval = Number(agent.Interval ?? agent.interval ?? 0) / 1e9;
-  const jitter = Number(agent.Jitter ?? agent.jitter ?? 0) / 1e9;
-  const grace = Math.max(15, interval + jitter);
-  return nowSeconds <= nextCheckin + grace;
+  const interval = Number(agent.Interval ?? agent.interval ?? 0) / 1e9
+  const jitter = Number(agent.Jitter ?? agent.jitter ?? 0) / 1e9
+  const grace = Math.max(15, interval + jitter)
+  return nowSeconds <= nextCheckin + grace
 }
 
 export function shortAgentID(id) {
-  return String(id || '').split('-')[0];
+  return String(id || '').split('-')[0]
+}
+
+export function osIcon(osName) {
+  const value = String(osName || '').toLowerCase()
+  if (value.includes('darwin') || value.includes('mac') || value.includes('apple') || value.includes('osx')) return 'apple'
+  if (value.includes('win')) return 'monitor'
+  if (value.includes('linux') || value.includes('unix') || value.includes('bsd')) return 'terminal'
+  if (value.includes('android')) return 'smartphone'
+  if (value.includes('ios') || value.includes('iphone') || value.includes('ipad')) return 'smartphone'
+  return 'cpu'
+}
+
+export function collectAgents({ sessions, beacons } = {}) {
+  return [
+    ...(sessions || []).map((agent) => ({ ...agent, _kind: 'session' })),
+    ...(beacons || []).map((agent) => ({ ...agent, _kind: 'beacon' })),
+  ]
 }
 
 // ID → agent lookup across sessions and beacons. Entries are annotated with
@@ -58,10 +80,10 @@ export function shortAgentID(id) {
 // without it a beacon renders as a session. On collision the beacon entry
 // wins, matching the resolution order the agent dropdowns have always used.
 export function buildAgentMap(sessionsList, beaconsList) {
-  const map = new Map();
-  for (const session of sessionsList || []) map.set(session.ID, { ...session, _kind: 'session' });
-  for (const beacon of beaconsList || []) map.set(beacon.ID, { ...beacon, _kind: 'beacon' });
-  return map;
+  const map = new Map()
+  for (const session of sessionsList || []) map.set(session.ID, { ...session, _kind: 'session' })
+  for (const beacon of beaconsList || []) map.set(beacon.ID, { ...beacon, _kind: 'beacon' })
+  return map
 }
 
 export function isHighPrivilege(username) {

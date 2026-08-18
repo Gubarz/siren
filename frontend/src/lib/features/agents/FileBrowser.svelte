@@ -19,6 +19,7 @@
   import { useResource } from '$stores/lib/createResource.svelte.js';
   import { useFileBrowser } from '$stores/perAgent/fileBrowser.svelte.js';
   import { entityColorStyle } from '../../utils/entityTags.js';
+  import { formatBytes, formatDateTime } from '../../utils/formats.js';
 
   useResource(entityColors)
 
@@ -117,9 +118,9 @@
     isDir: f.IsDir || f.isDir,
     iconStr: (f.IsDir || f.isDir) ? `📁 ${f.Name || f.name}` : `📄 ${f.Name || f.name}`,
     _sortSize: f.IsDir || f.isDir ? '' : String(f.Size || f.size || 0).padStart(20, '0'),
-    sizeStr: (f.IsDir || f.isDir) ? '-' : formatSize(f.Size || f.size),
+    sizeStr: (f.IsDir || f.isDir) ? '-' : formatBytes(f.Size || f.size),
     typeStr: (f.IsDir || f.isDir) ? 'Directory' : 'File',
-    modTimeStr: new Date((f.ModTime || f.modTime || 0) * 1000).toLocaleString()
+    modTimeStr: formatDateTime(f.ModTime || f.modTime || 0)
   })));
 
   let filteredFiles = $derived(
@@ -143,14 +144,6 @@
       uploading = false;
     }
   });
-
-  function formatSize(bytes) {
-    if (bytes === 0 || !bytes) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
 
   function handleDoubleClick(file) {
     if (staticData) return;

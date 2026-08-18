@@ -9,10 +9,6 @@ import (
 
 // ---- Implants / Builds / Profiles ----
 
-func (a *App) GenerateImplant(goos, goarch, format, c2url, name string, isBeacon bool, beaconInterval int64) (string, error) {
-	return a.Implants.Generate(goos, goarch, format, c2url, name, isBeacon, beaconInterval)
-}
-
 // GenerateImplantAdvanced builds an implant from the full option set exposed by
 // the new generate modal. Wraps the same Sliver Generate RPC as the legacy path.
 func (a *App) GenerateImplantAdvanced(req implants.GenerateRequest) (string, error) {
@@ -21,10 +17,6 @@ func (a *App) GenerateImplantAdvanced(req implants.GenerateRequest) (string, err
 
 func (a *App) SaveProfileAdvanced(req implants.GenerateRequest) error {
 	return a.Implants.SaveProfileAdvanced(req)
-}
-
-func (a *App) SaveProfile(name, goos, goarch, format, c2url string, isBeacon bool, beaconInterval int64) error {
-	return a.Implants.SaveProfile(name, goos, goarch, format, c2url, isBeacon, beaconInterval)
 }
 
 func (a *App) GenerateImplantFromProfile(profileConfigID, name string, format int) (string, error) {

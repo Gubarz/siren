@@ -1,11 +1,11 @@
 <script>
   import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
-  import Button from '../../../../components/ui/Button.svelte'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
   import CheckboxField from '../../../../components/forms/CheckboxField.svelte'
-  import PresetPicker from '../../../../components/forms/PresetPicker.svelte'
+  import CommandPreview from './CommandPreview.svelte'
+  import CommandModalFooter from './CommandModalFooter.svelte'
 
   let {
     open = $bindable(false),
@@ -30,7 +30,6 @@
     user = values['user'] || ''
   }
 
-
   let cmdPreview = $derived.by(() => {
     const parts = ['socks5', 'start']
     if (host) parts.push('--host', host)
@@ -45,48 +44,43 @@
 </script>
 
 <Modal bind:open title="Start SOCKS5 Proxy" size="xl" {onclose}>
-  
-    <p class="text-fg-muted text-sm mb-4">
-      Open a local SOCKS5 listener on your operator machine. Traffic gets tunneled through the implant, so tools like <code>proxychains</code>, browsers, and <code>nmap</code> can reach the target's internal network.
-    </p>
+  <p class="text-fg-muted text-sm mb-4">
+    Open a local SOCKS5 listener on your operator machine. Traffic gets tunneled through the implant, so tools like <code>proxychains</code>, browsers, and <code>nmap</code> can reach the target's internal network.
+  </p>
 
-    <div class="mb-3">
-      <TextField
-        bind:value={host}
-        label="Bind host"
-        placeholder="127.0.0.1"
-        description="Interface the SOCKS listener binds to on your operator machine"
-      />
-    </div>
+  <div class="mb-3">
+    <TextField
+      bind:value={host}
+      label="Bind host"
+      placeholder="127.0.0.1"
+      description="Interface the SOCKS listener binds to on your operator machine"
+    />
+  </div>
 
-    <div class="mb-3">
-      <TextField
-        bind:value={port}
-        label="Local port"
-        type="number"
-        placeholder="1080"
-      />
-    </div>
+  <div class="mb-3">
+    <TextField
+      bind:value={port}
+      label="Local port"
+      type="number"
+      placeholder="1080"
+    />
+  </div>
 
-    <CollapsibleGroup title="Authentication (advanced)" open={false}>
-      <CheckboxField
-        bind:checked={useAuth}
-        label="Require username/password auth"
-        description="WARNING: credentials are tunneled to the implant and recoverable from its memory"
-      />
-      {#if useAuth}
-        <TextField bind:value={user} label="Username" placeholder="operator" />
-      {/if}
-    </CollapsibleGroup>
+  <CollapsibleGroup title="Authentication (advanced)" open={false}>
+    <CheckboxField
+      bind:checked={useAuth}
+      label="Require username/password auth"
+      description="WARNING: credentials are tunneled to the implant and recoverable from its memory"
+    />
+    {#if useAuth}
+      <TextField bind:value={user} label="Username" placeholder="operator" />
+    {/if}
+  </CollapsibleGroup>
 
-    <div class="mb-4">
-      <span class="block text-sm font-semibold text-fg mb-1">Command preview</span>
-      <code class="block p-2 border border-line rounded bg-chrome text-fg break-all">{cmdPreview}</code>
-    </div>
-  
+  <CommandPreview cmd={cmdPreview} />
+
   {#snippet footer()}
-    <div class="flex justify-between items-center">
-    <PresetPicker
+    <CommandModalFooter
       commandPath="socks5 start"
       currentValues={{ 'host': host, 'port': port, 'user': useAuth ? user : '' }}
       onapply={(values) => {
@@ -94,11 +88,10 @@
         if (values['port'] != null) port = values['port']
         if (values['user']) { user = values['user']; useAuth = true }
       }}
+      primaryLabel="Start"
+      onprimary={execute}
+      primaryDisabled={!port}
+      oncancel={() => open = false}
     />
-    <div class="flex gap-2">
-      <Button color="dark" onclick={() => open = false}>Cancel</Button>
-      <Button color="primary" onclick={execute} disabled={!port}>Start</Button>
-    </div>
-  </div>
   {/snippet}
 </Modal>

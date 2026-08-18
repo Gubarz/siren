@@ -3,6 +3,8 @@
   import { CancelBeaconTask, GetBeaconTaskOutput } from '../../api/agents.js';
   import { dialog } from '../../stores/ui/dialog.svelte.js';
   import { errorMessage } from '../../utils/errors.js';
+  import { formatBytes, formatDateTime } from '../../utils/formats.js';
+  import { shortAgentID } from '../../utils/agents.js';
   import { useBeaconTasks } from '$stores/perAgent/beaconTasks.svelte.js';
   import { agentTabs } from '$stores/agentTabs.svelte.js';
   import InlineImage from '$components/ui/InlineImage.svelte';
@@ -38,7 +40,7 @@
 
   async function cancelTask(event, task) {
     event.stopPropagation();
-    const confirmed = await dialog.confirm(`Cancel pending task ${shortID(task.ID)}?`);
+    const confirmed = await dialog.confirm(`Cancel pending task ${shortAgentID(task.ID)}?`);
     if (!confirmed) return;
     cancelingTask = task.ID;
     try {
@@ -48,14 +50,6 @@
     } finally {
       cancelingTask = '';
     }
-  }
-
-  function shortID(id) {
-    return String(id || '').split('-')[0];
-  }
-
-  function formatTime(value) {
-    return value ? new Date(value * 1000).toLocaleString() : '-';
   }
 
   function taskState(value) {
@@ -166,14 +160,6 @@
     return m[v] || `Unknown (${v})`
   }
 
-  function formatFileSize(bytes) {
-    if (!bytes || bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
   let netstatRows = $derived(
     (taskOutput?.netstatEntries || []).map((e, idx) => ({
       ...e,
@@ -186,7 +172,7 @@
 
   let tableData = $derived(taskStore.state.tasks.map((t) => ({
     ...t,
-    _shortID: shortID(t.ID),
+    _shortID: shortAgentID(t.ID),
     _stateClass: taskStateClass(t.State),
     _kind: taskKind(t),
   })))
@@ -196,8 +182,7 @@
   }
 
   function handleRowClick(item) {
-    if (item._kind === 'raw') return
-    toggleTask(item)
+    expandedTask = item.ID;
   }
 
   function taskRowClass(item) {
@@ -205,14 +190,14 @@
   }
 </script>
 
-<div class="flex flex-col h-full bg-canvas">
+<div class="flex flex-col h-full bg-canvas text-fg">
   <div class="flex items-center justify-between gap-2 px-3 py-1 border-b border-line bg-chrome shrink-0">
     <span class="text-xs font-medium text-fg-muted">Beacon Tasks</span>
     <Button color="dark" size="sm" onclick={() => taskStore?.refresh()}>Refresh</Button>
   </div>
 
-  <div class="flex-1 min-h-0 flex flex-col">
-    <div class="flex-1 min-h-0">
+  <div class="flex-1 overflow-auto flex flex-col">
+    <div class="flex-1 overflow-auto">
       <DataTable
         data={tableData}
         {columns}
@@ -230,11 +215,11 @@
           {:else if col.key === '_stateClass'}
             <span class="font-semibold {item._stateClass}">{item.State || '-'}</span>
           {:else if col.key === 'CreatedAt'}
-            <span class="font-mono">{formatTime(item.CreatedAt)}</span>
+            <span class="font-mono">{formatDateTime(item.CreatedAt)}</span>
           {:else if col.key === 'SentAt'}
-            <span class="font-mono">{formatTime(item.SentAt)}</span>
+            <span class="font-mono">{formatDateTime(item.SentAt)}</span>
           {:else if col.key === 'CompletedAt'}
-            <span class="font-mono">{formatTime(item.CompletedAt)}</span>
+            <span class="font-mono">{formatDateTime(item.CompletedAt)}</span>
           {:else if col.key === '_actions'}
             <div class="flex items-center gap-1 min-h-6">
               {#if taskState(item.State) === 'pending'}
@@ -270,7 +255,7 @@
     {#if expandedTask}
       <div class="shrink-0 border-t-2 border-brand max-h-80 overflow-y-auto bg-chrome">
         <div class="flex items-center justify-between px-3 py-1 border-b border-line bg-surface-50 sticky top-0 z-10">
-          <span class="text-xs font-medium">Task {shortID(expandedTask)}</span>
+          <span class="text-xs font-medium">Task {shortAgentID(expandedTask)}</span>
           <Button color="dark" size="xs" onclick={() => expandedTask = ''}>Close</Button>
         </div>
         {#if !taskOutput}
@@ -290,11 +275,16 @@
         {:else if taskOutput.type === "netstat"}
           <div class="flex flex-col">
             <div class="flex items-center justify-between px-3 py-1 border-b border-line bg-surface-50">
-              <span class="text-xs text-fg-muted">{netstatRows.length} connections</span>
-              <Button color="dark" size="xs" onclick={() => openFullTab(beaconID, "netstat", {staticOutput: taskOutput.textOutput})}>Open Netstat</Button>
+              <span class="text-xs text-fg-muted">{taskOutput.netstatEntries?.length || 0} connections</span>
+              <Button color="dark" size="xs" onclick={() => openFullTab(beaconID, 'networkConnections', {staticEntries: taskOutput.netstatEntries})}>Open Network Tab</Button>
             </div>
             <div class="max-h-64 overflow-y-auto">
-              <DataTable data={netstatRows} columns={netstatColumns} keyField="_key" emptyState={{ title: "No connections found." }} />
+              <DataTable
+                data={netstatRows}
+                columns={netstatColumns}
+                keyField="_key"
+                emptyState={{ title: "No network connections found." }}
+              />
             </div>
           </div>
          {:else if taskOutput.type === "services"}
@@ -327,9 +317,9 @@
               <DataTable
                 data={(taskOutput.files || []).map((f) => ({
                   _name: f.Name || f.name || '',
-                  iconStr: (f.IsDir || f.isDir) ? `\uD83D\uDCC1 ${f.Name || f.name}` : `\uD83D\uDCC4 ${f.Name || f.name}`,
-                  sizeStr: (f.IsDir || f.isDir) ? '-' : formatFileSize(f.Size || f.size),
-                  modTimeStr: new Date((f.ModTime || f.modTime || 0) * 1000).toLocaleString(),
+                  iconStr: (f.IsDir || f.isDir) ? `📁 ${f.Name || f.name}` : `📄 ${f.Name || f.name}`,
+                  sizeStr: (f.IsDir || f.isDir) ? '-' : formatBytes(f.Size || f.size),
+                  modTimeStr: formatDateTime(f.ModTime || f.modTime || 0),
                 }))}
                 columns={fileColumns}
                 keyField="_name"

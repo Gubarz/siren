@@ -3,6 +3,7 @@
   import Button from '$components/ui/Button.svelte'
   import Badge from '$components/ui/Badge.svelte'
   import EmptyState from '$components/ui/EmptyState.svelte'
+  import { formatDateTime } from '../../utils/formats.js'
 
   let {
     rules = [],
@@ -33,10 +34,6 @@
       manual: 'Manual only',
     }
     return map[value] || value
-  }
-
-  function formatTime(value) {
-    return value ? new Date(value).toLocaleString() : '-'
   }
 
   function runIcon(status) {
@@ -72,7 +69,7 @@
           <span class="flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
             <strong class="block min-w-0 truncate">{run.ruleName}</strong>
             <small class="block min-w-0 truncate text-fg-muted">{run.targetName || 'No target'} &middot; {run.trigger}</small>
-            <time class="block min-w-0 truncate text-xs text-fg-muted">{formatTime(run.startedAt)}</time>
+            <time class="block min-w-0 truncate text-xs text-fg-muted">{formatDateTime(run.startedAt)}</time>
           </span>
         </Button>
       {/each}

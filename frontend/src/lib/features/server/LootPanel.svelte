@@ -18,6 +18,7 @@
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
   import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
   import { entityColorStyle } from '../../utils/entityTags.js'
+  import { formatBytes } from '../../utils/formats.js'
 
   let {
     embedded = false,
@@ -138,13 +139,6 @@
     a.href = url; a.download = 'loot-export.csv'; a.click()
     URL.revokeObjectURL(url)
   }
-
-  function formatSize(bytes) {
-    if (!bytes || bytes <= 0) return '-'
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / 1048576).toFixed(1)} MB`
-  }
 </script>
 
 <Panel {embedded} {onclose} title={embedded ? '' : 'Loot'} icon={embedded ? '' : 'download'}>
@@ -186,7 +180,7 @@
         {:else if col.key === '_tags'}
           <EntityTagBadges entityType="loot" entityID={item._id} showEmpty />
         {:else if col.key === '_size'}
-          {formatSize(item._size)}
+          {formatBytes(item._size, { zeroText: '-' })}
         {:else}
           {item[col.key]}
         {/if}

@@ -18,8 +18,9 @@ func TestServicePublishPayload(t *testing.T) {
 		}
 	})
 
-	s := &Service{rpc: rpc.NewClient(), bus: b}
-	s.publish("gui.loot-added", map[string]any{
+	s := New(rpc.NewClient())
+	s.SetBus(b)
+	s.Publish("gui.loot-added", map[string]any{
 		"type":     "loot-added",
 		"lootID":   "test-id",
 		"name":     "test",

@@ -5,6 +5,7 @@
   import Toolbar from '$components/patterns/Toolbar.svelte'
   import { listMemfiles, MemfilesAdd, MemfilesRemove } from '../../api/memfiles.js'
   import { errorMessage } from '../../utils/errors.js'
+  import { formatBytes } from '../../utils/formats.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
 
   let { sessionID = '' } = $props()
@@ -68,13 +69,6 @@
     const fd = Number.parseInt(match[1], 10)
     return Number.isNaN(fd) ? null : fd
   }
-
-  function formatSize(v) {
-    if (!v) return '0 B'
-    const u = ['B', 'KiB', 'MiB']
-    const i = Math.min(Math.floor(Math.log(v) / Math.log(1024)), u.length - 1)
-    return `${(v / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${u[i]}`
-  }
 </script>
 
 <div class="flex flex-col h-full">
@@ -99,7 +93,7 @@
           {#each files as f}
             <tr class="border-b border-line hover:bg-row-hover">
               <td class="px-3 py-2 font-mono">{f.Name || f.name}</td>
-              <td class="px-3 py-2 font-mono text-fg-muted">{formatSize(f.Size ?? f.size)}</td>
+              <td class="px-3 py-2 font-mono text-fg-muted">{formatBytes(f.Size ?? f.size)}</td>
               <td class="px-3 py-2 font-mono text-fg-muted">{f.Mode || f.mode}</td>
               <td class="px-3 py-2 text-right">
                 <Button color="red" size="xs" onclick={() => removeMemfile(f)}>Remove</Button>

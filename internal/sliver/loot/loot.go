@@ -9,39 +9,25 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	"siren/internal/bus"
 	"siren/internal/sliver/rpc"
 	"siren/internal/wailsadapter"
 )
 
 type Service struct {
+	rpc.Emitter
 	rpc *rpc.Client
 	ui  *wailsadapter.Bridge
-	bus bus.Bus
 }
 
-func New(rpc *rpc.Client) *Service {
-	return &Service{rpc: rpc}
+func New(rpcClient *rpc.Client) *Service {
+	return &Service{
+		rpc:     rpcClient,
+		Emitter: rpc.NewEmitter(rpcClient),
+	}
 }
 
 func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 	s.ui = ui
-}
-
-func (s *Service) SetBus(b bus.Bus) {
-	s.bus = b
-}
-
-func (s *Service) publish(eventType string, payload map[string]any) {
-	if s.bus == nil {
-		return
-	}
-	s.bus.Publish(bus.Event{
-		Type:         eventType,
-		Source:       "gui",
-		ConnectionID: s.rpc.ConnectionID(),
-		Payload:      payload,
-	})
 }
 
 func (s *Service) GetLoot() (*clientpb.AllLoot, error) {
@@ -104,7 +90,7 @@ func (s *Service) Add(ctx context.Context, name string, fileType clientpb.FileTy
 	if err != nil {
 		return nil, err
 	}
-	s.publish("gui.loot-added", map[string]any{
+	s.Publish("gui.loot-added", map[string]any{
 		"type":     "loot-added",
 		"lootID":   resp.ID,
 		"name":     resp.Name,
