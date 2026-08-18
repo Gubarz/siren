@@ -10,7 +10,7 @@
   import { createShellLineEditor } from '../../utils/shellLineEditor.js'
   import { createXterm } from '../../utils/xterm.js'
 
-  let { shell = null } = $props()
+  let { shell = null, active = true } = $props()
 
   let hostEl
   let term
@@ -21,6 +21,31 @@
   let lastRows = 0
   let shellID = $derived(shell?.id || shell?.ID || '')
   let shellPTY = $derived(shell?.pty ?? shell?.PTY ?? false)
+
+  function resize() {
+    if (!term || !fit) return
+    try {
+      fit.fit()
+      term.scrollToBottom()
+      const { cols, rows } = term
+      if (cols === lastCols && rows === lastRows) return
+      lastCols = cols
+      lastRows = rows
+      if (shellPTY && shellID) {
+        ResizeShell(shellID, rows, cols).catch(() => {})
+      }
+    } catch {
+      // transient layout states (e.g. 0 width/height while hidden)
+    }
+  }
+
+  $effect(() => {
+    if (active && term && fit) {
+      requestAnimationFrame(() => {
+        resize()
+      })
+    }
+  })
 
   onMount(() => {
     ;({ term, fit } = createXterm(hostEl))
@@ -65,17 +90,10 @@
     })
 
     ro = new ResizeObserver(() => {
-      if (!shellPTY) return
-      try {
-        fit.fit()
-        const { cols, rows } = term
-        if (cols === lastCols && rows === lastRows) return
-        lastCols = cols
-        lastRows = rows
-        ResizeShell(shellID, rows, cols).catch(() => {})
-      } catch { /* transient */ }
+      resize()
     })
     ro.observe(hostEl)
+    resize()
 
     // Replay any bytes buffered before we mounted (e.g. shell started in
     // another tab). Do this after subscribing so we don't lose live bytes
@@ -83,7 +101,10 @@
     ;(async () => {
       try {
         const buffered = await GetShellOutput(shellID)
-        if (buffered) term.write(buffered)
+        if (buffered) {
+          term.write(buffered)
+          term.scrollToBottom()
+        }
       } catch (err) {
         term.write(`\r\n\x1b[31m[!] ${errorMessage(err)}\x1b[0m\r\n`)
       }
@@ -95,7 +116,6 @@
       term?.dispose()
     }
   })
-
 </script>
 
 <div class="flex h-full w-full min-w-0 flex-col overflow-hidden bg-canvas text-fg">
