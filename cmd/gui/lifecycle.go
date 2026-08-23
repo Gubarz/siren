@@ -33,6 +33,10 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	a.Automation.Start(ctx)
 	a.CheckinPub.Start(ctx)
 
+	if a.BloodHound != nil {
+		go a.BloodHound.StartSync(a.ctx, 5*time.Minute)
+	}
+
 	// v3 delivers file drops to the backend (only for elements marked with
 	// data-file-drop-target); re-emit to the frontend with the v2 event shape.
 	a.registerFileDropWindow(a.window)
@@ -79,6 +83,9 @@ func (a *App) ServiceShutdown() error {
 	}
 	if a.Crack != nil {
 		a.Crack.Close()
+	}
+	if a.BloodHound != nil {
+		a.BloodHound.Close()
 	}
 	if a.Monitor != nil {
 		a.Monitor.Close()

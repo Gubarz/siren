@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -40,6 +41,19 @@ func (a *App) frontendBusSubscriber(ev bus.Event) {
 			p["type"] = ev.Type
 			a.bridge.Emit("gui-event", p)
 		}
+	case strings.HasPrefix(ev.Type, "bloodhound."):
+		raw, err := json.Marshal(ev.Payload)
+		if err != nil {
+			return
+		}
+		var payload any
+		if err := json.Unmarshal(raw, &payload); err != nil {
+			return
+		}
+		a.bridge.Emit("bloodhound-event", map[string]interface{}{
+			"type":    ev.Type,
+			"payload": payload,
+		})
 	case ev.Type == "journal.action-recorded":
 		if entry, ok := ev.Payload.(journal.Entry); ok {
 			a.bridge.Emit("journal-event", entryToMap(entry))
