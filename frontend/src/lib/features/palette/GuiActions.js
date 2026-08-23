@@ -15,6 +15,7 @@ const GUI_PANELS = [
   { id: 'panel-pivots', name: 'Pivots', label: 'Open Pivots', icon: 'network', section: 'Panels', overlay: 'pivots' },
   { id: 'panel-operators', name: 'Operators', label: 'Open Operators', icon: 'users', section: 'Panels', overlay: 'operators' },
   { id: 'panel-gallery', name: 'Screenshot Gallery', label: 'Open Screenshot Gallery', icon: 'images', section: 'Panels', overlay: 'gallery' },
+  { id: 'panel-bh-ingest', name: 'BloodHound Ingest', label: 'Open BloodHound Ingest', icon: 'download', section: 'Panels', overlay: 'bh-ingest' },
   { id: 'panel-builds', name: 'Builds', label: 'Open Builds', icon: 'factory', section: 'Panels', view: 'server', serverTab: 'builds' },
   { id: 'panel-profiles', name: 'Profiles', label: 'Open Profiles', icon: 'sliders', section: 'Panels', view: 'server', serverTab: 'profiles' },
   { id: 'panel-cases', name: 'Cases', label: 'Open Cases', icon: 'folder', section: 'Panels', view: 'server', serverTab: 'cases' },

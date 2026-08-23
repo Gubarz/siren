@@ -8,6 +8,7 @@
   import ArmoryPanel from '$features/server/ArmoryPanel.svelte'
   import GenerateModal from '$features/server/GenerateModal.svelte'
   import ScreenshotGallery from '$features/gallery/ScreenshotGallery.svelte'
+  import IngestPanel from '$features/bloodhound/IngestPanel.svelte'
 
   let current = $derived(overlays)
 </script>
@@ -36,5 +37,8 @@
   {/if}
   {#if current?.name === 'gallery'}
     <ScreenshotGallery onclose={() => overlays.close()} />
+  {/if}
+  {#if current?.name === 'bh-ingest'}
+    <IngestPanel onclose={() => overlays.close()} />
   {/if}
 {/key}

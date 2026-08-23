@@ -21,6 +21,7 @@ export const TAB_META = {
   privileges: { icon: 'key', label: 'Privileges' },
   env: { icon: 'braces', label: 'Env' },
   'wg-tunnels': { icon: 'shield', label: 'WG Tunnels' },
+  bloodhound: { icon: 'workflow', label: 'BloodHound' },
 }
 
 function tabLabel(sessionId, type) {

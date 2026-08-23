@@ -27,6 +27,7 @@ import NetworkCommandTab from '../NetworkCommandTab.svelte'
 import WireGuardTunnelsTab from '../WireGuardTunnelsTab.svelte'
 import PrivilegesTab from '../PrivilegesTab.svelte'
 import Console from '$components/patterns/Console/Console.svelte'
+import AgentBloodhoundTab from '$features/bloodhound/AgentBloodhoundTab.svelte'
 
 const bySessionID = (tab) => ({ sessionID: tab.sessionId })
 
@@ -66,6 +67,7 @@ const TabRegistry = {
   env:             { component: EnvTab,            props: (tab) => ({ sessionID: tab.sessionId, staticData: tab.meta?.staticData ?? null }) },
   privileges:       { component: PrivilegesTab,      props: bySessionID },
   'wg-tunnels':    { component: WireGuardTunnelsTab, props: bySessionID },
+  bloodhound:      { component: AgentBloodhoundTab,  props: bySessionID },
 }
 
 // resolveTab is what AgentBottomPane calls per-tab. Handles the `shell-*`

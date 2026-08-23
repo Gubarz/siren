@@ -70,6 +70,8 @@ The app starts disconnected. Import or select a Sliver client config, connect to
 - Monitoring provider start/stop/list/add/remove.
 - Crackstation listing, crack job submit/cancel/lookup, crack file create/upload/download/complete/delete, and local-path crack file upload.
 - Case files with create/update/delete, add/remove items from agents/loot/credentials/hosts/canaries, notes, and Markdown report generation.
+- BloodHound CE integration as a data layer: HMAC-token connection management (Settings), server-side agent→AD-entity correlation with Tier-0/owned/distance chips on the sessions table, per-agent BloodHound tab with k-shortest attack-path graphs restricted to exploitable edge types, a BloodHound overlay layer on the network graph, and an action bridge mapping findings to Sliver operations (kerberoast, lateral movement, add-to-case, tag/comment).
+- BloodHound ingest: collection upload jobs with per-file tracking and a drag-drop/upload panel; SharpHound/AzureHound pipeline (collector download with checksum verification → stage → run → exfil → ingest → loot) driven from the agent context menu or the `bloodhound_collect` automation action.
 
 ### Automation
 

@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import DataTable from '$components/patterns/DataTable.svelte'
   import StatusDot from '$components/ui/StatusDot.svelte'
   import Badge from '$components/ui/Badge.svelte'
@@ -6,6 +7,8 @@
   import Icon from '$components/ui/Icon.svelte'
   import TextInput from '$components/ui/TextInput.svelte'
   import EntityTagBadges from '$components/ui/EntityTagBadges.svelte'
+  import EnrichmentChip from '$features/bloodhound/EnrichmentChip.svelte'
+  import { bloodhoundStore, subscribeBloodhound, requestCorrelation } from '$features/bloodhound/bloodhound.svelte.js'
   import {
     agentKind, agentRemoteAddress, isAgentOnline, isHighPrivilege, osIcon, pivotParentMap, shortAgentID,
   } from '../../utils/agents.js'
@@ -45,6 +48,19 @@
   let tagsByAgent = $state({})
   let colorsByAgent = $state({})
   let colorsByEntity = $state({})
+
+  onMount(() => {
+    subscribeBloodhound()
+  })
+
+  // Keep the backend correlation cache warm for the agents on screen.
+  // Debounced inside the store; enrichment updates never touch `data` so
+  // this cannot loop.
+  $effect(() => {
+    if (bloodhoundStore.connected && data.length > 0) {
+      requestCorrelation(data)
+    }
+  })
 
   $effect(() => {
     const d = sessionNotes.data
@@ -176,6 +192,7 @@
       _lastCheckin: agent.LastCheckin ?? agent.lastCheckin ?? 0,
       _type: agentKind(agent),
       _osIcon: osIcon(agent.OS),
+      _bh: bloodhoundStore.enrichment[agent.ID] ?? null,
     }
     const devices = (discoveredByAgent[agent.ID] || []).map((d) => deviceRow(d, agent))
     return [agentRow, ...devices]
@@ -183,7 +200,7 @@
 
   let combinedSelected = $derived(new Set([...selectedAgentIDs, ...selectedDiscoveryKeys]))
 
-  const columns = [
+  let columns = $derived([
     { key: '_online', label: '', width: 36 },
     { key: 'ID', label: 'Agent ID', width: 68 },
     { key: '_implantName', label: 'Implant Name', width: 92 },
@@ -198,7 +215,8 @@
     { key: '_lastCheckin', label: 'Last Checkin', width: 74 },
     { key: '_tags', label: 'Tags', width: 108 },
     { key: '_note', label: 'Note', width: 96 },
-  ]
+    ...(bloodhoundStore.connected ? [{ key: '_bh', label: 'BH', width: 64 }] : []),
+  ])
 </script>
 
 <DataTable data={normalizedData} {columns} keyField="_rowKey" {filterable} selectable="multi" selected={combinedSelected}
@@ -245,6 +263,12 @@
         </div>
       {:else}
         <span class="text-fg-muted text-xs">-</span>
+      {/if}
+    {:else if col.key === '_bh'}
+      {#if item._isDevice}
+        <span class="text-fg-muted">-</span>
+      {:else}
+        <EnrichmentChip enrichment={item._bh} />
       {/if}
     {:else if col.key === '_note'}
       {#if item._isDevice}

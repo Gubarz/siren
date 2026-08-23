@@ -7,6 +7,7 @@
   import NotificationSettings from './NotificationSettings.svelte'
   import HealthPanel from './HealthPanel.svelte'
   import EnvSettings from './EnvSettings.svelte'
+  import BloodHoundSettings from './BloodHoundSettings.svelte'
 
   const themes = [
     { id: SYSTEM_THEME, name: 'System', bg: '#2a2a2a', accent: '#e0e0e0', text: '#eee' },
@@ -96,5 +97,6 @@
 
     <NotificationSettings />
     <EnvSettings />
+    <BloodHoundSettings />
   </div>
 </div>
