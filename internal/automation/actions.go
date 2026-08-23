@@ -44,27 +44,28 @@ type (
 )
 
 type ActionDeps struct {
-	Executor CommandExecutor
-	Tags     AgentTagStore
-	Emitter  Emitter
-	Bus      bus.Bus
-	Journal  JournalQuerier
-	HTTP     HTTPDoer
-	Cases    CaseAppender
-	Loot     LootWriter
+	Executor  CommandExecutor
+	Tags      AgentTagStore
+	Emitter   Emitter
+	Bus       bus.Bus
+	Journal   JournalQuerier
+	HTTP      HTTPDoer
+	Cases     CaseAppender
+	Loot      LootWriter
+	Collector CollectorStarter
 }
 
 type RunContext struct {
-	Ctx        context.Context
-	Rule       AutomationRule
-	Trigger    string
-	Target     Target
-	RunID      string
-	Action     ActionSpec
-	Log        func(...any)
-	Commands   *[]string
+	Ctx         context.Context
+	Rule        AutomationRule
+	Trigger     string
+	Target      Target
+	RunID       string
+	Action      ActionSpec
+	Log         func(...any)
+	Commands    *[]string
 	OutputSoFar func() string
-	Deps       ActionDeps
+	Deps        ActionDeps
 }
 
 type Action interface {
@@ -155,15 +156,31 @@ func (e *Engine) executeAction(rc *RunContext, spec ActionSpec) (result ActionRe
 
 func (e *Engine) actionDeps() ActionDeps {
 	return ActionDeps{
-		Executor: e.executor,
-		Tags:     e.tags,
-		Emitter:  e.emitter,
-		Bus:      e.bus,
-		Journal:  e.journal,
-		HTTP:     e.httpClient(),
-		Cases:    e.cases,
-		Loot:     e.loot,
+		Executor:  e.executor,
+		Tags:      e.tags,
+		Emitter:   e.emitter,
+		Bus:       e.bus,
+		Journal:   e.journal,
+		HTTP:      e.httpClient(),
+		Cases:     e.cases,
+		Loot:      e.loot,
+		Collector: e.collector(),
 	}
+}
+
+// SetCollector wires the BloodHound collection starter. Called once at
+// startup after the engine is constructed (the runner needs sliver services
+// that do not exist at bootstrap time).
+func (e *Engine) SetCollector(c CollectorStarter) {
+	e.collectorMu.Lock()
+	defer e.collectorMu.Unlock()
+	e.collectorRef = c
+}
+
+func (e *Engine) collector() CollectorStarter {
+	e.collectorMu.RLock()
+	defer e.collectorMu.RUnlock()
+	return e.collectorRef
 }
 
 func (e *Engine) httpClient() HTTPDoer {
