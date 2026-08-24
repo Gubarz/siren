@@ -25,6 +25,7 @@
   import { runGuiAction } from '../../palette/GuiActions.js'
   import { ROW_COLORS, colorHex } from '../../../utils/agentColors.js'
   import { buildAgentMap } from '../../../utils/agents.js'
+  import { buildCommandCategories } from './agentContextActions.js'
 
   useResource(sessions, beacons, agentColors)
 
@@ -166,16 +167,12 @@
     const rect = event.currentTarget.getBoundingClientRect()
     const items = commandCategories.length === 0
       ? [{ label: 'Loading commands...', disabled: true }]
-      : commandCategories.map((category) => ({
-          icon: 'command',
-          label: category.category,
-          children: category.commands.map((cmd) => ({
-            label: cmd.name,
-            description: cmd.unavailable || cmd.description || '',
-            disabled: isDisabled(cmd),
-            on: () => executeCommand(cmd),
-          })),
-        }))
+      : buildCommandCategories({
+          catalog: commandCategories,
+          targetIDs: [...selectedAgents],
+          executeAgentCommand: executeCommand,
+          isDisabled,
+        })
 
     contextMenu.open({
       x: rect.left,

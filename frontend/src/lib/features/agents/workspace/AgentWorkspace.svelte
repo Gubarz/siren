@@ -12,6 +12,7 @@
   import SplitPane from '$components/patterns/SplitPane.svelte'
   import CommandFormV2 from '../modals/CommandFormV2.svelte'
   import ReconfigureAgentModal from '../modals/ReconfigureAgentModal.svelte'
+  import { catalogToCategories } from './catalog.js'
 
   import { modalFor } from '../modals/registry.js'
   import { config } from '$stores/config.svelte.js'
@@ -22,7 +23,8 @@
   import { Modal } from '$stores/ui/Modal.svelte.js'
 
   let serverCategories = $state([])
-  let categories = $derived([...GuiActionGroups, ...serverCategories])
+  let agentCategories = $state([])
+  let categories = $derived([...GuiActionGroups, ...agentCategories])
 
   const reconfigure = new Modal()
 
@@ -35,12 +37,15 @@
 
   onMount(async () => {
     try {
-      const results = await Promise.all([
+      const [sessionCatalog, serverCatalog] = await Promise.all([
         GetCommandCatalog('session'),
         GetCommandCatalog('server'),
       ])
+      // Agent menus only get session commands — server commands (e.g. the
+      // Sliver group) belong in the palette, not on the agents dropdown.
+      agentCategories = catalogToCategories(sessionCatalog)
       const merged = new Map()
-      for (const catalog of results) {
+      for (const catalog of [sessionCatalog, serverCatalog]) {
         for (const group of catalog?.groups ?? []) {
           const key = group.title || group.id || 'Other'
           if (!merged.has(key)) merged.set(key, { category: key, commands: [] })

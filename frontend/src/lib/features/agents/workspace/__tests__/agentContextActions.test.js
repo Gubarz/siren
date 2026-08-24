@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { buildAgentContextSections } from '../agentContextActions.js'
+import { buildAgentContextSections, buildCommandCategories } from '../agentContextActions.js'
 
 function sectionItems(sections, label) {
   for (const section of sections) {
@@ -64,5 +64,38 @@ describe('agent context actions — find attack paths', () => {
     const sections = buildAgentContextSections(ctx)
     const item = sectionItems(sections, 'Find attack paths')
     expect(item.disabled).toBeTruthy()
+  })
+})
+
+describe('buildCommandCategories', () => {
+  const catalog = [
+    { category: 'Sliver', commands: [{ name: 'whoami', description: 'who am i' }] },
+    { category: 'Empty', commands: [] },
+  ]
+
+  it('builds nested items and drops empty categories', () => {
+    const execute = vi.fn()
+    const items = buildCommandCategories({ catalog, targetIDs: ['a1'], executeAgentCommand: execute })
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ icon: 'command', label: 'Sliver' })
+    const child = items[0].children[0]
+    expect(child.label).toBe('whoami')
+    child.on()
+    expect(execute).toHaveBeenCalledWith({ name: 'whoami', description: 'who am i' }, ['a1'])
+  })
+
+  it('applies disabled from the isDisabled callback', () => {
+    const items = buildCommandCategories({
+      catalog,
+      targetIDs: [],
+      executeAgentCommand: vi.fn(),
+      isDisabled: (cmd) => cmd.name === 'whoami',
+    })
+    expect(items[0].children[0].disabled).toBe(true)
+  })
+
+  it('leaves items enabled without isDisabled', () => {
+    const items = buildCommandCategories({ catalog, targetIDs: [], executeAgentCommand: vi.fn() })
+    expect(items[0].children[0].disabled).toBe(false)
   })
 })

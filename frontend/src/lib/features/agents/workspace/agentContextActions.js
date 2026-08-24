@@ -225,7 +225,7 @@ function buildAutomationActions({ agent, automationRules, runAutomationRule, tar
 
 // Turn the catalog categories into a nested-context-menu shape. Empty
 // categories are dropped so a right-click never opens an empty submenu.
-function buildCommandCategories({ catalog, targetIDs, executeAgentCommand }) {
+export function buildCommandCategories({ catalog, targetIDs, executeAgentCommand, isDisabled }) {
   return catalog
     .map((cat) => ({
       icon: 'command',
@@ -233,6 +233,7 @@ function buildCommandCategories({ catalog, targetIDs, executeAgentCommand }) {
       children: cat.commands.map((cmd) => ({
         label: cmd.name,
         description: cmd.unavailable || cmd.description || '',
+        disabled: isDisabled ? isDisabled(cmd) : false,
         on: () => executeAgentCommand(cmd, targetIDs),
       })),
     }))

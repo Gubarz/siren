@@ -46,6 +46,7 @@
   import { buildAgentContextSections, buildDiscoveryContextSections } from './agentContextActions.js'
   import { createAgentDataModel } from './useAgentData.svelte.js'
   import { useAgentShortcuts } from './useAgentShortcuts.svelte.js'
+  import { catalogToCategories } from './catalog.js'
   import { Modal } from '$stores/ui/Modal.svelte.js'
 
   let agentFilter = $state(workspaceState.agentFilter || '')
@@ -130,15 +131,6 @@
       beaconCategories = []
     }
   })
-
-  function catalogToCategories(catalog) {
-    return (catalog?.groups ?? [])
-      .map((group) => ({
-        category: group.title,
-        commands: (group.commands ?? []).filter((c) => c.name),
-      }))
-      .filter((g) => g.commands.length > 0)
-  }
 
   // --- Selection + action wiring ---
   function handleRowSelect({ id, additive }) {
