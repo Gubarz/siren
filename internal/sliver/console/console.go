@@ -229,6 +229,7 @@ func (s *Service) ListCommands() ([]string, error) {
 	if err := s.init(); err != nil {
 		return nil, err
 	}
+	s.refreshRootsLocked()
 
 	root := s.sliverRoot
 	serverRoot := s.serverRoot
@@ -255,6 +256,21 @@ func (s *Service) ListCommands() ([]string, error) {
 
 	sort.Strings(names)
 	return names, nil
+}
+
+// refreshRootsLocked rebuilds the command trees and completion tries from the
+// menu closures. The closures reload aliases/extensions from disk, so this
+// picks up packages installed (e.g. via `armory install`) after the console
+// was initialized. Sliver's own console rebuilds these trees before every
+// command run; we rebuild on read instead.
+func (s *Service) refreshRootsLocked() {
+	if s.sliverCmds == nil || s.serverCmds == nil {
+		return
+	}
+	s.sliverRoot = s.sliverCmds()
+	s.serverRoot = s.serverCmds()
+	s.sliverCmpl = buildCompletions(s.sliverRoot)
+	s.serverCmpl = buildCompletions(s.serverRoot)
 }
 
 func (s *Service) Render(fn func() error) (string, error) {
@@ -321,6 +337,7 @@ func (s *Service) GetCommandRoot(scope string) (*cobra.Command, error) {
 	if err := s.init(); err != nil {
 		return nil, err
 	}
+	s.refreshRootsLocked()
 
 	switch scope {
 	case "session":

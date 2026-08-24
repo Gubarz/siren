@@ -1,6 +1,9 @@
 package console
 
 import (
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -43,6 +46,42 @@ func TestOutputSinkCapturesCobraHelp(t *testing.T) {
 	}
 	if !strings.Contains(out, "Available Commands") || !strings.Contains(out, "child") {
 		t.Fatalf("captured help output %q does not include Cobra help", out)
+	}
+}
+
+func TestListCommandsReflectsNewlyInstalledAlias(t *testing.T) {
+	rootDir := t.TempDir()
+	t.Setenv("SLIVER_CLIENT_ROOT_DIR", rootDir)
+	svc := New(rpc.NewClient())
+
+	before, err := svc.ListCommands()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(before, "freshalias") {
+		t.Fatalf("freshalias should not be listed before it is installed: %v", before)
+	}
+
+	aliasDir := filepath.Join(rootDir, "aliases", "freshalias")
+	if err := os.MkdirAll(aliasDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	manifest := `{
+		"name": "freshalias",
+		"command_name": "freshalias",
+		"version": "1.0.0",
+		"help": "test alias"
+	}`
+	if err := os.WriteFile(filepath.Join(aliasDir, "alias.json"), []byte(manifest), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	after, err := svc.ListCommands()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(after, "freshalias") {
+		t.Fatalf("freshalias missing after install; commands: %v", after)
 	}
 }
 

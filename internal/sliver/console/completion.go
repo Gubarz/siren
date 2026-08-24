@@ -33,6 +33,8 @@ func (s *Service) CompleteCommand(sessionID, line string) ([]string, error) {
 		return nil, nil
 	}
 
+	s.refreshRootsLocked()
+
 	var trie *completionTrie
 	if sessionID != "" {
 		trie = s.sliverCmpl
