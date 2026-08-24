@@ -34,6 +34,7 @@ type Dependencies struct {
 }
 
 type SharedStack struct {
+	DataDir    string
 	RPC        *rpc.Client
 	Console    *console.Service
 	Beacons    *beacons.Service
@@ -95,10 +96,11 @@ func NewShared(deps Dependencies) *SharedStack {
 	registerBuiltinTriggers(eng, busImpl)
 	registerBuiltinActions(eng)
 	return &SharedStack{
-		RPC: rpcClient, Console: con, Beacons: beac, Automation: eng,
+		DataDir: deps.DataDir,
+		RPC:     rpcClient, Console: con, Beacons: beac, Automation: eng,
 		CheckinPub: automationexec.NewCheckinPublisher(rpcClient, busImpl),
 		LootWriter: lootWriter,
-		Tags: tagsSvc, Comments: commentsSvc, Cases: caseSvc,
+		Tags:       tagsSvc, Comments: commentsSvc, Cases: caseSvc,
 		Events: eventsStore, Bus: busImpl, Journal: journalSvc,
 	}
 }
@@ -131,6 +133,7 @@ func registerBuiltinActions(eng *automation.Engine) {
 		actions.Notify(),
 		actions.Tag(),
 		actions.CaseAdd(),
+		actions.BloodHoundCollect(),
 	} {
 		if err := eng.RegisterAction(a); err != nil {
 			log.Printf("bootstrap: register action: %v", err)

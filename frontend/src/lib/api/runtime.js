@@ -16,6 +16,12 @@ export function onSliverEvent(callback) {
   return subscribe('sliver-event', callback);
 }
 
+// BloodHound backend events. Payload: {type, payload} where payload is the
+// JSON-serialized bus event body (status / enrichment / synced).
+export function onBloodhoundEvent(callback) {
+  return subscribe('bloodhound-event', callback);
+}
+
 export function onShellOutput(callback) {
   return subscribe('shell-output', callback);
 }

@@ -52,6 +52,22 @@ func (s *Service) UploadFiles(sessionID string, remotePath string, localPaths []
 	return nil
 }
 
+// UploadToPath uploads a single local file to a remote directory without a
+// dialog. Used by automated pipelines (BloodHound collection).
+func (s *Service) UploadToPath(sessionID string, remotePath string, localPath string) error {
+	if !s.rpc.Connected() {
+		return rpc.ErrNotConnected
+	}
+	info, err := os.Stat(localPath)
+	if err != nil {
+		return fmt.Errorf("%s: %w", filepath.Base(localPath), err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("%s is a directory", filepath.Base(localPath))
+	}
+	return s.uploadLocalFile(sessionID, remotePath, localPath)
+}
+
 func (s *Service) uploadLocalFile(sessionID string, remotePath string, localPath string) error {
 	f, err := os.Open(localPath)
 	if err != nil {

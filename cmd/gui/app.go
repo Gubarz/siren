@@ -7,6 +7,7 @@ import (
 	"github.com/bishopfox/sliver/client/assets"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
+	"siren/internal/bloodhound"
 	"siren/internal/bootstrap"
 	"siren/internal/sliver/agents"
 	"siren/internal/sliver/armory"
@@ -80,6 +81,9 @@ type App struct {
 	Hosts      *hosts.Service
 	Health     *health.Service
 	Env        *env.Service
+	BloodHound *bloodhound.Service
+	// BloodHoundCollection is built lazily on first collection start.
+	BloodHoundCollection *bloodhound.CollectionRunner
 }
 
 func NewApp(wailsApp *application.App, window *application.WebviewWindow) *App {
@@ -121,6 +125,7 @@ func NewApp(wailsApp *application.App, window *application.WebviewWindow) *App {
 		Crack:        crack.New(shared.RPC),
 		Builders:     builders.New(shared.RPC),
 		Env:          env.New(shared.RPC),
+		BloodHound:   bloodhound.New(shared.DataDir, shared.Bus),
 	}
 	app.Files.SetBus(shared.Bus)
 	app.Procs.SetBus(shared.Bus)
@@ -128,6 +133,7 @@ func NewApp(wailsApp *application.App, window *application.WebviewWindow) *App {
 	app.Builders.SetBus(shared.Bus)
 	app.Loot.SetBus(shared.Bus)
 	shared.LootWriter.SetService(app.Loot)
+	app.Automation.SetCollector(appCollectorStarter{app: app})
 	app.Console.SetRoutedCommandHandler(func(sessionID, line string) console.RoutedCommandResult {
 		result := app.Tunneling.HandleConsoleTunnelCommand(sessionID, line)
 		return console.RoutedCommandResult{

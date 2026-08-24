@@ -32,15 +32,42 @@ type AgentTagStore interface {
 	SetAgentTags(agentID string, tags []string) error
 }
 
+// CollectorRequest carries one BloodHound collection request across the
+// automation boundary (the concrete runner type lives outside this package).
+type CollectorRequest struct {
+	Collector      string
+	Methods        []string
+	Flags          []string
+	Domain         string
+	TimeoutSeconds int
+	Ingest         bool
+	Loot           bool
+}
+
+// CollectorProgress is a snapshot of a running collection.
+type CollectorProgress struct {
+	Stage string
+	Error string
+}
+
+// CollectorStarter launches BloodHound collections and reports progress.
+// Implementations are wired in after the engine is constructed (the runner
+// needs sliver services), so the field is settable post-New.
+type CollectorStarter interface {
+	StartCollection(ctx context.Context, agentID, agentKind, agentOS string, req CollectorRequest) (string, error)
+	CollectionState(ctx context.Context, id string) (CollectorProgress, bool)
+}
+
 type Dependencies struct {
-	Store    StateStore
-	Emitter  Emitter
-	Executor CommandExecutor
-	Targets  TargetProvider
-	Tags     AgentTagStore
-	Bus      bus.Bus
-	Journal  JournalQuerier
-	HTTP     HTTPDoer
-	Cases    CaseAppender
-	Loot     LootWriter
+	Store     StateStore
+	Emitter   Emitter
+	Executor  CommandExecutor
+	Targets   TargetProvider
+	Tags      AgentTagStore
+	Bus       bus.Bus
+	Journal   JournalQuerier
+	HTTP      HTTPDoer
+	Cases     CaseAppender
+	Loot      LootWriter
+	Collector CollectorStarter
 }
