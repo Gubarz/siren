@@ -68,6 +68,12 @@ func (s *Service) downloadToPath(sessionID, remotePath, localPath string, recurs
 	return nil
 }
 
+// DownloadToPath downloads a remote file to a local path without a dialog.
+// Used by automated pipelines (BloodHound collection).
+func (s *Service) DownloadToPath(sessionID, remotePath, localPath string) error {
+	return s.downloadToPath(sessionID, remotePath, localPath, false)
+}
+
 func (s *Service) singleShotDownload(
 	sessionID, remotePath, localPath string, emit func(string, int64, int64),
 ) (int64, error) {

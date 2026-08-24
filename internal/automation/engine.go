@@ -24,6 +24,9 @@ type Engine struct {
 	loot     LootWriter
 	ctx      context.Context
 
+	collectorMu  sync.RWMutex
+	collectorRef CollectorStarter
+
 	triggersMu sync.RWMutex
 	triggers   map[string]Trigger
 	actionsMu  sync.RWMutex
