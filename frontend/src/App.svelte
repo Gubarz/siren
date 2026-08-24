@@ -27,6 +27,7 @@
   import { applyThemePreference, watchSystemThemePreference } from '$stores/ui/theme.svelte.js'
   import { installClientLogHandlers } from './lib/utils/clientLog.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
+  import { setWindowZoom } from './lib/api/runtime.js'
 
   useResource(sessions, beacons)
 
@@ -48,7 +49,7 @@
   $effect(() => {
     const zoom = Number(config?.zoom)
     const appZoom = Number.isFinite(zoom) && zoom > 0 ? zoom : 1
-    document.documentElement.style.fontSize = `${16 * appZoom}px`
+    setWindowZoom(appZoom)
   })
 
   onMount(() => {
