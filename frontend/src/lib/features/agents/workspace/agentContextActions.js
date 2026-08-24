@@ -122,7 +122,6 @@ function buildCoreActions({
     tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
     { icon: 'terminal-square', label: bulkLabel('New Shell', sessionAgents.length), disabled: sessionAgents.length === 0, on: () => sessionAgents.forEach(newShell) },
     tabAction(agentTabs, sessionAgents, 'fileBrowser', sessionAgents.length),
-    tabAction(agentTabs, sessionAgents, 'tunneling', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'processExplorer', sessionAgents.length),
     {
       icon: 'workflow',
@@ -145,6 +144,7 @@ function buildCoreActions({
     moreItems.push(tabAction(agentTabs, windowsSessions, 'registryBrowser', windowsSessions.length))
   }
   moreItems.push(
+    tabAction(agentTabs, sessionAgents, 'tunneling', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'netstat', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'ifconfig', sessionAgents.length),
   )

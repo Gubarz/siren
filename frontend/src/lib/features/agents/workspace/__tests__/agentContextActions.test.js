@@ -161,6 +161,16 @@ describe('buildAgentActionsSections', () => {
     expect(sectionItems(sections, 'New Shell').icon).toBe('terminal-square')
   })
 
+  it('keeps Tunnels in the More submenu, not the top level', () => {
+    const sections = buildAgentActionsSections(actionsCtx({
+      targetAgents: [{ ID: 'a1', OS: 'windows', Name: 'impl', _kind: 'session', Hostname: 'PC1' }],
+    }))
+    const topLabels = (sections[0]?.items ?? []).map((i) => i.label)
+    const moreChildren = sections[1]?.items?.[0]?.children ?? []
+    expect(topLabels).not.toContain('Tunnels')
+    expect(moreChildren.map((i) => i.label)).toContain('Tunnels')
+  })
+
   it('disables every leaf item when there are no targets', () => {
     const sections = buildAgentActionsSections(actionsCtx({ agent: null, isWindows: false }))
     const leaves = flattenItems(sections).filter((i) => !i.children)
