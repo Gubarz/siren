@@ -226,9 +226,11 @@
         <Controls>
           {#if bloodhound}
             <ControlButton
+              class={bloodhound.showEdges ? 'bg-brand! text-on-brand!' : ''}
               onclick={() => onBloodhoundToggle(!bloodhound.showEdges)}
               title={bloodhound.showEdges ? 'Hide BloodHound edges' : 'Show BloodHound edges'}
               aria-label="Toggle BloodHound edges"
+              aria-pressed={bloodhound.showEdges}
             >
               <span style="font-size: 9px; font-weight: 700;">BH</span>
             </ControlButton>
