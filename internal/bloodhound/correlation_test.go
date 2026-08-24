@@ -145,6 +145,31 @@ func TestCorrelateUsernameSamAccount(t *testing.T) {
 	}
 }
 
+func TestCorrelateFallsBackToHostnameWhenUsernameUnresolved(t *testing.T) {
+	var searched []string
+	c := newCorrelationServer(t, func(q string) string {
+		searched = append(searched, q)
+		if q == "srv01" {
+			return `{"data":[{"name":"SRV01.CORP.LOCAL","objectid":"S-1-5-21-4615","type":"Computer"}]}`
+		}
+		return `{"data":[]}`
+	}, threeNodePath)
+	svc := connectedService(t, c.f.url)
+
+	ref := AgentRef{ID: "a1", Hostname: "SRV01", Username: `CORP\SRV01$`}
+	got, err := svc.Correlate(context.Background(), []AgentRef{ref})
+	if err != nil {
+		t.Fatalf("Correlate: %v", err)
+	}
+	e := got["a1"]
+	if e.Entity.ObjectID != "S-1-5-21-4615" || e.Entity.Kind != "Computer" {
+		t.Fatalf("enrichment = %+v, want the hostname computer fallback", e.Entity)
+	}
+	if len(searched) != 2 || searched[0] != "srv01$" || searched[1] != "srv01" {
+		t.Fatalf("searched = %v, want username first then hostname", searched)
+	}
+}
+
 func TestCorrelateUnreachableEntity(t *testing.T) {
 	c := newCorrelationServer(t, userHit, `{"data":{"nodes":{},"edges":[]}}`)
 	svc := connectedService(t, c.f.url)

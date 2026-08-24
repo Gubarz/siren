@@ -70,25 +70,28 @@ func samAccount(username string) string {
 	return strings.ToLower(strings.TrimSpace(u))
 }
 
-// candidatesFor returns the search terms for an agent, canonical first: the
-// username sam-account, else the hostname short label (canonical) followed by
-// the full name as fallback.
+// candidatesFor returns the search terms for an agent in priority order: the
+// username sam-account first (agents normally enrich to the logged-on user),
+// then hostname candidates as fallback so sessions running as machine
+// accounts, SYSTEM, or otherwise unresolvable users still resolve to their
+// Computer entity.
 func candidatesFor(ref AgentRef) []string {
+	var cands []string
 	if u := samAccount(ref.Username); u != "" {
-		return []string{u}
+		cands = append(cands, u)
 	}
 	h := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(ref.Hostname), ".")))
-	if h == "" {
-		return nil
+	if h != "" {
+		short := h
+		if i := strings.IndexByte(h, '.'); i >= 0 {
+			short = h[:i]
+		}
+		cands = append(cands, short)
+		if short != h {
+			cands = append(cands, h)
+		}
 	}
-	short := h
-	if i := strings.IndexByte(h, '.'); i >= 0 {
-		short = h[:i]
-	}
-	if short == h {
-		return []string{h}
-	}
-	return []string{short, h}
+	return cands
 }
 
 // pickMatch chooses the search hit that best matches the candidate: exact
