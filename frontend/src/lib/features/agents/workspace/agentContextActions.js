@@ -23,11 +23,16 @@ function bulkLabel(label, count) {
   return count > 1 ? `${label} (${count})` : label
 }
 
+function pick(agents, agent) {
+  return agents.length > 0 ? agents : (agent ? [agent] : [])
+}
+
 function tabAction(agentTabs, agents, type, count) {
   const meta = TAB_META[type]
   return {
     icon: meta?.icon ?? 'info',
     label: bulkLabel(meta?.label ?? type, count),
+    disabled: agents.length === 0,
     on: () => openTabs(agentTabs, agents, type),
   }
 }
@@ -53,6 +58,8 @@ function buildColorClearItem({ agent, targetAgents, setAgentRowColor }) {
 
 // ---------------------------------------------------------------------------
 // Core actions — split into top-level flat items and a "More" submenu.
+// Shared by the agent right-click menu and the workspace Actions dropdown,
+// so both are kind- and OS-aware from the same definition.
 // ---------------------------------------------------------------------------
 
 function buildCoreActions({
@@ -68,43 +75,44 @@ function buildCoreActions({
   newShell,
   findAttackPaths,
 }) {
-  const compatibleAgents = targetAgents.length > 0 ? targetAgents : [agent]
+  const compatibleAgents = pick(targetAgents, agent)
   const sessionAgents = compatibleAgents.filter((target) => target._kind !== 'beacon')
   const beaconAgents = compatibleAgents.filter((target) => target._kind === 'beacon')
   const windowsSessions = sessionAgents.filter(isWindowsAgent)
 
   if (isBeacon) {
-    const taskTargets = beaconAgents.length > 0 ? beaconAgents : [agent]
+    const taskTargets = pick(beaconAgents, agent)
     const topLevel = [
       tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
       tabAction(agentTabs, taskTargets, 'tasks', taskTargets.length),
       tabAction(agentTabs, taskTargets, 'processExplorer', taskTargets.length),
-      { icon: 'info', label: 'Beacon Detail…', on: () => openBeaconDetail(agent) },
-      { icon: 'terminal', label: 'Open Interactive Session', on: () => promoteBeacon(agent) },
-      { icon: 'x', label: 'Close Interactive Session', disabled: !hasInteractiveSession, on: () => demoteSession(agent) },
+      { icon: 'info', label: 'Beacon Detail…', disabled: !openBeaconDetail, on: () => openBeaconDetail(agent) },
+      { icon: 'terminal', label: 'Open Interactive Session', disabled: !promoteBeacon, on: () => promoteBeacon(agent) },
+      { icon: 'x', label: 'Close Interactive Session', disabled: !hasInteractiveSession || !demoteSession, on: () => demoteSession(agent) },
       {
         icon: 'workflow',
         label: bulkLabel('Find attack paths', compatibleAgents.length),
-        disabled: !findAttackPaths,
+        disabled: !findAttackPaths || compatibleAgents.length === 0,
         on: () => findAttackPaths(compatibleAgents),
       },
     ]
 
+    const moreTargets = pick(beaconAgents, agent)
     const moreItems = [
-      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'screenshot', beaconAgents.length || 1),
-      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'grep', beaconAgents.length || 1),
-      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'env', beaconAgents.length || 1),
+      tabAction(agentTabs, moreTargets, 'screenshot', moreTargets.length),
+      tabAction(agentTabs, moreTargets, 'grep', moreTargets.length),
+      tabAction(agentTabs, moreTargets, 'env', moreTargets.length),
     ]
     if (isWindows) {
-      moreItems.push(tabAction(agentTabs, [agent], 'registryBrowser', 1))
-      moreItems.push(tabAction(agentTabs, [agent], 'services', 1))
+      moreItems.push(tabAction(agentTabs, moreTargets, 'registryBrowser', moreTargets.length))
+      moreItems.push(tabAction(agentTabs, moreTargets, 'services', moreTargets.length))
     }
     moreItems.push(
-      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'netstat', beaconAgents.length || 1),
-      tabAction(agentTabs, beaconAgents.length > 0 ? beaconAgents : [agent], 'ifconfig', beaconAgents.length || 1),
+      tabAction(agentTabs, moreTargets, 'netstat', moreTargets.length),
+      tabAction(agentTabs, moreTargets, 'ifconfig', moreTargets.length),
     )
     if (isWindows) {
-      moreItems.push(tabAction(agentTabs, [agent], 'privileges', 1))
+      moreItems.push(tabAction(agentTabs, moreTargets, 'privileges', moreTargets.length))
     }
 
     return { topLevel, moreItems }
@@ -112,21 +120,20 @@ function buildCoreActions({
 
   const topLevel = [
     tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
-    { icon: 'terminal', label: bulkLabel('New Shell', sessionAgents.length), on: () => sessionAgents.forEach(newShell) },
+    { icon: 'terminal-square', label: bulkLabel('New Shell', sessionAgents.length), disabled: sessionAgents.length === 0, on: () => sessionAgents.forEach(newShell) },
     tabAction(agentTabs, sessionAgents, 'fileBrowser', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'tunneling', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'processExplorer', sessionAgents.length),
     {
       icon: 'workflow',
       label: bulkLabel('Find attack paths', compatibleAgents.length),
-      disabled: !findAttackPaths,
+      disabled: !findAttackPaths || compatibleAgents.length === 0,
       on: () => findAttackPaths(compatibleAgents),
     },
   ]
 
-  if (isWindows || windowsSessions.length > 0) {
-    const serviceTargets = windowsSessions.length > 0 ? windowsSessions : [agent]
-    topLevel.push(tabAction(agentTabs, serviceTargets, 'services', serviceTargets.length))
+  if (windowsSessions.length > 0) {
+    topLevel.push(tabAction(agentTabs, windowsSessions, 'services', windowsSessions.length))
   }
 
   const moreItems = [
@@ -134,19 +141,33 @@ function buildCoreActions({
     tabAction(agentTabs, sessionAgents, 'grep', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'env', sessionAgents.length),
   ]
-  if (isWindows || windowsSessions.length > 0) {
-    const registryTargets = windowsSessions.length > 0 ? windowsSessions : [agent]
-    moreItems.push(tabAction(agentTabs, registryTargets, 'registryBrowser', registryTargets.length))
+  if (windowsSessions.length > 0) {
+    moreItems.push(tabAction(agentTabs, windowsSessions, 'registryBrowser', windowsSessions.length))
   }
   moreItems.push(
     tabAction(agentTabs, sessionAgents, 'netstat', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'ifconfig', sessionAgents.length),
   )
-  if (isWindows || windowsSessions.length > 0) {
-    moreItems.push(tabAction(agentTabs, windowsSessions.length > 0 ? windowsSessions : [agent], 'privileges', windowsSessions.length || 1))
+  if (windowsSessions.length > 0) {
+    moreItems.push(tabAction(agentTabs, windowsSessions, 'privileges', windowsSessions.length))
   }
 
   return { topLevel, moreItems }
+}
+
+// Sections wrapper around buildCoreActions: top-level items, then the
+// "More" submenu, then a divider. Imported by both the right-click menu
+// and the workspace Actions dropdown.
+export function buildAgentActionsSections(ctx) {
+  const { topLevel, moreItems } = buildCoreActions(ctx)
+  const sections = [{ items: topLevel }]
+  if (moreItems.length > 0) {
+    sections.push({
+      items: [{ icon: 'ellipsis-vertical', label: 'More', children: moreItems }],
+    })
+    sections.push({ divider: true })
+  }
+  return sections
 }
 
 // ---------------------------------------------------------------------------
@@ -267,11 +288,10 @@ export function buildAgentContextSections(ctx) {
     contextMenuHandlers,
   } = ctx
 
-  const { topLevel, moreItems } = buildCoreActions({
+  const sections = buildAgentActionsSections({
     agent, isBeacon, isWindows,
     hasInteractiveSession: hasInteractiveSession ?? false,
-    targetAgents,
-    agentTabs,
+    targetAgents, agentTabs,
     openBeaconDetail: contextMenuHandlers.openBeaconDetail,
     promoteBeacon: contextMenuHandlers.promoteBeacon,
     demoteSession: contextMenuHandlers.demoteSession,
@@ -323,17 +343,6 @@ export function buildAgentContextSections(ctx) {
     catalog, targetIDs,
     executeAgentCommand: contextMenuHandlers.executeAgentCommand,
   })
-
-  const sections = [
-    { items: topLevel },
-  ]
-
-  if (moreItems.length > 0) {
-    sections.push({
-      items: [{ icon: 'ellipsis-vertical', label: 'More', children: moreItems }],
-    })
-    sections.push({ divider: true })
-  }
 
   sections.push({
     items: [{ icon: 'network-wired', label: 'Discovery', children: discoveryItems }],

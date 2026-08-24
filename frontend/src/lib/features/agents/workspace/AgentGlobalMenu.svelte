@@ -15,9 +15,9 @@
   import { addToCase } from '$stores/ui/addToCase.svelte.js'
   import { dialog } from '$stores/ui/dialog.svelte.js'
   import { agentColors } from '$stores/resources/agentColors.svelte.js'
-  import { TAB_META } from '$stores/agentTabs.svelte.js'
   import { sessions } from '$stores/resources/sessions.svelte.js'
   import { beacons } from '$stores/resources/beacons.svelte.js'
+  import { discoveries } from '$stores/resources/discoveries.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
   import { SetAgentColor } from '../../../api/tags.js'
   import { RenameAgent } from '../../../api/agents.js'
@@ -25,11 +25,16 @@
   import { runGuiAction } from '../../palette/GuiActions.js'
   import { ROW_COLORS, colorHex } from '../../../utils/agentColors.js'
   import { buildAgentMap } from '../../../utils/agents.js'
-  import { buildCommandCategories } from './agentContextActions.js'
+  import { Modal } from '$stores/ui/Modal.svelte.js'
+  import BeaconDetailModal from '../modals/BeaconDetailModal.svelte'
+  import { createAgentActions } from './agentActions.js'
+  import { buildAgentActionsSections, buildCommandCategories } from './agentContextActions.js'
 
   useResource(sessions, beacons, agentColors)
 
   let { categories = [], onReconfigure = () => {} } = $props()
+
+  const beaconDetail = new Modal()
 
   let selectedAgents = $derived(selection.agents)
   let workspaceOpen = $state(false)
@@ -39,24 +44,24 @@
   // NOTE: must be $derived.by — plain $derived would store the function
   // itself as the value and agentMap.get(...) would throw.
   let agentMap = $derived.by(() => buildAgentMap(sessions.data, beacons.data))
+  let contextAgent = $derived(
+    [...selection.agents].map((id) => agentMap.get(id)).filter(Boolean)[0] ?? null,
+  )
+
+  const actions = createAgentActions({
+    dialog,
+    discoveries,
+    agentTabs,
+    selectedAgentIDsIncluding: (agent) => [
+      ...[...selection.agents].filter((id) => id !== agent.ID),
+      agent.ID,
+    ],
+  })
+  const { promoteBeacon, demoteSession } = actions
 
   function getAgentLabel(id) {
     const a = agentMap.get(id)
     return a?.Name || a?.Hostname || id
-  }
-
-  function openTabForSelected(type) {
-    for (const id of selectedAgents) agentTabs.openTab(id, type)
-  }
-
-  function tabItem(type) {
-    const meta = TAB_META[type]
-    const disabled = selectedAgents.size === 0
-    return { icon: meta?.icon ?? 'info', label: meta?.label ?? type, disabled, on: () => openTabForSelected(type) }
-  }
-
-  function newShellForSelected() {
-    for (const id of selectedAgents) agentTabs.launchShell(id, '')
   }
 
   async function renameSelected() {
@@ -132,32 +137,29 @@
     event.stopPropagation()
     workspaceOpen = false
     const rect = event.currentTarget.getBoundingClientRect()
-    const disabled = selectedAgents.size === 0
+    const targetAgents = [...selection.agents].map((id) => agentMap.get(id)).filter(Boolean)
+    const agent = contextAgent
+    const isBeacon = agent?._kind === 'beacon'
+    const isWindows = (agent?.OS || '').toLowerCase() === 'windows'
+    const hasInteractiveSession = isBeacon && (sessions.data ?? []).some((s) => s.Name === agent?.Name)
     contextMenu.open({
       x: rect.left,
       y: rect.bottom + 4,
-      sections: [{
-        items: [
-          tabItem('console'),
-          { icon: 'terminal-square', label: 'New Shell', disabled, on: newShellForSelected },
-          tabItem('fileBrowser'),
-          tabItem('tunneling'),
-          tabItem('processExplorer'),
-          tabItem('services'),
-          {
-            icon: 'ellipsis-vertical', label: 'More',
-            children: [
-              tabItem('screenshot'),
-              tabItem('grep'),
-              tabItem('env'),
-              tabItem('registryBrowser'),
-              tabItem('netstat'),
-              tabItem('ifconfig'),
-              tabItem('privileges'),
-            ],
-          },
-        ],
-      }],
+      sections: buildAgentActionsSections({
+        agent,
+        isBeacon,
+        isWindows,
+        hasInteractiveSession,
+        targetAgents,
+        agentTabs,
+        openBeaconDetail: (a) => beaconDetail.show(a.ID),
+        promoteBeacon,
+        demoteSession,
+        newShell: (a) => agentTabs.launchShell(a.ID, ''),
+        findAttackPaths: (agents) => {
+          for (const target of agents) agentTabs.openTab(target.ID, 'bloodhound');
+        },
+      }),
     })
   }
 
@@ -278,3 +280,5 @@
     </Button>
   </div>
 </div>
+
+<BeaconDetailModal bind:open={beaconDetail.open} beaconID={beaconDetail.data} />
