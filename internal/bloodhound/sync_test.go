@@ -99,6 +99,24 @@ func TestSyncPublishesWhileConnected(t *testing.T) {
 	}
 }
 
+func TestStartSyncRunsImmediatelyWhenConnected(t *testing.T) {
+	f := newRoutedServer(t, map[string]func(r *http.Request) string{
+		"/api/v2/available-domains": func(r *http.Request) string {
+			return `{"data":[{"id":"S-1-5-21-123","name":"corp.local","type":"ActiveDirectory","collected":true}]}`
+		},
+	})
+	b := &recordingBus{}
+	svc := connectedServiceWithBus(t, f.url, b)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go svc.StartSync(ctx, time.Hour) // long interval; the first sync must not wait for it
+
+	waitFor(t, "immediate bloodhound.synced event", func() bool {
+		return len(b.ofType("bloodhound.synced")) >= 1
+	})
+}
+
 func TestSyncSilentWhenDisconnected(t *testing.T) {
 	b := &recordingBus{}
 	svc := New(t.TempDir(), b)

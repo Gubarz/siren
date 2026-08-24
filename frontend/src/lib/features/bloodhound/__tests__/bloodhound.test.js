@@ -7,10 +7,13 @@ vi.mock('$api/runtime.js', () => runtime)
 
 const api = vi.hoisted(() => ({
   correlateAgents: vi.fn(),
+  getBloodHoundStatus: vi.fn(() => Promise.resolve(null)),
+  getBloodHoundIngestJobs: vi.fn(() => Promise.resolve([])),
+  getBloodHoundCollections: vi.fn(() => Promise.resolve([])),
 }))
 vi.mock('$api/bloodhound.js', () => api)
 
-import { bloodhoundStore, subscribeBloodhound, requestCorrelation } from '../bloodhound.svelte.js'
+import { bloodhoundStore, subscribeBloodhound, requestCorrelation, pullBloodhoundState } from '../bloodhound.svelte.js'
 import { enrichmentChip, pathTitle } from '../enrichment.js'
 
 let eventHandler = null
@@ -39,6 +42,19 @@ describe('bloodhoundStore', () => {
     eventHandler({ type: 'bloodhound.status', payload: { connected: true, serverUrl: 'https://bh' } })
     expect(bloodhoundStore.connected).toBe(true)
     expect(bloodhoundStore.status).toMatchObject({ connected: true })
+  })
+
+  it('pulls current status, jobs, and collections', async () => {
+    api.getBloodHoundStatus.mockResolvedValue({ connected: true, serverUrl: 'https://bh' })
+    api.getBloodHoundIngestJobs.mockResolvedValue([{ id: 1 }])
+    api.getBloodHoundCollections.mockResolvedValue([{ id: 'run1' }])
+
+    await pullBloodhoundState()
+
+    expect(bloodhoundStore.connected).toBe(true)
+    expect(bloodhoundStore.status).toMatchObject({ connected: true, serverUrl: 'https://bh' })
+    expect(bloodhoundStore.ingestJobs).toEqual([{ id: 1 }])
+    expect(bloodhoundStore.collections).toEqual([{ id: 'run1' }])
   })
 
   it('routes synced events', () => {

@@ -34,6 +34,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	a.CheckinPub.Start(ctx)
 
 	if a.BloodHound != nil {
+		a.BloodHound.ConnectIfConfigured(ctx)
 		go a.BloodHound.StartSync(a.ctx, 5*time.Minute)
 	}
 

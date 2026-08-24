@@ -78,8 +78,10 @@ func (s *Service) GetConfig() ConfigView {
 	return Masked(s.cfg)
 }
 
-// SaveConfig validates and persists cfg, then rebuilds the connection if we
-// were connected. A failed reconnect keeps the saved config and reports the error.
+// SaveConfig validates and persists cfg, then rebuilds the connection. A
+// configured server is connected immediately so the rest of the integration
+// works without a separate connect step; a failed connect keeps the saved
+// config and reports the error.
 func (s *Service) SaveConfig(cfg Config) error {
 	return s.save(cfg)
 }
@@ -120,20 +122,32 @@ func (s *Service) save(cfg Config) error {
 		return err
 	}
 	s.connMu.Lock()
-	wasConnected := s.client != nil
 	s.disconnectLocked()
 	s.connMu.Unlock()
 	s.cfgMu.Lock()
 	s.cfg = cfg
 	s.cfgMu.Unlock()
-	if wasConnected {
+	if cfg.configured() {
 		if err := s.Connect(context.Background()); err != nil {
 			s.publishStatus()
-			return fmt.Errorf("saved, but reconnect failed: %w", err)
+			return fmt.Errorf("saved, but connect failed: %w", err)
 		}
 	}
 	s.publishStatus()
 	return nil
+}
+
+// ConnectIfConfigured establishes the live client when a saved config
+// exists; otherwise it does nothing. Used at startup so a previously saved
+// BloodHound server reconnects without user interaction.
+func (s *Service) ConnectIfConfigured(ctx context.Context) {
+	s.cfgMu.RLock()
+	configured := s.cfg.configured()
+	s.cfgMu.RUnlock()
+	if !configured {
+		return
+	}
+	_ = s.Connect(ctx)
 }
 
 func (s *Service) Connect(ctx context.Context) error {

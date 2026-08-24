@@ -40,6 +40,10 @@ func (s *Service) StartSync(ctx context.Context, interval time.Duration) {
 	if interval <= 0 {
 		interval = 5 * time.Minute
 	}
+	// Sync once immediately so a connection established at startup surfaces
+	// domains and enrichment without waiting a full interval.
+	s.syncOnce(ctx)
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {

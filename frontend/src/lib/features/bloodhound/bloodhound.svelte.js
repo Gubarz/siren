@@ -1,5 +1,5 @@
 import { onBloodhoundEvent } from '$api/runtime.js';
-import { correlateAgents, getBloodHoundIngestJobs, getBloodHoundCollections } from '$api/bloodhound.js';
+import { correlateAgents, getBloodHoundIngestJobs, getBloodHoundCollections, getBloodHoundStatus } from '$api/bloodhound.js';
 
 export const bloodhoundStore = $state({
   status: null,
@@ -65,6 +65,23 @@ export function subscribeBloodhound() {
         break;
     }
   });
+  // The backend may connect (and publish status/synced events) before this
+  // module subscribes; pull the current state once so the UI reflects it.
+  pullBloodhoundState();
+}
+
+// Fetches current status, ingest jobs, and collections. Also called once
+// from subscribeBloodhound to cover the startup race with backend events.
+export async function pullBloodhoundState() {
+  try {
+    const status = await getBloodHoundStatus();
+    bloodhoundStore.status = status;
+    bloodhoundStore.connected = Boolean(status?.connected);
+  } catch {
+    // keep last known state
+  }
+  await refreshIngestJobs();
+  await refreshCollections();
 }
 
 export async function refreshIngestJobs() {

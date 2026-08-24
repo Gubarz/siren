@@ -32,6 +32,41 @@ func overrideFactory(t *testing.T, srvURL string) {
 	t.Cleanup(func() { clientFactory = orig })
 }
 
+func TestSaveConfigConnectsWithoutExplicitConnect(t *testing.T) {
+	srv := fakeBHServer(t)
+	overrideFactory(t, srv.URL)
+	svc := New(t.TempDir(), nil)
+	if err := svc.SaveConfig(Config{ServerURL: srv.URL, TokenID: "id", TokenKey: "key"}); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+	st := svc.Status()
+	if !st.Connected {
+		t.Fatalf("saving a configured server should establish the live connection: %+v", st)
+	}
+}
+
+func TestConnectIfConfiguredRestoresConnectionAfterRestart(t *testing.T) {
+	srv := fakeBHServer(t)
+	overrideFactory(t, srv.URL)
+	dir := t.TempDir()
+	if err := New(dir, nil).SaveConfig(Config{ServerURL: srv.URL, TokenID: "id", TokenKey: "key"}); err != nil {
+		t.Fatalf("SaveConfig: %v", err)
+	}
+	svc := New(dir, nil) // fresh instance, as after an app restart
+	svc.ConnectIfConfigured(context.Background())
+	if !svc.Status().Connected {
+		t.Fatalf("ConnectIfConfigured should connect from the saved config: %+v", svc.Status())
+	}
+}
+
+func TestConnectIfConfiguredWithoutConfigStaysIdle(t *testing.T) {
+	svc := New(t.TempDir(), nil)
+	svc.ConnectIfConfigured(context.Background())
+	if svc.Status().Connected {
+		t.Fatal("ConnectIfConfigured connected without a saved config")
+	}
+}
+
 func TestConnectRequiresConfig(t *testing.T) {
 	svc := New(t.TempDir(), nil)
 	err := svc.Connect(context.Background())
