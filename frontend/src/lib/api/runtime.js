@@ -78,6 +78,10 @@ export function minimizeWindow() {
   Window.Minimise();
 }
 
+export function setWindowZoom(zoom) {
+  Window.SetZoom(zoom);
+}
+
 export function toggleMaximizeWindow() {
   Window.ToggleMaximise();
 }

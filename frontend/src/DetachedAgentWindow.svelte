@@ -10,7 +10,7 @@
   import EntityTagsRoot from '$components/system/EntityTagsRoot.svelte'
   import Icon from '$components/ui/Icon.svelte'
   import { GetDetachedAgentTab, ReattachAgentTab } from '$api/detachedTabs.js'
-  import { closeWindow, minimizeWindow, toggleMaximizeWindow } from '$api/runtime.js'
+  import { closeWindow, minimizeWindow, toggleMaximizeWindow, setWindowZoom } from '$api/runtime.js'
   import { dispatchCommand } from '$stores/console.svelte.js'
   import { config } from '$stores/config.svelte.js'
   import { agentTabs } from '$stores/agentTabs.svelte.js'
@@ -35,7 +35,7 @@
   $effect(() => {
     const zoom = Number(config?.zoom)
     const appZoom = Number.isFinite(zoom) && zoom > 0 ? zoom : 1
-    document.documentElement.style.fontSize = `${16 * appZoom}px`
+    setWindowZoom(appZoom)
   })
 
   onMount(() => {

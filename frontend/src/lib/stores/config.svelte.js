@@ -27,7 +27,7 @@ const DEFAULTS = {
 
 export { DEFAULT_NOTIFICATION_TYPES }
 
-export const ZOOM_MIN = 0.6
+export const ZOOM_MIN = 1.0
 export const ZOOM_MAX = 2.0
 export const ZOOM_STEP = 0.1
 
@@ -40,7 +40,11 @@ export function clampZoom(z) {
 function loadPersisted() {
   try {
     const raw = localStorage.getItem('sliver-config')
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) }
+    if (raw) {
+      const state = { ...DEFAULTS, ...JSON.parse(raw) }
+      state.zoom = clampZoom(state.zoom)
+      return state
+    }
   } catch {}
   return { ...DEFAULTS }
 }

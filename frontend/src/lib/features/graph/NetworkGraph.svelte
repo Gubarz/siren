@@ -6,7 +6,6 @@
   import GraphNode from './GraphNode.svelte';
   import GraphAutoFit from './GraphAutoFit.svelte';
   import Panel from '$components/patterns/Panel.svelte';
-  import { config } from '$stores/config.svelte.js';
   import { agentColors } from '$stores/resources/agentColors.svelte.js';
   import { agentTags } from '$stores/resources/agentTags.svelte.js';
   import { entityColors } from '$stores/resources/entityColors.svelte.js';
@@ -69,10 +68,6 @@
   let layoutCustomized = false;
   let fitKey = $state(0);
   let now = $state(Math.floor(Date.now() / 1000));
-  let appZoom = $derived.by(() => {
-    const zoom = Number(config?.zoom);
-    return Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
-  });
 
   // Every-5s tick so "online / offline" indicators refresh without every
   // parent having to re-render. Cleanup lives on the effect return so we
@@ -200,10 +195,7 @@
 
 <Panel {embedded} onclose={onClose}>
   <div class="h-vh-75 w-full relative overflow-hidden" class:h-full={embedded}>
-    <div
-      class="min-w-full min-h-full"
-      style="width: {appZoom * 100}%; height: {appZoom * 100}%; zoom: {1 / appZoom};"
-    >
+    <div class="w-full h-full">
       <SvelteFlow
         colorMode="dark"
         bind:nodes
