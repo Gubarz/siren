@@ -19,6 +19,7 @@
   import { agentColors } from '$stores/resources/agentColors.svelte.js'
   import { automation } from '$stores/resources/automation.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
+  import { bloodhoundStore, subscribeBloodhound, requestCollection } from '$features/bloodhound/bloodhound.svelte.js'
 
   useResource(sessions, beacons, pivots, pivotListeners, discoveries, agentTags, agentColors, automation)
   import { selection } from '$stores/ui/selection.svelte.js'
@@ -58,6 +59,7 @@
   let activeView = $derived(navigation.activeView)
   let viewMode = $derived(config?.agentViewMode || 'table')
   let graphDirection = $derived(config?.graphDirection || 'TB')
+  let bloodhoundShowEdges = $state(config?.bhGraphEdges === true)
 
   let sessionData = $derived(sessions?.data || [])
   let beaconData = $derived(beacons?.data || [])
@@ -115,6 +117,7 @@
 
   // --- Lifecycle ---
   onMount(async () => {
+    subscribeBloodhound();
     try {
       const [sessCatalog, beaconCatalog] = await Promise.all([
         GetCommandCatalog('session'),
@@ -238,6 +241,15 @@
           addToCase: (payload) => addToCase.open(payload),
           killAgent, removeBeaconRecord,
           executeAgentCommand,
+          findAttackPaths: (agents) => {
+            for (const target of agents) {
+              agentTabs.openTab(target.ID, 'bloodhound');
+            }
+          },
+          collectBloodHound: (agent) => {
+            requestCollection(agent.ID);
+            agentTabs.openTab(agent.ID, 'bloodhound');
+          },
         },
       }),
     })
@@ -305,6 +317,7 @@
 
 <div class="flex shrink-0 items-center gap-2 px-3 py-1 border-b border-line bg-chrome text-fg-muted text-xs">
   <Button color="secondary" size="sm" icon="headphones" title="Listeners" onclick={() => overlays.open('listeners')} />
+  <Button color="secondary" size="sm" icon="workflow" title="BloodHound Ingest" onclick={() => overlays.open('bh-ingest')} />
   <Button color="secondary" size="sm" icon="shield" title="Armory" onclick={() => overlays.open('armory')} />
   <Button color="secondary" size="sm" icon="images" title="Screenshot Gallery" onclick={() => overlays.open('gallery')} />
   <Button color="secondary" size="sm" icon="key" title="Credentials" onclick={() => overlays.open('credentials')} />
@@ -377,6 +390,11 @@
       discoveries={filteredDiscoveries}
       selectedAgentIDs={[...selected.agents]}
       selectedDiscoveryKeys={[...selected.devices]}
+      bloodhound={{ enrichment: bloodhoundStore.enrichment, showEdges: bloodhoundShowEdges }}
+      onBloodhoundToggle={(show) => {
+        bloodhoundShowEdges = show;
+        config.set('bhGraphEdges', show);
+      }}
       onSelect={() => {}}
       onInteract={(id) => handleInteract(id)}
       onContextMenu={(nativeEvent, agent) => openAgentContextMenu(nativeEvent, agent)}

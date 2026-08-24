@@ -66,6 +66,7 @@ function buildCoreActions({
   promoteBeacon,
   demoteSession,
   newShell,
+  findAttackPaths,
 }) {
   const compatibleAgents = targetAgents.length > 0 ? targetAgents : [agent]
   const sessionAgents = compatibleAgents.filter((target) => target._kind !== 'beacon')
@@ -81,6 +82,12 @@ function buildCoreActions({
       { icon: 'info', label: 'Beacon Detail…', on: () => openBeaconDetail(agent) },
       { icon: 'terminal', label: 'Open Interactive Session', on: () => promoteBeacon(agent) },
       { icon: 'x', label: 'Close Interactive Session', disabled: !hasInteractiveSession, on: () => demoteSession(agent) },
+      {
+        icon: 'workflow',
+        label: bulkLabel('Find attack paths', compatibleAgents.length),
+        disabled: !findAttackPaths,
+        on: () => findAttackPaths(compatibleAgents),
+      },
     ]
 
     const moreItems = [
@@ -109,6 +116,12 @@ function buildCoreActions({
     tabAction(agentTabs, sessionAgents, 'fileBrowser', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'tunneling', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'processExplorer', sessionAgents.length),
+    {
+      icon: 'workflow',
+      label: bulkLabel('Find attack paths', compatibleAgents.length),
+      disabled: !findAttackPaths,
+      on: () => findAttackPaths(compatibleAgents),
+    },
   ]
 
   if (isWindows || windowsSessions.length > 0) {
@@ -140,12 +153,16 @@ function buildCoreActions({
 // Discovery — now nested inside a "Discovery" submenu.
 // ---------------------------------------------------------------------------
 
-function buildDiscoveryActions({ agent, runDiscovery, promptPingSweep, clearDiscoveries }) {
-  return [
+function buildDiscoveryActions({ agent, runDiscovery, promptPingSweep, clearDiscoveries, collectBloodHound }) {
+  const items = [
     { icon: 'network-wired', label: 'Discover Neighbors (ARP)', on: () => runDiscovery(agent, 'arp') },
     { icon: 'search-location', label: 'Ping Sweep…', on: () => promptPingSweep(agent) },
-    { icon: 'eraser', label: 'Clear Discoveries (this agent only)', on: () => clearDiscoveries(agent.ID, agent.Name || agent.Hostname || agent.ID) },
   ]
+  if (collectBloodHound) {
+    items.push({ icon: 'workflow', label: 'Collect BloodHound data…', on: () => collectBloodHound(agent) })
+  }
+  items.push({ icon: 'eraser', label: 'Clear Discoveries (this agent only)', on: () => clearDiscoveries(agent.ID, agent.Name || agent.Hostname || agent.ID) })
+  return items
 }
 
 // ---------------------------------------------------------------------------
@@ -258,6 +275,7 @@ export function buildAgentContextSections(ctx) {
     promoteBeacon: contextMenuHandlers.promoteBeacon,
     demoteSession: contextMenuHandlers.demoteSession,
     newShell: contextMenuHandlers.newShell,
+    findAttackPaths: contextMenuHandlers.findAttackPaths,
   })
 
   const discoveryItems = buildDiscoveryActions({
@@ -265,6 +283,7 @@ export function buildAgentContextSections(ctx) {
     runDiscovery: contextMenuHandlers.runDiscovery,
     promptPingSweep: contextMenuHandlers.promptPingSweep,
     clearDiscoveries: contextMenuHandlers.clearDiscoveries,
+    collectBloodHound: contextMenuHandlers.collectBloodHound,
   })
 
   const automationActions = buildAutomationActions({

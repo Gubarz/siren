@@ -18,6 +18,7 @@
     SERVER_W, SERVER_H,
     collectAgents, indexAgents, agentNode, addC2Links, addDiscoveryNodes,
   } from './nodeBuilders.js';
+  import { addBloodhoundOverlay } from './bhOverlay.js';
 
   let {
     sessions = [],
@@ -27,6 +28,8 @@
     discoveries = [],
     selectedAgentIDs = [],
     selectedDiscoveryKeys = [],
+    bloodhound = null,
+    onBloodhoundToggle = () => {},
     embedded = false,
     onClose = () => {},
     onSelect = () => {},
@@ -103,6 +106,14 @@
       allAgentIds: index.allAgentIds, discoveries, direction, selectedDiscoveryKeys,
       colorsByEntity, commentsByEntity,
     });
+    if (bloodhound) {
+      addBloodhoundOverlay(rawNodes, rawEdges, {
+        agents: allAgents,
+        enrichment: bloodhound.enrichment ?? {},
+        showEdges: Boolean(bloodhound.showEdges),
+        direction,
+      });
+    }
 
     const nextLayoutSig = layoutSignature(rawNodes, rawEdges);
     const laidOut = layoutGraph(rawNodes, rawEdges, direction);
@@ -120,6 +131,8 @@
       sessions, beacons, pivotGraph, pivotListeners, discoveries, now,
       colors: colorsByAgent, tags: tagsByAgent, entityColors: colorsByEntity,
       comments: commentsByEntity,
+      bloodhoundEnrichment: bloodhound?.enrichment ?? {},
+      bloodhoundEdges: Boolean(bloodhound?.showEdges),
     });
     if (sig === lastSig) return;
     lastSig = sig;
@@ -211,6 +224,15 @@
         <GraphAutoFit {fitKey} />
         <Background gap={18} />
         <Controls>
+          {#if bloodhound}
+            <ControlButton
+              onclick={() => onBloodhoundToggle(!bloodhound.showEdges)}
+              title={bloodhound.showEdges ? 'Hide BloodHound edges' : 'Show BloodHound edges'}
+              aria-label="Toggle BloodHound edges"
+            >
+              <span style="font-size: 9px; font-weight: 700;">BH</span>
+            </ControlButton>
+          {/if}
           <ControlButton
             onclick={resetLayout}
             title="Reset layout"

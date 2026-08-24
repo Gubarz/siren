@@ -111,6 +111,7 @@ export function preservePositions(previousNodes, nextNodes, nextEdges) {
 export function topologySignature({
   sessions, beacons, pivotGraph, pivotListeners, discoveries, now,
   colors, tags, entityColors, comments,
+  bloodhoundEnrichment, bloodhoundEdges,
 }) {
   const pivotRelations = [...pivotParentMap(pivotGraph).entries()]
     .map(([child, parent]) => `${parent}>${child}`)
@@ -126,6 +127,9 @@ export function topologySignature({
     ...Object.entries(tags || {}).map(([id, values]) => `t_${id}:${(values || []).join(',')}`),
     ...Object.entries(entityColors || {}).map(([id, color]) => `ec_${id}:${color}`),
     ...Object.entries(comments || {}).map(([id, values]) => `cm_${id}:${values?.length || 0}`),
+    ...Object.entries(bloodhoundEnrichment || {}).map(([id, enr]) =>
+      `bh_${id}:${enr?.entity?.objectId || ''}:${enr?.distanceToTierZero ?? -1}:${(enr?.paths || []).length}`),
+    `bhEdges:${bloodhoundEdges ? 1 : 0}`,
   ].sort().join('|')
 }
 
