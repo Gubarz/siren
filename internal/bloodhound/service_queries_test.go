@@ -197,3 +197,88 @@ func TestCommunityQueryRunsCypher(t *testing.T) {
 		t.Fatalf("expected 1 cypher request, got %d", len(fake.cypherReqs))
 	}
 }
+
+func TestEntityRelationsRequireConnection(t *testing.T) {
+	svc := New(t.TempDir(), nil)
+	ctx := context.Background()
+	if _, err := svc.EntitySessions(ctx, "S-1-5-21-1", "Computer"); !errors.Is(err, ErrNotConnected) {
+		t.Errorf("EntitySessions = %v, want ErrNotConnected", err)
+	}
+	if _, err := svc.EntityLocalAdmins(ctx, "S-1-5-21-1", "Computer"); !errors.Is(err, ErrNotConnected) {
+		t.Errorf("EntityLocalAdmins = %v, want ErrNotConnected", err)
+	}
+}
+
+func TestEntityRelationsRejectInvalidIDsBeforeHTTP(t *testing.T) {
+	fake := &fakeQueryServer{}
+	svc := connectedService(t, newFakeQueryServer(t, fake).URL)
+	if _, err := svc.EntitySessions(context.Background(), "nope", "Computer"); err == nil {
+		t.Error("EntitySessions with invalid id should fail")
+	}
+	if _, err := svc.EntityLocalAdmins(context.Background(), "nope", "User"); err == nil {
+		t.Error("EntityLocalAdmins with invalid id should fail")
+	}
+	if len(fake.cypherReqs) != 0 {
+		t.Fatalf("no cypher requests expected, got %v", fake.cypherReqs)
+	}
+}
+
+func TestEntitySessionsRunsTypedQuery(t *testing.T) {
+	fake := &fakeQueryServer{cypherBody: `{"data":{"nodes":{
+		"u1":{"label":"jane@corp.local","kind":"User","isTierZero":false,"isOwnedObject":true}},
+		"edges":[{"source":"u1","target":"c1","kind":"HasSession"}]}}`}
+	svc := connectedService(t, newFakeQueryServer(t, fake).URL)
+
+	graph, err := svc.EntitySessions(context.Background(), "S-1-5-21-1234", "Computer")
+	if err != nil {
+		t.Fatalf("EntitySessions: %v", err)
+	}
+	if len(graph.Nodes) != 1 || len(graph.Edges) != 1 || !graph.Nodes[0].Owned {
+		t.Fatalf("graph = %+v", graph)
+	}
+	if !strings.Contains(fake.cypherReqs[0], "c.objectid") || !strings.Contains(fake.cypherReqs[0], "S-1-5-21-1234") {
+		t.Fatalf("cypher request = %s", fake.cypherReqs[0])
+	}
+}
+
+func TestEntityLocalAdminsRunsExpandedQuery(t *testing.T) {
+	fake := &fakeQueryServer{cypherBody: `{"data":{"nodes":{
+		"g1":{"label":"IT ADMINS@corp.local","kind":"Group"}},
+		"edges":[{"source":"g1","target":"c1","kind":"AdminTo"}]}}`}
+	svc := connectedService(t, newFakeQueryServer(t, fake).URL)
+
+	graph, err := svc.EntityLocalAdmins(context.Background(), "S-1-5-21-5678", "Computer")
+	if err != nil {
+		t.Fatalf("EntityLocalAdmins: %v", err)
+	}
+	if len(graph.Nodes) != 1 || len(graph.Edges) != 1 {
+		t.Fatalf("graph = %+v", graph)
+	}
+	if !strings.Contains(fake.cypherReqs[0], "MemberOf*0..5") {
+		t.Fatalf("cypher request missing group expansion: %s", fake.cypherReqs[0])
+	}
+}
+
+func TestEntityRelationsTreat404AsEmpty(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/v2/graphs/cypher" {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"http_status":404,"errors":[{"context":"query","message":"resource not found"}]}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	t.Cleanup(srv.Close)
+	svc := connectedService(t, srv.URL)
+
+	graph, err := svc.EntitySessions(context.Background(), "S-1-5-21-1", "Computer")
+	if err != nil || graph.Nodes == nil || graph.Edges == nil || len(graph.Nodes) != 0 {
+		t.Fatalf("EntitySessions = (%+v, %v), want empty non-nil", graph, err)
+	}
+	admins, err := svc.EntityLocalAdmins(context.Background(), "S-1-5-21-1", "User")
+	if err != nil || admins.Nodes == nil || admins.Edges == nil || len(admins.Edges) != 0 {
+		t.Fatalf("EntityLocalAdmins = (%+v, %v), want empty non-nil", admins, err)
+	}
+}
