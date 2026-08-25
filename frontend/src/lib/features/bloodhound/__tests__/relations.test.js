@@ -22,6 +22,17 @@ describe('uniqueEntities', () => {
     expect(uniqueEntities(graph, 'missing-id').map((n) => n.id)).toEqual(['u1', 'g1'])
   })
 
+  it('excludes by objectId when the node key diverges from it', () => {
+    const graph = {
+      nodes: [
+        { id: 'key-u1', objectId: 'S-1-5-21-9', label: 'jane' },
+        { id: 'g1', objectId: 'S-1-5-21-2', label: 'IT ADMINS' },
+      ],
+    }
+    expect(uniqueEntities(graph, 'S-1-5-21-9').map((n) => n.id)).toEqual(['g1'])
+    expect(uniqueEntities(graph, 'key-u1').map((n) => n.id)).toEqual(['g1'])
+  })
+
   it('ignores blank excludeId values', () => {
     const graph = { nodes: [{ id: 'u1', label: 'jane' }] }
     expect(uniqueEntities(graph, '').map((n) => n.id)).toEqual(['u1'])

@@ -21,7 +21,7 @@ export function adminHeading(kind) {
 export function uniqueEntities(graph, excludeId = '') {
   const seen = new Set();
   return (Array.isArray(graph?.nodes) ? graph.nodes : []).filter((n) => {
-    if (excludeId && n?.id === excludeId) return false;
+    if (excludeId && (n?.id === excludeId || n?.objectId === excludeId)) return false;
     if (!n?.id || seen.has(n.id)) return false;
     seen.add(n.id);
     return true;
