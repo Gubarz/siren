@@ -13,6 +13,8 @@ import {
   BloodHoundCollections,
   BloodHoundMarkOwned,
   BloodHoundUnmarkOwned,
+  BloodHoundSessions,
+  BloodHoundLocalAdmins,
 } from '../../../bindings/siren/cmd/gui/app.js';
 import { responseField } from './normalize.js';
 
@@ -113,4 +115,16 @@ export async function markBloodHoundOwned(objectId) {
 
 export async function unmarkBloodHoundOwned(objectId) {
   return BloodHoundUnmarkOwned(objectId);
+}
+
+// Session relationships around an entity as GraphDTO; direction is decided
+// server-side from entityKind ('Computer' vs principal kinds).
+export async function getBloodHoundSessions(objectId, entityKind) {
+  return BloodHoundSessions(objectId, entityKind);
+}
+
+// Local-admin relationships around an entity as GraphDTO, group-expanded
+// server-side; direction is decided from entityKind.
+export async function getBloodHoundLocalAdmins(objectId, entityKind) {
+  return BloodHoundLocalAdmins(objectId, entityKind);
 }

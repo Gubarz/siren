@@ -5,6 +5,8 @@ import {
   correlateAgents,
   markBloodHoundOwned,
   unmarkBloodHoundOwned,
+  getBloodHoundSessions,
+  getBloodHoundLocalAdmins,
 } from '../bloodhound.js'
 
 const app = vi.hoisted(() => ({
@@ -17,6 +19,8 @@ const app = vi.hoisted(() => ({
   BloodHoundCorrelate: vi.fn(),
   BloodHoundMarkOwned: vi.fn(),
   BloodHoundUnmarkOwned: vi.fn(),
+  BloodHoundSessions: vi.fn(),
+  BloodHoundLocalAdmins: vi.fn(),
 }))
 vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
 
@@ -74,6 +78,21 @@ describe('bloodhound api wrapper', () => {
   it('correlateAgents tolerates null bindings and empty lists', async () => {
     app.BloodHoundCorrelate.mockResolvedValue(null)
     await expect(correlateAgents([])).resolves.toEqual({})
+  })
+
+  it('passes objectId and kind through to relation bindings', async () => {
+    app.BloodHoundSessions.mockResolvedValue({ nodes: [], edges: [] })
+    await expect(getBloodHoundSessions('S-1', 'Computer')).resolves.toEqual({ nodes: [], edges: [] })
+    expect(app.BloodHoundSessions).toHaveBeenCalledWith('S-1', 'Computer')
+
+    app.BloodHoundLocalAdmins.mockResolvedValue({ nodes: [], edges: [] })
+    await expect(getBloodHoundLocalAdmins('S-1', 'User')).resolves.toEqual({ nodes: [], edges: [] })
+    expect(app.BloodHoundLocalAdmins).toHaveBeenCalledWith('S-1', 'User')
+  })
+
+  it('surfaces relation binding errors as rejected promises', async () => {
+    app.BloodHoundSessions.mockRejectedValue(new Error('not connected'))
+    await expect(getBloodHoundSessions('S-1', 'Computer')).rejects.toThrow('not connected')
   })
 })
 
