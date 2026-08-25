@@ -100,7 +100,7 @@ func (s *Service) setActiveTarget(sessionID string, sess *clientpb.Session, beac
 
 func (s *Service) execCapture(ctx context.Context, line string) (string, error) {
 	menu := s.sliverCon.App.ActiveMenu()
-	ctx, cancel := context.WithTimeout(ctx, commandTimeout)
+	ctx, cancel := consoleCommandContext(ctx)
 	defer cancel()
 
 	out, runErr := s.output.capture(func() error {
@@ -111,6 +111,17 @@ func (s *Service) execCapture(ctx context.Context, line string) (string, error) 
 		s.publishConsoleOutput(ctx, line, trimmed)
 	}
 	return trimmed, runErr
+}
+
+// consoleCommandContext bounds console command execution. Callers that
+// already pass a deadline (automation rules, long-running pipelines like
+// BloodHound collection) keep it; callers without one (raw console input)
+// get the default commandTimeout cap.
+func consoleCommandContext(parent context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := parent.Deadline(); ok {
+		return context.WithCancel(parent)
+	}
+	return context.WithTimeout(parent, commandTimeout)
 }
 
 // unsupportedConsoleCommand returns a human message if the parsed command

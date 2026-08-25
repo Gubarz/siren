@@ -1,11 +1,13 @@
 package console
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	sliverconsole "github.com/bishopfox/sliver/client/console"
 	"github.com/spf13/cobra"
@@ -82,6 +84,30 @@ func TestListCommandsReflectsNewlyInstalledAlias(t *testing.T) {
 	}
 	if !slices.Contains(after, "freshalias") {
 		t.Fatalf("freshalias missing after install; commands: %v", after)
+	}
+}
+
+func TestConsoleCommandContextHonorsParentDeadline(t *testing.T) {
+	parent, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	parentDeadline, _ := parent.Deadline()
+
+	ctx, cancel2 := consoleCommandContext(parent)
+	defer cancel2()
+	deadline, ok := ctx.Deadline()
+	if !ok || !deadline.Equal(parentDeadline) {
+		t.Fatalf("deadline = %v (ok=%v), want parent's %v", deadline, ok, parentDeadline)
+	}
+
+	ctx, cancel2 = consoleCommandContext(context.Background())
+	defer cancel2()
+	deadline, ok = ctx.Deadline()
+	if !ok {
+		t.Fatal("background context must receive the default cap")
+	}
+	remaining := time.Until(deadline)
+	if remaining <= 0 || remaining > commandTimeout+time.Second {
+		t.Fatalf("background deadline in %v, want ~%v", remaining, commandTimeout)
 	}
 }
 
