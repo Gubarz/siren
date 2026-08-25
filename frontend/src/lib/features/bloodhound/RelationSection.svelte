@@ -43,6 +43,7 @@
           <button
             type="button"
             class="w-full flex items-center gap-2 bg-transparent border-0 p-0 text-left cursor-pointer hover:bg-row-hover"
+            aria-expanded={expandedRow === entity.id}
             onclick={() => (expandedRow = expandedRow === entity.id ? '' : entity.id)}
           >
             <span class="text-xs text-fg truncate flex-1" title={entity.label}>{entity.label}</span>

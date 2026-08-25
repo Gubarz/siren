@@ -15,12 +15,20 @@ export function adminHeading(kind) {
 }
 
 // uniqueEntities returns graph nodes deduplicated by ID (group expansion can
-// yield duplicate paths), preserving first-seen order.
-export function uniqueEntities(graph) {
+// yield duplicate paths), preserving first-seen order. When excludeId is set,
+// that node is dropped so a queried entity never lists itself among its own
+// relations.
+export function uniqueEntities(graph, excludeId = '') {
   const seen = new Set();
-  return (graph?.nodes ?? []).filter((n) => {
+  return (Array.isArray(graph?.nodes) ? graph.nodes : []).filter((n) => {
+    if (excludeId && n?.id === excludeId) return false;
     if (!n?.id || seen.has(n.id)) return false;
     seen.add(n.id);
     return true;
   });
+}
+
+// toActionEntity adapts a graph node to the shape actionsForEntity expects.
+export function toActionEntity(node) {
+  return { ...node, objectId: node?.objectId || node?.id || '', name: node?.label || '' };
 }

@@ -18,7 +18,10 @@ func isEmptyCypherResult(err error) bool {
 }
 
 type NodeDTO struct {
-	ID       string `json:"id"`
+	ID string `json:"id"`
+	// ObjectID is the BloodHound object ID (SID/GUID) used by action
+	// bridges; ID is only the graph node key and may be opaque.
+	ObjectID string `json:"objectId"`
 	Label    string `json:"label"`
 	Kind     string `json:"kind"`
 	TierZero bool   `json:"tierZero"`
@@ -56,12 +59,17 @@ func GraphFromUnified(graph *bhservices.UnifiedGraphGraphWithKeys) GraphDTO {
 	}
 	if graph.Nodes != nil {
 		for id, n := range *graph.Nodes {
+			objectID := deref(n.ObjectId)
+			if objectID == "" {
+				objectID = id // SDK keys can be opaque; prefer the real object ID
+			}
 			label := deref(n.Label)
 			if label == "" {
 				label = id
 			}
 			dto.Nodes = append(dto.Nodes, NodeDTO{
 				ID:       id,
+				ObjectID: objectID,
 				Label:    label,
 				Kind:     deref(n.Kind),
 				TierZero: derefBool(n.IsTierZero),

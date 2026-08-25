@@ -166,12 +166,18 @@ func TestSessionsCypherDirectionFollowsEntityKind(t *testing.T) {
 			t.Errorf("computer query missing %q in %q", want, host)
 		}
 	}
+	if strings.Contains(host, "u.objectid") {
+		t.Errorf("computer query must not match the source principal: %q", host)
+	}
 	user, err := SessionsCypher("S-1-5-21-111", "User")
 	if err != nil {
 		t.Fatalf("SessionsCypher: %v", err)
 	}
 	if !strings.Contains(user, "u.objectid") {
 		t.Errorf("user query should match source principal: %q", user)
+	}
+	if strings.Contains(user, "c.objectid") {
+		t.Errorf("user query must not match the target host: %q", user)
 	}
 }
 
@@ -185,12 +191,18 @@ func TestLocalAdminsCypherExpandsGroups(t *testing.T) {
 			t.Errorf("admin query missing %q in %q", want, q)
 		}
 	}
+	if strings.Contains(q, "u.objectid") {
+		t.Errorf("admin query must not match the source principal: %q", q)
+	}
 	user, err := LocalAdminsCypher("S-1-5-21-111", "Group")
 	if err != nil {
 		t.Fatalf("LocalAdminsCypher: %v", err)
 	}
 	if !strings.Contains(user, "u.objectid") {
 		t.Errorf("group query should match source principal: %q", user)
+	}
+	if strings.Contains(user, "c.objectid") {
+		t.Errorf("group query must not match the target host: %q", user)
 	}
 }
 

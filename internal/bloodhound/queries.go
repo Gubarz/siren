@@ -105,15 +105,13 @@ func SessionsCypher(objectID, entityKind string) (string, error) {
 	if !validObjectID(objectID) {
 		return "", fmt.Errorf("bloodhound: invalid object id %q", objectID)
 	}
+	whereClause := "u"
 	if entityKind == "Computer" {
-		return fmt.Sprintf(
-			"MATCH p = (u)-[:HasSession]->(c) WHERE c.objectid = %q RETURN p LIMIT %d",
-			objectID, maxListResults,
-		), nil
+		whereClause = "c"
 	}
 	return fmt.Sprintf(
-		"MATCH p = (u)-[:HasSession]->(c) WHERE u.objectid = %q RETURN p LIMIT %d",
-		objectID, maxListResults,
+		"MATCH p = (u)-[:HasSession]->(c) WHERE %s.objectid = %q RETURN p LIMIT %d",
+		whereClause, objectID, maxListResults,
 	), nil
 }
 
@@ -125,15 +123,12 @@ func LocalAdminsCypher(objectID, entityKind string) (string, error) {
 	if !validObjectID(objectID) {
 		return "", fmt.Errorf("bloodhound: invalid object id %q", objectID)
 	}
-	pattern := "(u)-[:MemberOf*0..5]->(g)-[:AdminTo]->(c)"
+	whereClause := "u"
 	if entityKind == "Computer" {
-		return fmt.Sprintf(
-			"MATCH p = "+pattern+" WHERE c.objectid = %q RETURN p LIMIT %d",
-			objectID, maxListResults,
-		), nil
+		whereClause = "c"
 	}
 	return fmt.Sprintf(
-		"MATCH p = "+pattern+" WHERE u.objectid = %q RETURN p LIMIT %d",
-		objectID, maxListResults,
+		"MATCH p = (u)-[:MemberOf*0..5]->(g)-[:AdminTo]->(c) WHERE %s.objectid = %q RETURN p LIMIT %d",
+		whereClause, objectID, maxListResults,
 	), nil
 }

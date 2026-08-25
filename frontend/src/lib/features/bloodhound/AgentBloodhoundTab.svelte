@@ -6,7 +6,7 @@
   import CollectionModal from '$features/bloodhound/CollectionModal.svelte';
   import CollectionTaskCard from '$features/bloodhound/CollectionTaskCard.svelte';
   import RelationSection from './RelationSection.svelte';
-  import { uniqueEntities, sessionHeading, adminHeading } from './relations.js';
+  import { uniqueEntities, sessionHeading, adminHeading, toActionEntity } from './relations.js';
   import { bloodhoundStore, subscribeBloodhound, requestCorrelation, refreshCollections } from './bloodhound.svelte.js';
   import { actionsForEntity, actionsForEdge } from './actions.js';
   import { getBloodHoundAttackPaths, getBloodHoundKerberoastTargets, getBloodHoundSessions, getBloodHoundLocalAdmins, markBloodHoundOwned, unmarkBloodHoundOwned } from '$api/bloodhound.js';
@@ -130,8 +130,8 @@
     }
   });
 
-  // Load attack paths whenever the resolved entity changes; drop stale
-  // responses if the entity moved on before the request landed.
+  // Load attack paths whenever the resolved entity changes; stale responses
+  // are dropped via loadRelation's guard.
   $effect(() => {
     const objectId = enrichment?.entity?.objectId;
     if (!objectId) {
@@ -139,20 +139,15 @@
       pathError = '';
       return;
     }
-    loadingPaths = true;
-    pathError = '';
-    getBloodHoundAttackPaths(objectId, 5)
-      .then((g) => {
-        if (bloodhoundStore.enrichment[sessionID]?.entity?.objectId !== objectId) return;
-        pathGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] };
-      })
-      .catch((e) => {
+    loadRelation(() => getBloodHoundAttackPaths(objectId, 5), objectId, {
+      begin: () => { loadingPaths = true; pathError = ''; },
+      apply: (g) => { pathGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] }; },
+      fail: (e) => {
         pathError = errorMessage(e);
         toast.push({ variant: 'error', message: `Attack paths: ${pathError}` });
-      })
-      .finally(() => {
-        loadingPaths = false;
-      });
+      },
+      done: () => { loadingPaths = false; },
+    });
   });
 
   let sessionsGraph = $state({ nodes: [], edges: [] });
@@ -165,17 +160,37 @@
   let showAdminsGraph = $state(false);
 
   // Per-row actions reuse the entity bridge with the listed entity in place
-  // of the resolved one.
+  // of the resolved one. The row's own objectId/name drive the action, and
+  // the per-row Tier-0 flag is seeded into enrichment so "Add to case" keys
+  // off the row while ownedSession still reads the anchor agent's state.
   function rowActions(rowEntity) {
     return actionsForEntity({
-      agent, enrichment, entity: rowEntity,
+      agent,
+      entity: toActionEntity(rowEntity),
+      enrichment: enrichment ? { ...enrichment, tierZero: rowEntity.tierZero } : enrichment,
       kerberoastableIDs, runCommand,
       addToCase, openTags: tagsModal.openTags.bind(tagsModal), openComments: commentsModal.openComments.bind(commentsModal),
     });
   }
 
+  // loadRelation runs one entity-scoped graph fetch behind a shared
+  // stale-response guard: once the resolved entity moves on, late responses
+  // (success or failure) are dropped instead of clobbering fresh state.
+  function loadRelation(fetcher, objectId, { begin, apply, fail, done }) {
+    begin();
+    fetcher()
+      .then((g) => {
+        if (bloodhoundStore.enrichment[sessionID]?.entity?.objectId === objectId) apply(g);
+      })
+      .catch((e) => {
+        if (bloodhoundStore.enrichment[sessionID]?.entity?.objectId === objectId) fail(e);
+      })
+      .finally(done);
+  }
+
   // Load both relation graphs when the resolved entity changes; the
-  // stale-response guard matches the attack-paths effect above.
+  // stale-response guard lives in loadRelation. The queried entity itself is
+  // excluded from its own relation lists.
   $effect(() => {
     const objectId = enrichment?.entity?.objectId;
     const kind = enrichment?.entity?.kind ?? '';
@@ -186,35 +201,25 @@
       adminsError = '';
       return;
     }
-    loadingSessions = true;
-    sessionsError = '';
-    getBloodHoundSessions(objectId, kind)
-      .then((g) => {
-        if (bloodhoundStore.enrichment[sessionID]?.entity?.objectId !== objectId) return;
-        sessionsGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] };
-      })
-      .catch((e) => {
+    loadRelation(() => getBloodHoundSessions(objectId, kind), objectId, {
+      begin: () => { loadingSessions = true; sessionsError = ''; },
+      apply: (g) => { sessionsGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] }; },
+      fail: (e) => {
         sessionsError = errorMessage(e);
         toast.push({ variant: 'error', message: `Sessions: ${sessionsError}` });
-      })
-      .finally(() => {
-        loadingSessions = false;
-      });
+      },
+      done: () => { loadingSessions = false; },
+    });
 
-    loadingAdmins = true;
-    adminsError = '';
-    getBloodHoundLocalAdmins(objectId, kind)
-      .then((g) => {
-        if (bloodhoundStore.enrichment[sessionID]?.entity?.objectId !== objectId) return;
-        adminsGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] };
-      })
-      .catch((e) => {
+    loadRelation(() => getBloodHoundLocalAdmins(objectId, kind), objectId, {
+      begin: () => { loadingAdmins = true; adminsError = ''; },
+      apply: (g) => { adminsGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] }; },
+      fail: (e) => {
         adminsError = errorMessage(e);
         toast.push({ variant: 'error', message: `Local admins: ${adminsError}` });
-      })
-      .finally(() => {
-        loadingAdmins = false;
-      });
+      },
+      done: () => { loadingAdmins = false; },
+    });
   });
 </script>
 
@@ -311,7 +316,7 @@
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
           <RelationSection
             title={sessionHeading(enrichment.entity.kind)}
-            entities={uniqueEntities(sessionsGraph)}
+            entities={uniqueEntities(sessionsGraph, enrichment.entity.objectId)}
             graph={sessionsGraph}
             loading={loadingSessions}
             error={sessionsError}
@@ -321,7 +326,7 @@
           />
           <RelationSection
             title={adminHeading(enrichment.entity.kind)}
-            entities={uniqueEntities(adminsGraph)}
+            entities={uniqueEntities(adminsGraph, enrichment.entity.objectId)}
             graph={adminsGraph}
             loading={loadingAdmins}
             error={adminsError}

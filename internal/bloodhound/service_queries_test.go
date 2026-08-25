@@ -225,7 +225,8 @@ func TestEntityRelationsRejectInvalidIDsBeforeHTTP(t *testing.T) {
 
 func TestEntitySessionsRunsTypedQuery(t *testing.T) {
 	fake := &fakeQueryServer{cypherBody: `{"data":{"nodes":{
-		"u1":{"label":"jane@corp.local","kind":"User","isTierZero":false,"isOwnedObject":true}},
+		"u1":{"label":"jane@corp.local","kind":"User","isTierZero":false,"isOwnedObject":true,"objectId":"S-1-5-21-777"},
+		"c1":{"kind":"Computer"}},
 		"edges":[{"source":"u1","target":"c1","kind":"HasSession"}]}}`}
 	svc := connectedService(t, newFakeQueryServer(t, fake).URL)
 
@@ -233,8 +234,23 @@ func TestEntitySessionsRunsTypedQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EntitySessions: %v", err)
 	}
-	if len(graph.Nodes) != 1 || len(graph.Edges) != 1 || !graph.Nodes[0].Owned {
+	if len(graph.Nodes) != 2 || len(graph.Edges) != 1 {
 		t.Fatalf("graph = %+v", graph)
+	}
+	var jane, host *NodeDTO
+	for i := range graph.Nodes {
+		switch graph.Nodes[i].ID {
+		case "u1":
+			jane = &graph.Nodes[i]
+		case "c1":
+			host = &graph.Nodes[i]
+		}
+	}
+	if jane == nil || !jane.Owned || jane.ObjectID != "S-1-5-21-777" {
+		t.Fatalf("u1 should carry owned flag and the explicit objectId: %+v", jane)
+	}
+	if host == nil || host.ObjectID != "c1" {
+		t.Fatalf("node without objectId should fall back to the graph key: %+v", host)
 	}
 	if !strings.Contains(fake.cypherReqs[0], "c.objectid") || !strings.Contains(fake.cypherReqs[0], "S-1-5-21-1234") {
 		t.Fatalf("cypher request = %s", fake.cypherReqs[0])
@@ -274,11 +290,11 @@ func TestEntityRelationsTreat404AsEmpty(t *testing.T) {
 	svc := connectedService(t, srv.URL)
 
 	graph, err := svc.EntitySessions(context.Background(), "S-1-5-21-1", "Computer")
-	if err != nil || graph.Nodes == nil || graph.Edges == nil || len(graph.Nodes) != 0 {
+	if err != nil || graph.Nodes == nil || graph.Edges == nil || len(graph.Nodes) != 0 || len(graph.Edges) != 0 {
 		t.Fatalf("EntitySessions = (%+v, %v), want empty non-nil", graph, err)
 	}
 	admins, err := svc.EntityLocalAdmins(context.Background(), "S-1-5-21-1", "User")
-	if err != nil || admins.Nodes == nil || admins.Edges == nil || len(admins.Edges) != 0 {
+	if err != nil || admins.Nodes == nil || admins.Edges == nil || len(admins.Nodes) != 0 || len(admins.Edges) != 0 {
 		t.Fatalf("EntityLocalAdmins = (%+v, %v), want empty non-nil", admins, err)
 	}
 }

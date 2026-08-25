@@ -94,6 +94,11 @@ describe('bloodhound api wrapper', () => {
     app.BloodHoundSessions.mockRejectedValue(new Error('not connected'))
     await expect(getBloodHoundSessions('S-1', 'Computer')).rejects.toThrow('not connected')
   })
+
+  it('surfaces local-admin binding errors as rejected promises', async () => {
+    app.BloodHoundLocalAdmins.mockRejectedValue(new Error('not connected'))
+    await expect(getBloodHoundLocalAdmins('S-1', 'User')).rejects.toThrow('not connected')
+  })
 })
 
 describe('owned marking', () => {
