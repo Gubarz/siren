@@ -91,3 +91,49 @@ func AttackPathsCypher(objectID string, maxPaths int) (string, error) {
 		objectID, strings.Join(attackPathEdgeKinds, "|"), clampMaxPaths(maxPaths),
 	), nil
 }
+
+// maxListResults caps relation-list queries; session and local-admin sets
+// are browsing lists, not path enumerations.
+const maxListResults = 100
+
+// SessionsCypher returns session relationships around objectID. For a
+// Computer entity the match is inbound (users with a session on this host);
+// for any other kind it is outbound (hosts where this principal has a
+// session). The object ID must be a valid SID/GUID and is substituted after
+// validation, so the string cannot be injected.
+func SessionsCypher(objectID, entityKind string) (string, error) {
+	if !validObjectID(objectID) {
+		return "", fmt.Errorf("bloodhound: invalid object id %q", objectID)
+	}
+	if entityKind == "Computer" {
+		return fmt.Sprintf(
+			"MATCH p = (u)-[:HasSession]->(c) WHERE c.objectid = %q RETURN p LIMIT %d",
+			objectID, maxListResults,
+		), nil
+	}
+	return fmt.Sprintf(
+		"MATCH p = (u)-[:HasSession]->(c) WHERE u.objectid = %q RETURN p LIMIT %d",
+		objectID, maxListResults,
+	), nil
+}
+
+// LocalAdminsCypher returns local-admin relationships around objectID,
+// expanded through MemberOf so group-derived admin is included; the
+// zero-length MemberOf leg covers direct AdminTo edges. Direction follows
+// entityKind as in SessionsCypher.
+func LocalAdminsCypher(objectID, entityKind string) (string, error) {
+	if !validObjectID(objectID) {
+		return "", fmt.Errorf("bloodhound: invalid object id %q", objectID)
+	}
+	pattern := "(u)-[:MemberOf*0..5]->(g)-[:AdminTo]->(c)"
+	if entityKind == "Computer" {
+		return fmt.Sprintf(
+			"MATCH p = "+pattern+" WHERE c.objectid = %q RETURN p LIMIT %d",
+			objectID, maxListResults,
+		), nil
+	}
+	return fmt.Sprintf(
+		"MATCH p = "+pattern+" WHERE u.objectid = %q RETURN p LIMIT %d",
+		objectID, maxListResults,
+	), nil
+}

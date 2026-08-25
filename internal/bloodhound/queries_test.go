@@ -140,6 +140,60 @@ func TestEntityAttackPathsRequiresConnection(t *testing.T) {
 	}
 }
 
+func TestSessionsCypherRejectsInvalidObjectIDs(t *testing.T) {
+	for _, id := range []string{"", "S-1-5'-x", "not-a-sid", "S-1-5-x; DROP"} {
+		if _, err := SessionsCypher(id, "Computer"); err == nil {
+			t.Errorf("SessionsCypher(%q) = nil error, want rejection", id)
+		}
+	}
+}
+
+func TestLocalAdminsCypherRejectsInvalidObjectIDs(t *testing.T) {
+	for _, id := range []string{"", "S-1-5'-x", "not-a-sid"} {
+		if _, err := LocalAdminsCypher(id, "User"); err == nil {
+			t.Errorf("LocalAdminsCypher(%q) = nil error, want rejection", id)
+		}
+	}
+}
+
+func TestSessionsCypherDirectionFollowsEntityKind(t *testing.T) {
+	host, err := SessionsCypher("S-1-5-21-111", "Computer")
+	if err != nil {
+		t.Fatalf("SessionsCypher: %v", err)
+	}
+	for _, want := range []string{"(u)-[:HasSession]->(c)", "c.objectid", "LIMIT 100"} {
+		if !strings.Contains(host, want) {
+			t.Errorf("computer query missing %q in %q", want, host)
+		}
+	}
+	user, err := SessionsCypher("S-1-5-21-111", "User")
+	if err != nil {
+		t.Fatalf("SessionsCypher: %v", err)
+	}
+	if !strings.Contains(user, "u.objectid") {
+		t.Errorf("user query should match source principal: %q", user)
+	}
+}
+
+func TestLocalAdminsCypherExpandsGroups(t *testing.T) {
+	q, err := LocalAdminsCypher("S-1-5-21-111", "Computer")
+	if err != nil {
+		t.Fatalf("LocalAdminsCypher: %v", err)
+	}
+	for _, want := range []string{"(u)-[:MemberOf*0..5]->(g)-[:AdminTo]->(c)", "c.objectid", "LIMIT 100"} {
+		if !strings.Contains(q, want) {
+			t.Errorf("admin query missing %q in %q", want, q)
+		}
+	}
+	user, err := LocalAdminsCypher("S-1-5-21-111", "Group")
+	if err != nil {
+		t.Fatalf("LocalAdminsCypher: %v", err)
+	}
+	if !strings.Contains(user, "u.objectid") {
+		t.Errorf("group query should match source principal: %q", user)
+	}
+}
+
 func TestCommunityCypher(t *testing.T) {
 	for _, kind := range []CommunityKind{
 		CommunityKerberoastable, CommunityASREP, CommunityDCSync, CommunityUnconstrained,
