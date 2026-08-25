@@ -5,9 +5,11 @@
   import BhGraph from '$features/bloodhound/BhGraph.svelte';
   import CollectionModal from '$features/bloodhound/CollectionModal.svelte';
   import CollectionTaskCard from '$features/bloodhound/CollectionTaskCard.svelte';
+  import RelationSection from './RelationSection.svelte';
+  import { uniqueEntities, sessionHeading, adminHeading } from './relations.js';
   import { bloodhoundStore, subscribeBloodhound, requestCorrelation, refreshCollections } from './bloodhound.svelte.js';
   import { actionsForEntity, actionsForEdge } from './actions.js';
-  import { getBloodHoundAttackPaths, getBloodHoundKerberoastTargets, markBloodHoundOwned, unmarkBloodHoundOwned } from '$api/bloodhound.js';
+  import { getBloodHoundAttackPaths, getBloodHoundKerberoastTargets, getBloodHoundSessions, getBloodHoundLocalAdmins, markBloodHoundOwned, unmarkBloodHoundOwned } from '$api/bloodhound.js';
   import { GetCommandCatalog } from '$api/console.js';
   import { commandModal } from '$stores/ui/commandModal.svelte.js';
   import { addToCase } from '$stores/ui/addToCase.svelte.js';
@@ -152,6 +154,68 @@
         loadingPaths = false;
       });
   });
+
+  let sessionsGraph = $state({ nodes: [], edges: [] });
+  let loadingSessions = $state(false);
+  let sessionsError = $state('');
+  let showSessionsGraph = $state(false);
+  let adminsGraph = $state({ nodes: [], edges: [] });
+  let loadingAdmins = $state(false);
+  let adminsError = $state('');
+  let showAdminsGraph = $state(false);
+
+  // Per-row actions reuse the entity bridge with the listed entity in place
+  // of the resolved one.
+  function rowActions(rowEntity) {
+    return actionsForEntity({
+      agent, enrichment, entity: rowEntity,
+      kerberoastableIDs, runCommand,
+      addToCase, openTags: tagsModal.openTags.bind(tagsModal), openComments: commentsModal.openComments.bind(commentsModal),
+    });
+  }
+
+  // Load both relation graphs when the resolved entity changes; the
+  // stale-response guard matches the attack-paths effect above.
+  $effect(() => {
+    const objectId = enrichment?.entity?.objectId;
+    const kind = enrichment?.entity?.kind ?? '';
+    if (!objectId) {
+      sessionsGraph = { nodes: [], edges: [] };
+      adminsGraph = { nodes: [], edges: [] };
+      sessionsError = '';
+      adminsError = '';
+      return;
+    }
+    loadingSessions = true;
+    sessionsError = '';
+    getBloodHoundSessions(objectId, kind)
+      .then((g) => {
+        if (bloodhoundStore.enrichment[sessionID]?.entity?.objectId !== objectId) return;
+        sessionsGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] };
+      })
+      .catch((e) => {
+        sessionsError = errorMessage(e);
+        toast.push({ variant: 'error', message: `Sessions: ${sessionsError}` });
+      })
+      .finally(() => {
+        loadingSessions = false;
+      });
+
+    loadingAdmins = true;
+    adminsError = '';
+    getBloodHoundLocalAdmins(objectId, kind)
+      .then((g) => {
+        if (bloodhoundStore.enrichment[sessionID]?.entity?.objectId !== objectId) return;
+        adminsGraph = { nodes: g?.nodes ?? [], edges: g?.edges ?? [] };
+      })
+      .catch((e) => {
+        adminsError = errorMessage(e);
+        toast.push({ variant: 'error', message: `Local admins: ${adminsError}` });
+      })
+      .finally(() => {
+        loadingAdmins = false;
+      });
+  });
 </script>
 
 <div class="h-full overflow-auto p-6">
@@ -243,6 +307,28 @@
           {:else}
             <BhGraph graph={pathGraph} onEdgeClick={(edge) => { clickedEdge = edge; }} />
           {/if}
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <RelationSection
+            title={sessionHeading(enrichment.entity.kind)}
+            entities={uniqueEntities(sessionsGraph)}
+            graph={sessionsGraph}
+            loading={loadingSessions}
+            error={sessionsError}
+            bind:showGraph={showSessionsGraph}
+            actionsFor={rowActions}
+            onEdgeClick={(edge) => { clickedEdge = edge; }}
+          />
+          <RelationSection
+            title={adminHeading(enrichment.entity.kind)}
+            entities={uniqueEntities(adminsGraph)}
+            graph={adminsGraph}
+            loading={loadingAdmins}
+            error={adminsError}
+            bind:showGraph={showAdminsGraph}
+            actionsFor={rowActions}
+            onEdgeClick={(edge) => { clickedEdge = edge; }}
+          />
         </div>
       </div>
     {/if}
