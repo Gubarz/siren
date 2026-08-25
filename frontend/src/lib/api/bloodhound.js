@@ -11,6 +11,8 @@ import {
   BloodHoundIngestLocalFile,
   BloodHoundStartCollection,
   BloodHoundCollections,
+  BloodHoundMarkOwned,
+  BloodHoundUnmarkOwned,
 } from '../../../bindings/siren/cmd/gui/app.js';
 import { responseField } from './normalize.js';
 
@@ -100,4 +102,15 @@ export async function startBloodHoundCollection(agentID, agentKind, agentOS, opt
 
 export async function getBloodHoundCollections() {
   return (await BloodHoundCollections()) ?? [];
+}
+
+// Marks an entity owned in BloodHound via an object-ID selector on the
+// built-in Owned tag; Unmark removes it. The backend invalidates the
+// correlation cache so chips reflect the change on the next correlation.
+export async function markBloodHoundOwned(objectId) {
+  return BloodHoundMarkOwned(objectId);
+}
+
+export async function unmarkBloodHoundOwned(objectId) {
+  return BloodHoundUnmarkOwned(objectId);
 }

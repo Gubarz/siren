@@ -26,6 +26,14 @@ func (a *App) BloodHoundConnect() error {
 	return a.BloodHound.Connect(context.Background())
 }
 
+func (a *App) BloodHoundMarkOwned(objectID string) error {
+	return a.BloodHound.MarkOwned(context.Background(), objectID)
+}
+
+func (a *App) BloodHoundUnmarkOwned(objectID string) error {
+	return a.BloodHound.UnmarkOwned(context.Background(), objectID)
+}
+
 func (a *App) BloodHoundDisconnect() {
 	a.BloodHound.Disconnect()
 }

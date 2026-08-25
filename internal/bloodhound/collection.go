@@ -213,7 +213,8 @@ func (r *CollectionRunner) Start(ctx context.Context, agentID, agentKind, agentO
 }
 
 func (r *CollectionRunner) pipeline(id, agentID string, opts CollectionOptions) {
-	ctx, cancel := context.WithTimeout(context.Background(), clampTimeoutSeconds(opts.TimeoutSeconds))
+	timeout := clampTimeoutSeconds(opts.TimeoutSeconds)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout+30*time.Second)
 	defer cancel()
 
 	fail := func(stage Stage, format string, args ...any) {
@@ -237,10 +238,14 @@ func (r *CollectionRunner) pipeline(id, agentID string, opts CollectionOptions) 
 		return
 	}
 
-	// Collecting: run the collector.
+	// Collecting: run the collector via the sliver console's execute command.
+	// The "--" is load-bearing: without it pflag strips the collector flags
+	// that follow the binary path. The zipfilename is an absolute remote path
+	// so the artifact lands where the download stage expects it.
 	artifactName := fmt.Sprintf("siren-%s-%s.zip", collector, id)
 	remoteArtifact := filepath.Join(remoteDir, artifactName)
-	cmd := fmt.Sprintf(`"%s" -c %s --zipfilename %s`, remoteCollector, strings.Join(opts.Methods, ","), artifactName)
+	cmd := fmt.Sprintf("execute --timeout %d -- %q -c %s --zipfilename %s",
+		int(timeout.Seconds()), remoteCollector, strings.Join(opts.Methods, ","), remoteArtifact)
 	if opts.Domain != "" {
 		cmd += " --domain " + opts.Domain
 	}

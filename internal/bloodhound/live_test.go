@@ -12,16 +12,12 @@ package bloodhound
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	bh "github.com/Gubarz/bloodhound-sdk-go"
 )
@@ -157,7 +153,7 @@ func TestLiveRawEntityShape(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(resp.Body)
-		if strings.Contains(r.URL.Path, "/api/v2/users/") || strings.Contains(r.URL.Path, "/api/v2/search") {
+		if strings.Contains(r.URL.Path, "/api/v2/base/") || strings.Contains(r.URL.Path, "/api/v2/search") {
 			hdr := ""
 			for k, vv := range r.Header {
 				for _, v := range vv {
@@ -196,31 +192,24 @@ func TestLiveRawEntityShape(t *testing.T) {
 	}
 }
 
-// TestLiveSignatureParity recomputes the HMAC both ways for identical inputs
-// to prove the siren signer matches the SDK's algorithm.
-func TestLiveSignatureParity(t *testing.T) {
+// TestLiveSignerHeaders signs a raw request with the SDK's exported signer
+// and verifies the three HMAC headers land on the wire.
+func TestLiveSignerHeaders(t *testing.T) {
 	key := os.Getenv("BH_KEY")
 	if key == "" {
 		t.Skip("BH_KEY not set")
 	}
-	method := "GET"
-	path := "/api/v2/users/S-1-5-21-EXAMPLE-SID"
-	now := time.Now().UTC().Truncate(time.Minute)
-
-	sdkOp := hmac.New(sha256.New, []byte(key))
-	sdkOp.Write([]byte(method + path))
-	sdkDigest := sdkOp.Sum(nil)
-	sdkDate := hmac.New(sha256.New, sdkDigest)
-	sdkDate.Write([]byte(now.Format("2006-01-02T15")))
-	sdkFinal := hmac.New(sha256.New, sdkDate.Sum(nil))
-	sdkSig := base64.StdEncoding.EncodeToString(sdkFinal.Sum(nil))
-
-	req, _ := http.NewRequest(method, "http://x"+path, nil)
-	signHMAC("tok", key, method, path, nil, now, req)
-	ourSig := req.Header.Get("Signature")
-
-	if sdkSig != ourSig {
-		t.Fatalf("signature mismatch: sdk=%s ours=%s", sdkSig, ourSig)
+	path := "/api/v2/base/S-1-5-21-EXAMPLE-SID"
+	req, _ := http.NewRequest(http.MethodGet, "http://x"+path, nil)
+	editor := bh.SignRequest("tok", key, "siren-test")
+	if err := editor(context.Background(), req); err != nil {
+		t.Fatalf("SignRequest: %v", err)
+	}
+	if req.Header.Get("Authorization") != "bhesignature tok" {
+		t.Fatalf("Authorization = %q", req.Header.Get("Authorization"))
+	}
+	if req.Header.Get("RequestDate") == "" || req.Header.Get("Signature") == "" {
+		t.Fatalf("missing date/signature headers: %v", req.Header)
 	}
 }
 

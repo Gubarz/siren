@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
+	bh "github.com/Gubarz/bloodhound-sdk-go"
 	bhservices "github.com/Gubarz/bloodhound-sdk-go/services"
 )
 
@@ -123,7 +125,7 @@ func (s *Service) ListDomains(ctx context.Context) ([]DomainDTO, error) {
 }
 
 // Entity resolves an object ID to a typed entity: search gives name/kind/
-// owned/tier-zero, then a signed kind-specific fetch fills Properties.
+// owned/tier-zero, then the SDK's base entity query fills Properties.
 func (s *Service) Entity(ctx context.Context, objectID string) (*Entity, error) {
 	client, err := s.snapshot()
 	if err != nil {
@@ -145,9 +147,41 @@ func (s *Service) Entity(ctx context.Context, objectID string) (*Entity, error) 
 		return nil, fmt.Errorf("%w: %s", ErrEntityNotFound, objectID)
 	}
 
-	if props, err := s.fetchEntityDetail(ctx, ent.Kind, objectID); err == nil && len(props) > 0 {
+	if props, err := s.fetchEntityDetail(ctx, client, objectID); err == nil && len(props) > 0 {
 		ent.Properties = props
 	}
 	// Detail fetch is best-effort: identity data survives failures.
 	return ent, nil
+}
+
+// fetchEntityDetail resolves object properties via the SDK's base entity
+// query and flattens scalar props into a string map. Returns nil when the
+// object carries no props.
+func (s *Service) fetchEntityDetail(ctx context.Context, client *bh.Client, objectID string) (map[string]string, error) {
+	ent, err := client.Community().ADBaseEntities().Entity(ctx, objectID)
+	if err != nil {
+		return nil, err
+	}
+	if ent == nil {
+		return nil, nil
+	}
+	out := map[string]string{}
+	for key, raw := range ent.Props {
+		switch v := raw.(type) {
+		case string:
+			out[key] = v
+		case bool:
+			out[key] = strconv.FormatBool(v)
+		case float64:
+			// Shortest representation: integer-ish timestamps print without
+			// scientific notation, decimals keep their precision.
+			out[key] = strconv.FormatFloat(v, 'f', -1, 64)
+		default:
+			// arrays/nested objects are skipped; the UI shows scalars
+		}
+	}
+	if len(ent.Kinds) == 0 && len(out) == 0 {
+		return nil, nil
+	}
+	return out, nil
 }

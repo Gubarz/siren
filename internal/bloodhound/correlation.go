@@ -158,7 +158,10 @@ func (s *Service) resolveCandidate(ctx context.Context, cands []string) (Entity,
 }
 
 // buildEnrichment computes distance-to-tier-zero and the ordered path for a
-// resolved entity. Path queries are best-effort: failure degrades to -1.
+// resolved entity. Owned state comes from the Owned asset-group tag
+// membership (authoritative on CE with the asset-isolation engine; search
+// system_tags no longer carry it) with the search-derived flag as fallback
+// when the tag check fails. Path queries are best-effort.
 func (s *Service) buildEnrichment(ctx context.Context, entity Entity) Enrichment {
 	dist, paths := -1, []NodeDTO{}
 	if graph, err := s.EntityAttackPaths(ctx, entity.ObjectID, 1); err == nil {
@@ -168,9 +171,13 @@ func (s *Service) buildEnrichment(ctx context.Context, entity Entity) Enrichment
 			paths = ordered
 		}
 	}
+	owned := entity.Owned
+	if ok, err := s.IsOwned(ctx, entity.ObjectID); err == nil {
+		owned = ok
+	}
 	return Enrichment{
 		Entity:             entity,
-		Owned:              entity.Owned,
+		Owned:              owned,
 		TierZero:           entity.TierZero,
 		DistanceToTierZero: dist,
 		Paths:              paths,

@@ -146,12 +146,10 @@ func TestEntityMergesTypedProps(t *testing.T) {
 		"/api/v2/search": func(r *http.Request) string {
 			return `{"data":[{"name":"jane@corp.local","objectid":"S-1-5-21-77","type":"User","system_tags":"owned"}]}`
 		},
-		"/api/v2/users/": func(r *http.Request) string {
+		"/api/v2/base/": func(r *http.Request) string {
 			sawAuth = r.Header.Get("Authorization") != ""
 			sawDate = r.Header.Get("RequestDate") != ""
 			sawSig = r.Header.Get("Signature") != ""
-			// Real CE shape: flat scalar props (the SDK's nested model
-			// cannot unmarshal this, which is why we fetch it ourselves).
 			return `{"data":{"kinds":["User","Base"],"props":{"admincount":true,"hasspn":false,"description":"svc","serviceprincipalnames":[]}}}`
 		},
 	})
@@ -176,7 +174,7 @@ func TestEntityMergesTypedProps(t *testing.T) {
 	// The request path must carry the leading slash: the HMAC is computed
 	// over the exact path sent, and a mismatched slash yields a 401.
 	for _, req := range f.requests {
-		if strings.HasPrefix(req, "GET /api/v2/users/") {
+		if strings.HasPrefix(req, "GET /api/v2/base/") {
 			return
 		}
 	}

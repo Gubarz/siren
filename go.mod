@@ -3,7 +3,7 @@ module siren
 go 1.26.3
 
 require (
-	github.com/Gubarz/bloodhound-sdk-go v0.8.9
+	github.com/Gubarz/bloodhound-sdk-go v0.8.12
 	github.com/bishopfox/sliver v1.7.3
 	github.com/creack/pty v1.1.24
 	github.com/google/uuid v1.6.0

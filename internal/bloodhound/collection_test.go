@@ -142,7 +142,10 @@ func TestCollectionPipelineHappyPath(t *testing.T) {
 		t.Fatalf("commands = %v", runner.commands)
 	}
 	cmd := runner.commands[0]
-	for _, want := range []string{"-c", "Default", "--zipfilename", "sharphound.exe", "C:\\Windows\\Temp"} {
+	if !strings.HasPrefix(cmd, "execute ") {
+		t.Errorf("command %q must be a sliver console line starting with 'execute'", cmd)
+	}
+	for _, want := range []string{"--timeout", "--", "-c", "Default", "--zipfilename", "sharphound.exe", "siren-sharphound-", "C:\\Windows\\Temp"} {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("command %q missing %q", cmd, want)
 		}

@@ -3,6 +3,8 @@ import {
   getBloodHoundStatus,
   getBloodHoundConfig,
   correlateAgents,
+  markBloodHoundOwned,
+  unmarkBloodHoundOwned,
 } from '../bloodhound.js'
 
 const app = vi.hoisted(() => ({
@@ -13,6 +15,8 @@ const app = vi.hoisted(() => ({
   BloodHoundDisconnect: vi.fn(),
   BloodHoundStatus: vi.fn(),
   BloodHoundCorrelate: vi.fn(),
+  BloodHoundMarkOwned: vi.fn(),
+  BloodHoundUnmarkOwned: vi.fn(),
 }))
 vi.mock('../../../../bindings/siren/cmd/gui/app.js', () => app)
 
@@ -70,5 +74,19 @@ describe('bloodhound api wrapper', () => {
   it('correlateAgents tolerates null bindings and empty lists', async () => {
     app.BloodHoundCorrelate.mockResolvedValue(null)
     await expect(correlateAgents([])).resolves.toEqual({})
+  })
+})
+
+describe('owned marking', () => {
+  it('passes the object ID through to the mark binding', async () => {
+    app.BloodHoundMarkOwned.mockResolvedValue(null)
+    await markBloodHoundOwned('S-1-5-21-999')
+    expect(app.BloodHoundMarkOwned).toHaveBeenCalledWith('S-1-5-21-999')
+  })
+
+  it('passes the object ID through to the unmark binding', async () => {
+    app.BloodHoundUnmarkOwned.mockResolvedValue(null)
+    await unmarkBloodHoundOwned('S-1-5-21-999')
+    expect(app.BloodHoundUnmarkOwned).toHaveBeenCalledWith('S-1-5-21-999')
   })
 })

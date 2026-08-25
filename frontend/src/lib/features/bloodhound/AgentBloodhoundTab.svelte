@@ -7,7 +7,7 @@
   import CollectionTaskCard from '$features/bloodhound/CollectionTaskCard.svelte';
   import { bloodhoundStore, subscribeBloodhound, requestCorrelation, refreshCollections } from './bloodhound.svelte.js';
   import { actionsForEntity, actionsForEdge } from './actions.js';
-  import { getBloodHoundAttackPaths, getBloodHoundKerberoastTargets } from '$api/bloodhound.js';
+  import { getBloodHoundAttackPaths, getBloodHoundKerberoastTargets, markBloodHoundOwned, unmarkBloodHoundOwned } from '$api/bloodhound.js';
   import { GetCommandCatalog } from '$api/console.js';
   import { commandModal } from '$stores/ui/commandModal.svelte.js';
   import { addToCase } from '$stores/ui/addToCase.svelte.js';
@@ -88,6 +88,35 @@
     addToCase, openTags: tagsModal.openTags.bind(tagsModal), openComments: commentsModal.openComments.bind(commentsModal),
   }));
 
+  let togglingOwned = $state(false);
+
+  // Marks/removes the resolved entity from BloodHound's built-in Owned tag.
+  // The backend invalidates the correlation cache, so the optimistic flip
+  // here is confirmed by the follow-up re-correlation.
+  async function toggleOwned() {
+    const entity = enrichment?.entity;
+    if (!entity?.objectId || !agent) return;
+    const wasOwned = Boolean(enrichment.owned);
+    togglingOwned = true;
+    try {
+      if (wasOwned) {
+        await unmarkBloodHoundOwned(entity.objectId);
+      } else {
+        await markBloodHoundOwned(entity.objectId);
+      }
+      bloodhoundStore.enrichment = {
+        ...bloodhoundStore.enrichment,
+        [sessionID]: { ...enrichment, owned: !wasOwned },
+      };
+      requestCorrelation([agent]);
+      toast.push({ variant: 'success', message: wasOwned ? 'Removed from Owned' : 'Marked as Owned' });
+    } catch (e) {
+      toast.push({ variant: 'error', message: `Owned update failed: ${errorMessage(e)}` });
+    } finally {
+      togglingOwned = false;
+    }
+  }
+
   let edgeActions = $derived(actionsForEdge({
     agent, enrichment, entity: enrichment?.entity, edge: clickedEdge, runCommand,
   }));
@@ -163,6 +192,10 @@
           {#if enrichment.distanceToTierZero >= 0}
             <span class="text-xs text-fg-muted">{enrichment.distanceToTierZero} hop(s) to Tier-0</span>
           {/if}
+          <span class="flex-1"></span>
+          <Button size="sm" color={enrichment.owned ? 'alternative' : 'primary'} loading={togglingOwned} onclick={toggleOwned}>
+            {enrichment.owned ? 'Remove Owned' : 'Mark Owned'}
+          </Button>
         </div>
         {#if enrichment.entity.properties && Object.keys(enrichment.entity.properties).length > 0}
           <dl class="grid grid-cols-2 gap-x-4 gap-y-1 mb-3 m-0">

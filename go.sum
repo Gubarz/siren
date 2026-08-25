@@ -1,7 +1,7 @@
 github.com/Binject/debug v0.0.0-20230508195519-26db73212a7a h1:4c0nc0krv8eh7gD809n+swLaCuFyHpxdrxwx0ZmHvBw=
 github.com/Binject/debug v0.0.0-20230508195519-26db73212a7a/go.mod h1:QzgxDLY/qdKlvnbnb65eqTedhvQPbaSP2NqIbcuKvsQ=
-github.com/Gubarz/bloodhound-sdk-go v0.8.9 h1:5CDXqEbLsOHm+SNQyL5PoxR5dcLbpDl/zBxoEMt+CTw=
-github.com/Gubarz/bloodhound-sdk-go v0.8.9/go.mod h1:cqha023Bzo46W2QI23tzHH6tIsmc+Ktt8E4/9a4qT2A=
+github.com/Gubarz/bloodhound-sdk-go v0.8.12 h1:add1B1AZ/yrO3QXOWLmvzmaszedah2+ROaXuACQU4L4=
+github.com/Gubarz/bloodhound-sdk-go v0.8.12/go.mod h1:cqha023Bzo46W2QI23tzHH6tIsmc+Ktt8E4/9a4qT2A=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAwZ/2OOE=
