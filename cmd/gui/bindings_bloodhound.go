@@ -85,3 +85,11 @@ func (a *App) BloodHoundAttackPaths(objectID string, maxPaths int) (bloodhound.G
 func (a *App) BloodHoundCommunityQuery(kind string) (bloodhound.GraphDTO, error) {
 	return a.BloodHound.CommunityQuery(context.Background(), bloodhound.CommunityKind(kind))
 }
+
+func (a *App) BloodHoundSessions(objectID, entityKind string) (bloodhound.GraphDTO, error) {
+	return a.BloodHound.EntitySessions(context.Background(), objectID, entityKind)
+}
+
+func (a *App) BloodHoundLocalAdmins(objectID, entityKind string) (bloodhound.GraphDTO, error) {
+	return a.BloodHound.EntityLocalAdmins(context.Background(), objectID, entityKind)
+}
