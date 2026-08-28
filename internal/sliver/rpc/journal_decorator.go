@@ -34,7 +34,7 @@ func (d *journalDecorator) GetVersion(ctx context.Context, in *commonpb.Empty, o
 	return resp, err
 }
 
-func (d *journalDecorator) ClientLog(ctx context.Context, opts ...grpc.CallOption) (rpcpb.SliverRPC_ClientLogClient, error) {
+func (d *journalDecorator) ClientLog(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[clientpb.ClientLogData, commonpb.Empty], error) {
 	start := time.Now()
 	stream, err := d.next.ClientLog(ctx, opts...)
 	d.hook.record(ctx, "ClientLog", time.Since(start).Milliseconds(), err)
@@ -108,6 +108,55 @@ func (d *journalDecorator) MonitorDelConfig(ctx context.Context, in *clientpb.Mo
 	start := time.Now()
 	resp, err := d.next.MonitorDelConfig(ctx, in, opts...)
 	d.hook.record(ctx, "MonitorDelConfig", time.Since(start).Milliseconds(), err)
+	return resp, err
+}
+
+func (d *journalDecorator) GetAIProviders(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.AIProviderConfigs, error) {
+	start := time.Now()
+	resp, err := d.next.GetAIProviders(ctx, in, opts...)
+	d.hook.record(ctx, "GetAIProviders", time.Since(start).Milliseconds(), err)
+	return resp, err
+}
+
+func (d *journalDecorator) GetAIConversations(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.AIConversations, error) {
+	start := time.Now()
+	resp, err := d.next.GetAIConversations(ctx, in, opts...)
+	d.hook.record(ctx, "GetAIConversations", time.Since(start).Milliseconds(), err)
+	return resp, err
+}
+
+func (d *journalDecorator) GetAIConversation(ctx context.Context, in *clientpb.AIConversationReq, opts ...grpc.CallOption) (*clientpb.AIConversation, error) {
+	start := time.Now()
+	resp, err := d.next.GetAIConversation(ctx, in, opts...)
+	d.hook.record(ctx, "GetAIConversation", time.Since(start).Milliseconds(), err)
+	return resp, err
+}
+
+func (d *journalDecorator) SaveAIConversation(ctx context.Context, in *clientpb.AIConversation, opts ...grpc.CallOption) (*clientpb.AIConversation, error) {
+	start := time.Now()
+	resp, err := d.next.SaveAIConversation(ctx, in, opts...)
+	d.hook.record(ctx, "SaveAIConversation", time.Since(start).Milliseconds(), err)
+	return resp, err
+}
+
+func (d *journalDecorator) DeleteAIConversation(ctx context.Context, in *clientpb.AIConversationReq, opts ...grpc.CallOption) (*commonpb.Empty, error) {
+	start := time.Now()
+	resp, err := d.next.DeleteAIConversation(ctx, in, opts...)
+	d.hook.record(ctx, "DeleteAIConversation", time.Since(start).Milliseconds(), err)
+	return resp, err
+}
+
+func (d *journalDecorator) GetAIConversationMessages(ctx context.Context, in *clientpb.AIConversationReq, opts ...grpc.CallOption) (*clientpb.AIConversationMessages, error) {
+	start := time.Now()
+	resp, err := d.next.GetAIConversationMessages(ctx, in, opts...)
+	d.hook.record(ctx, "GetAIConversationMessages", time.Since(start).Milliseconds(), err)
+	return resp, err
+}
+
+func (d *journalDecorator) SaveAIConversationMessage(ctx context.Context, in *clientpb.AIConversationMessage, opts ...grpc.CallOption) (*clientpb.AIConversationMessage, error) {
+	start := time.Now()
+	resp, err := d.next.SaveAIConversationMessage(ctx, in, opts...)
+	d.hook.record(ctx, "SaveAIConversationMessage", time.Since(start).Milliseconds(), err)
 	return resp, err
 }
 
@@ -412,7 +461,7 @@ func (d *journalDecorator) SaveHTTPC2Profile(ctx context.Context, in *clientpb.H
 	return resp, err
 }
 
-func (d *journalDecorator) BuilderRegister(ctx context.Context, in *clientpb.Builder, opts ...grpc.CallOption) (rpcpb.SliverRPC_BuilderRegisterClient, error) {
+func (d *journalDecorator) BuilderRegister(ctx context.Context, in *clientpb.Builder, opts ...grpc.CallOption) (grpc.ServerStreamingClient[clientpb.Event], error) {
 	start := time.Now()
 	stream, err := d.next.BuilderRegister(ctx, in, opts...)
 	d.hook.record(ctx, "BuilderRegister", time.Since(start).Milliseconds(), err)
@@ -454,7 +503,7 @@ func (d *journalDecorator) Crack(ctx context.Context, in *clientpb.CrackCommand,
 	return resp, err
 }
 
-func (d *journalDecorator) CrackstationRegister(ctx context.Context, in *clientpb.Crackstation, opts ...grpc.CallOption) (rpcpb.SliverRPC_CrackstationRegisterClient, error) {
+func (d *journalDecorator) CrackstationRegister(ctx context.Context, in *clientpb.Crackstation, opts ...grpc.CallOption) (grpc.ServerStreamingClient[clientpb.Event], error) {
 	start := time.Now()
 	stream, err := d.next.CrackstationRegister(ctx, in, opts...)
 	d.hook.record(ctx, "CrackstationRegister", time.Since(start).Milliseconds(), err)
@@ -1294,7 +1343,7 @@ func (d *journalDecorator) CloseSocks(ctx context.Context, in *sliverpb.Socks, o
 	return resp, err
 }
 
-func (d *journalDecorator) SocksProxy(ctx context.Context, opts ...grpc.CallOption) (rpcpb.SliverRPC_SocksProxyClient, error) {
+func (d *journalDecorator) SocksProxy(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[sliverpb.SocksData, sliverpb.SocksData], error) {
 	start := time.Now()
 	stream, err := d.next.SocksProxy(ctx, opts...)
 	d.hook.record(ctx, "SocksProxy", time.Since(start).Milliseconds(), err)
@@ -1315,14 +1364,14 @@ func (d *journalDecorator) CloseTunnel(ctx context.Context, in *sliverpb.Tunnel,
 	return resp, err
 }
 
-func (d *journalDecorator) TunnelData(ctx context.Context, opts ...grpc.CallOption) (rpcpb.SliverRPC_TunnelDataClient, error) {
+func (d *journalDecorator) TunnelData(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[sliverpb.TunnelData, sliverpb.TunnelData], error) {
 	start := time.Now()
 	stream, err := d.next.TunnelData(ctx, opts...)
 	d.hook.record(ctx, "TunnelData", time.Since(start).Milliseconds(), err)
 	return stream, err
 }
 
-func (d *journalDecorator) Events(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (rpcpb.SliverRPC_EventsClient, error) {
+func (d *journalDecorator) Events(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[clientpb.Event], error) {
 	start := time.Now()
 	stream, err := d.next.Events(ctx, in, opts...)
 	d.hook.record(ctx, "Events", time.Since(start).Milliseconds(), err)
