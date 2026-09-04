@@ -21,6 +21,9 @@ func Run(frontendAssets embed.FS) {
 		return
 	}
 
+	// Windows: console-subsystem build, hide our own console for the GUI.
+	hideConsoleWindow()
+
 	wailsApp := application.New(application.Options{
 		Name: "siren",
 		Assets: application.AssetOptions{
