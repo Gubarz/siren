@@ -15,9 +15,14 @@ BUILD_OUTPUT_NAME := $(notdir $(BUILD_OUTPUT))
 # Production builds need the `production` tag (wails v3); BUILD_TAGS carries
 # any extras (e.g. BUILD_TAGS=gtk3 for webkit2gtk-4.1 systems).
 PRODUCTION_TAGS := $(strip production $(BUILD_TAGS))
-# Windows GUI apps must not allocate a console.
+# NOTE: no `-H windowsgui` on Windows. The --sliver-console subprocess must
+# be a console-subsystem binary: the ConPTY pseudoconsole only provides a
+# real console (and thus working CONIN$/CONOUT$) to console-subsystem
+# children. A GUI-subsystem child gets no console and only raw pipes, which
+# makes the sliver readline spin and balloon memory. The GUI hides its own
+# console window at startup (see cmd/gui/hideconsole_windows.go).
 HOST_GOOS := $(shell go env GOOS)
-GUI_LDFLAGS := $(if $(filter windows,$(or $(GOOS),$(HOST_GOOS))),-H windowsgui,)
+GUI_LDFLAGS :=
 
 export GOCACHE
 export XDG_CACHE_HOME
