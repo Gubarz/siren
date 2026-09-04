@@ -4,7 +4,7 @@ go 1.26.6
 
 require (
 	github.com/Gubarz/bloodhound-sdk-go v0.8.12
-	github.com/bishopfox/sliver v1.7.6
+	github.com/bishopfox/sliver v1.7.7
 	github.com/creack/pty v1.1.24
 	github.com/google/uuid v1.6.0
 	github.com/grafana/sobek v0.0.0-20260612080906-524cb275218c
@@ -97,6 +97,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rsteube/carapace v0.50.2 // indirect
 	github.com/rsteube/carapace-shlex v0.1.2 // indirect
+	github.com/sliverarmory/opfor v0.0.2 // indirect
 	github.com/sliverarmory/wasm-donut v0.0.3 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect

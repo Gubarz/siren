@@ -5,6 +5,7 @@ package console
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -105,7 +106,10 @@ type winConPTY struct {
 func startConPTY(cmdLine string, cols, rows int16) (*winConPTY, error) {
 	// Pipe ends are created non-inheritable: ConPTY dups what it needs
 	// into conhost, and the child receives console handles through the
-	// pseudoconsole attribute rather than handle inheritance.
+	// pseudoconsole attribute rather than handle inheritance. The child is
+	// a console-subsystem process, so the pseudoconsole provides it a real
+	// console (CONIN$/CONOUT$); GUI-subsystem children have no console and
+	// only raw pipes, which breaks the sliver readline (it spins forever).
 	var inRead, inWrite windows.Handle
 	if err := windows.CreatePipe(&inRead, &inWrite, nil, 0); err != nil {
 		return nil, fmt.Errorf("conpty input pipe: %w", err)
@@ -172,12 +176,17 @@ func (c *winConPTY) spawn(cmdLine string) error {
 	siEx := &windows.StartupInfoEx{}
 	siEx.Cb = uint32(unsafe.Sizeof(*siEx))
 	siEx.ProcThreadAttributeList = attrList.List()
-	// STARTF_USESTDHANDLES with zeroed std handles tells CreateProcess to
-	// substitute the pseudoconsole's handles for stdin/stdout/stderr.
-	// Without this a GUI-subsystem build (wails release builds use
-	// -H windowsgui) gets NULL std handles: the child produces no output
-	// and its readline spins on a dead input handle.
+	// Wire the ConPTY pipe ends directly as the child's standard handles.
+	// The pipes are created inheritable and CreateProcess is called with
+	// bInheritHandles=TRUE (see startConPTY). STARTF_USESTDHANDLES with
+	// zeroed handles (as the original code did) hands the child NULL std
+	// handles, so it dies instantly with no output and no usable input. We
+	// pass the input pipe's read end for stdin and the output pipe's write
+	// end for stdout/stderr, matching the battle-tested conpty library.
 	siEx.StartupInfo.Flags |= windows.STARTF_USESTDHANDLES
+	siEx.StartupInfo.StdInput = c.ptyIn
+	siEx.StartupInfo.StdOutput = c.ptyOut
+	siEx.StartupInfo.StdErr = c.ptyOut
 
 	cmdLinePtr, err := windows.UTF16PtrFromString(cmdLine)
 	if err != nil {
@@ -195,10 +204,32 @@ func (c *winConPTY) spawn(cmdLine string) error {
 			passthrough = append(passthrough, name+"="+v)
 		}
 	}
-	envBlock := syscall.StringToUTF16Ptr(strings.Join(passthrough, "\x00") + "\x00")
+	// Build the UTF-16 environment block manually: each KEY=VALUE entry is
+	// NUL-terminated and the block ends with an extra NUL. UTF16FromString
+	// already appends the per-entry NUL, so only the final block terminator
+	// is added here. StringToUTF16Ptr cannot be used on the whole joined
+	// string because it panics on any embedded NUL byte ("string with NUL
+	// passed to StringToUTF16"). Entries are sorted by name as Windows
+	// expects (same as os/exec does before CreateProcess).
+	sort.SliceStable(passthrough, func(i, j int) bool {
+		return envVarName(passthrough[i]) < envVarName(passthrough[j])
+	})
+	env := make([]uint16, 0)
+	for _, entry := range passthrough {
+		utf16Entry, err := syscall.UTF16FromString(entry)
+		if err != nil {
+			return fmt.Errorf("spawn env: %w", err)
+		}
+		env = append(env, utf16Entry...)
+	}
+	env = append(env, 0)
+	var envBlock *uint16
+	if len(env) > 0 {
+		envBlock = &env[0]
+	}
 	err = windows.CreateProcess(
 		nil, cmdLinePtr, nil, nil, false,
-		windows.EXTENDED_STARTUPINFO_PRESENT,
+		windows.EXTENDED_STARTUPINFO_PRESENT|windows.CREATE_UNICODE_ENVIRONMENT,
 		envBlock, nil, &siEx.StartupInfo, &pi,
 	)
 	if err != nil {
@@ -281,6 +312,13 @@ func (c *winConPTY) Close() error {
 	}
 	c.mu.Unlock()
 	return nil
+}
+
+// envVarName returns the name portion of a KEY=VALUE environment entry,
+// lowercased for a stable case-insensitive sort like Windows uses.
+func envVarName(entry string) string {
+	name, _, _ := strings.Cut(entry, "=")
+	return strings.ToLower(name)
 }
 
 // winQuoteArgs joins arguments into a CreateProcess command line using
