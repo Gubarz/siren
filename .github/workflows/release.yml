@@ -116,7 +116,7 @@ jobs:
             .
 
       - name: Package archive (tar.gz)
-        if: matrix.asset endsWith '.tar.gz'
+        if: endsWith(matrix.asset, '.tar.gz')
         shell: bash
         run: |
           mkdir -p artifacts pkg
@@ -124,7 +124,7 @@ jobs:
           tar -czf "artifacts/${{ matrix.asset }}" -C pkg .
 
       - name: Package archive (zip)
-        if: matrix.asset endsWith '.zip'
+        if: endsWith(matrix.asset, '.zip')
         shell: bash
         run: |
           mkdir -p artifacts pkg
