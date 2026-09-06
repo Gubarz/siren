@@ -1,6 +1,6 @@
 # Siren
 
-[![CI](https://github.com/Gubarz/siren/actions/workflows/ci.yml/badge.svg)](https://github.com/Gubarz/siren/actions/workflows/ci.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](go.mod) [![Platform](https://img.shields.io/badge/Platform-Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-555555)](#build-it) [![Releases](https://img.shields.io/badge/Releases-GitHub-181717?logo=github)](https://github.com/Gubarz/siren/releases)
+[![CI](https://github.com/Gubarz/siren/actions/workflows/ci.yml/badge.svg)](https://github.com/Gubarz/siren/actions/workflows/ci.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)](go.mod) [![Platform](https://img.shields.io/badge/Platform-Linux%20%C2%B7%20Windows%20%C2%B7%20macOS-555555)](#build-it) [![Releases](https://img.shields.io/badge/Releases-GitHub-181717?logo=github)](https://github.com/Gubarz/siren/releases)
 
 A desktop operator workbench for the [Sliver](https://github.com/BishopFox/sliver) C2 framework, built with [Wails v3](https://v3.wails.io), Go, Svelte 5, Vite, and Tailwind CSS.
 
