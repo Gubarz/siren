@@ -5,6 +5,7 @@ import {
   GetLoot,
   GetOperators,
   GetProfiles,
+  LootAdd,
 } from '../../../bindings/siren/cmd/gui/app.js';
 import { responseField } from './normalize.js';
 
@@ -39,6 +40,12 @@ export async function listJobs() {
 
 export async function listLoot() {
   return responseField(await GetLoot(), 'Loot', []);
+}
+
+// Upload a file into the shared sliver loot store. fileType follows the
+// sliver LootFileType enum: 0 = text, 1 = binary (images are binary).
+export async function addLootFile(name, dataBase64, fileType = 1) {
+  return LootAdd(name, fileType, dataBase64);
 }
 
 export async function listOperators() {
