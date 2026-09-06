@@ -176,17 +176,16 @@ func (c *winConPTY) spawn(cmdLine string) error {
 	siEx := &windows.StartupInfoEx{}
 	siEx.Cb = uint32(unsafe.Sizeof(*siEx))
 	siEx.ProcThreadAttributeList = attrList.List()
-	// Wire the ConPTY pipe ends directly as the child's standard handles.
-	// The pipes are created inheritable and CreateProcess is called with
-	// bInheritHandles=TRUE (see startConPTY). STARTF_USESTDHANDLES with
-	// zeroed handles (as the original code did) hands the child NULL std
-	// handles, so it dies instantly with no output and no usable input. We
-	// pass the input pipe's read end for stdin and the output pipe's write
-	// end for stdout/stderr, matching the battle-tested conpty library.
+	// STARTF_USESTDHANDLES with NULL std handles: without the flag the
+	// kernel duplicates the parent's standard handles into the child,
+	// which would bypass the pseudoconsole. The child's real std handles
+	// come from conhost: it attaches the (console-subsystem) child to the
+	// ConPTY and points CONIN$/CONOUT$ at it, exactly like Windows
+	// Terminal's ConptyConnection. GUI-subsystem children get no console
+	// and only NULL/raw handles, which breaks the sliver readline (it
+	// spins forever) - so the binary must stay console-subsystem (no
+	// -H windowsgui).
 	siEx.StartupInfo.Flags |= windows.STARTF_USESTDHANDLES
-	siEx.StartupInfo.StdInput = c.ptyIn
-	siEx.StartupInfo.StdOutput = c.ptyOut
-	siEx.StartupInfo.StdErr = c.ptyOut
 
 	cmdLinePtr, err := windows.UTF16PtrFromString(cmdLine)
 	if err != nil {
