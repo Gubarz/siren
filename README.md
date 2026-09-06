@@ -84,7 +84,7 @@ Frontend feature code should call wrappers in `frontend/src/lib/api/`, not gener
 
 ## Build It
 
-You need Go, Node.js/npm, and the [Wails v3 CLI](https://v3.wails.io) (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.7`). Install frontend dependencies once with:
+You need Go, Node.js/npm, and the [Wails v3 CLI](https://v3.wails.io) (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16`). Install frontend dependencies once with:
 
 ```sh
 npm --prefix frontend install
