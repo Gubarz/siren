@@ -24,7 +24,6 @@ jobs:
             asset: siren-linux-amd64-gtk4.tar.gz
             build_tags: ""
             linux_deps: libgtk-4-dev libwebkitgtk-6.0-dev
-            gui_ldflags: ""
             cgo: "1"
           # Wails v3 opt-in: GTK3 + webkit2gtk-4.1 (older distros)
           - name: linux-amd64-gtk3-webkit4.1
@@ -33,15 +32,17 @@ jobs:
             asset: siren-linux-amd64-gtk3-webkit4.1.tar.gz
             build_tags: "gtk3"
             linux_deps: libgtk-3-dev libwebkit2gtk-4.1-dev
-            gui_ldflags: ""
             cgo: "1"
+          # Windows ships as a console-subsystem binary (no -H windowsgui):
+          # the --sliver-console subprocess must attach to a ConPTY, which
+          # only works for console-subsystem children. The GUI hides its
+          # own console window at startup (cmd/gui/hideconsole_windows.go).
           - name: windows-amd64
             os: windows-latest
             output: dist/siren.exe
             asset: siren-windows-amd64.zip
             build_tags: ""
             linux_deps: ""
-            gui_ldflags: "-H windowsgui"
             cgo: "0"
           - name: macos-arm64
             os: macos-latest
@@ -49,7 +50,6 @@ jobs:
             asset: siren-macos-arm64.tar.gz
             build_tags: ""
             linux_deps: ""
-            gui_ldflags: ""
             cgo: "1"
     steps:
       - uses: actions/checkout@v4
@@ -101,7 +101,7 @@ jobs:
             -tags "production ${{ matrix.build_tags }}" \
             -trimpath \
             -buildvcs=false \
-            -ldflags="-w -s ${{ matrix.gui_ldflags }} -X siren/internal/buildinfo.Version=${GITHUB_REF_NAME} -X siren/internal/buildinfo.Commit=${COMMIT} -X siren/internal/buildinfo.Date=${DATE}" \
+            -ldflags="-w -s -X siren/internal/buildinfo.Version=${GITHUB_REF_NAME} -X siren/internal/buildinfo.Commit=${COMMIT} -X siren/internal/buildinfo.Date=${DATE}" \
             -o "${{ matrix.output }}" \
             .
 
