@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/buildinfo"
@@ -12,6 +13,11 @@ import (
 )
 
 func Run(frontendAssets embed.FS) {
+	// siren is a GUI, not a CLI that was misinvoked by double-click: cobra's
+	// mousetrap (default-enabled on Windows) would otherwise print a splash,
+	// sleep MousetrapDisplayDuration, and os.Exit(1) before every in-process
+	// console command whenever the app was launched from Explorer.
+	cobra.MousetrapHelpText = ""
 	if len(os.Args) >= 2 && os.Args[1] == "--version" {
 		fmt.Println(buildinfo.String())
 		return
