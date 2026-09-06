@@ -37,15 +37,23 @@ jobs:
           # the --sliver-console subprocess must attach to a ConPTY, which
           # only works for console-subsystem children. The GUI hides its
           # own console window at startup (cmd/gui/hideconsole_windows.go).
+          # Cross-compiled on a Linux runner: the wails v3 Windows stack is
+          # pure Go (cgo "0"), so no Windows runner is needed. GTK headers
+          # are still required because the wails3 CLI is built for the
+          # runner's own OS.
           - name: windows-amd64
-            os: windows-latest
+            os: ubuntu-24.04
+            goos: windows
+            goarch: amd64
             output: dist/siren.exe
             asset: siren-windows-amd64.zip
             build_tags: ""
-            linux_deps: ""
+            linux_deps: libgtk-4-dev libwebkitgtk-6.0-dev zip
             cgo: "0"
           - name: macos-arm64
             os: macos-latest
+            goos: darwin
+            goarch: arm64
             output: dist/siren
             asset: siren-macos-arm64.tar.gz
             build_tags: ""
@@ -93,6 +101,8 @@ jobs:
         shell: bash
         env:
           CGO_ENABLED: ${{ matrix.cgo }}
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
           COMMIT=$(git rev-parse --short=12 HEAD)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -106,7 +116,7 @@ jobs:
             .
 
       - name: Package archive (tar.gz)
-        if: runner.os != 'Windows'
+        if: matrix.asset endsWith '.tar.gz'
         shell: bash
         run: |
           mkdir -p artifacts pkg
@@ -114,11 +124,12 @@ jobs:
           tar -czf "artifacts/${{ matrix.asset }}" -C pkg .
 
       - name: Package archive (zip)
-        if: runner.os == 'Windows'
+        if: matrix.asset endsWith '.zip'
+        shell: bash
         run: |
-          New-Item -ItemType Directory -Force artifacts, pkg | Out-Null
-          Copy-Item "${{ matrix.output }}", LICENSE, README.md pkg/
-          Compress-Archive -Path pkg/* -DestinationPath "artifacts/${{ matrix.asset }}"
+          mkdir -p artifacts pkg
+          cp "${{ matrix.output }}" LICENSE README.md pkg/
+          (cd pkg && zip -qr "../artifacts/${{ matrix.asset }}" .)
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
