@@ -48,6 +48,30 @@ export function createAgentActions({ dialog, discoveries, agentTabs, selectedAge
     }
   }
 
+  // Selection-aware variant used by the right-click menu when more than one
+  // agent is selected: one confirmation, then each kill runs and any partial
+  // failure is reported in a single summary (mirrors the bulk bar's runBatch).
+  async function killAgents(agents) {
+    const targets = agents.filter(Boolean)
+    if (targets.length === 0) return
+    if (targets.length === 1) return killAgent(targets[0])
+    if (!(await dialog.confirm(`Kill ${targets.length} agents? This cannot be undone.`, 'Confirm Bulk Kill'))) return
+    const failures = []
+    for (const agent of targets) {
+      try {
+        await KillAgent(agent.ID)
+      } catch (err) {
+        failures.push(`${agent.Name || agent.ID}: ${errorMessage(err)}`)
+      }
+    }
+    if (failures.length > 0) {
+      await dialog.alert(
+        `Kill completed for ${targets.length - failures.length}/${targets.length}. Failures:\n${failures.join('\n')}`,
+        'Bulk Kill',
+      )
+    }
+  }
+
   async function newShell(agent) {
     await agentTabs.launchShell(agent.ID, '')
   }
@@ -68,6 +92,30 @@ export function createAgentActions({ dialog, discoveries, agentTabs, selectedAge
       await RemoveBeacon(agent.ID)
     } catch (err) {
       await dialog.alert(errorMessage(err, 'Remove failed: '), 'Remove Beacon')
+    }
+  }
+
+  async function removeBeaconRecords(agents) {
+    const targets = agents.filter(Boolean)
+    if (targets.length === 0) return
+    if (targets.length === 1) return removeBeaconRecord(targets[0])
+    if (!(await dialog.confirm(
+      `Remove beacon records for ${targets.length} beacons? This cannot be undone.`,
+      'Confirm Remove',
+    ))) return
+    const failures = []
+    for (const agent of targets) {
+      try {
+        await RemoveBeacon(agent.ID)
+      } catch (err) {
+        failures.push(`${agent.Name || agent.ID}: ${errorMessage(err)}`)
+      }
+    }
+    if (failures.length > 0) {
+      await dialog.alert(
+        `Remove completed for ${targets.length - failures.length}/${targets.length}. Failures:\n${failures.join('\n')}`,
+        'Bulk Remove',
+      )
     }
   }
 
@@ -111,7 +159,7 @@ export function createAgentActions({ dialog, discoveries, agentTabs, selectedAge
 
   return {
     runDiscovery, promptPingSweep, clearDiscoveries,
-    killAgent, newShell, renameAgent, removeBeaconRecord,
+    killAgent, killAgents, newShell, renameAgent, removeBeaconRecord, removeBeaconRecords,
     promoteBeacon, demoteSession, runAutomationRule,
   }
 }

@@ -207,12 +207,25 @@ function buildManagementActions({ agent, renameAgent, openReconfigure, openTags,
 // Danger
 // ---------------------------------------------------------------------------
 
-function buildDangerActions({ agent, isBeacon, killAgent, removeBeaconRecord }) {
+function buildDangerActions({ agent, targetAgents, killAgent, killAgents, removeBeaconRecord, removeBeaconRecords }) {
+  const compatible = pick(targetAgents, agent)
+  const multi = compatible.length > 1
   const items = [
-    { icon: 'skull', label: 'Kill Agent', danger: true, on: () => killAgent(agent) },
+    {
+      icon: 'skull',
+      label: bulkLabel('Kill Agent', compatible.length),
+      danger: true,
+      on: () => (multi ? killAgents(compatible) : killAgent(agent)),
+    },
   ]
-  if (isBeacon) {
-    items.push({ icon: 'trash', label: 'Remove Beacon Record', danger: true, on: () => removeBeaconRecord(agent) })
+  const beaconAgents = compatible.filter((target) => target._kind === 'beacon')
+  if (beaconAgents.length > 0) {
+    items.push({
+      icon: 'trash',
+      label: bulkLabel('Remove Beacon Record', beaconAgents.length),
+      danger: true,
+      on: () => (beaconAgents.length > 1 ? removeBeaconRecords(beaconAgents) : removeBeaconRecord(agent)),
+    })
   }
   return items
 }
@@ -334,9 +347,11 @@ export function buildAgentContextSections(ctx) {
   })
 
   const dangerActions = buildDangerActions({
-    agent, isBeacon,
+    agent, targetAgents,
     killAgent: contextMenuHandlers.killAgent,
+    killAgents: contextMenuHandlers.killAgents,
     removeBeaconRecord: contextMenuHandlers.removeBeaconRecord,
+    removeBeaconRecords: contextMenuHandlers.removeBeaconRecords,
   })
 
   const commandCategories = buildCommandCategories({
