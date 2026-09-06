@@ -160,12 +160,20 @@
   const bulk = createBulkActions({ dialog })
   const {
     runDiscovery, promptPingSweep, clearDiscoveries,
-    killAgent, newShell, renameAgent, removeBeaconRecord,
+    killAgent, killAgents, newShell, renameAgent, removeBeaconRecord, removeBeaconRecords,
     promoteBeacon, demoteSession, runAutomationRule,
   } = actions
 
+  let selectedBeacons = $derived(selectedAgents.filter((a) => a._kind === 'beacon'))
+
   async function runBulk(fn) {
     await fn(selectedAgents)
+    selection.clear()
+  }
+
+  async function bulkRemoveBeacons() {
+    if (selectedBeacons.length === 0) return
+    await removeBeaconRecords(selectedBeacons)
     selection.clear()
   }
 
@@ -231,7 +239,7 @@
           runAutomationRule,
           setAgentRowColor,
           addToCase: (payload) => addToCase.open(payload),
-          killAgent, removeBeaconRecord,
+          killAgent, killAgents, removeBeaconRecord, removeBeaconRecords,
           executeAgentCommand,
           findAttackPaths: (agents) => {
             for (const target of agents) {
@@ -319,7 +327,9 @@
   <div class="ml-auto flex items-center gap-2">
   <BulkActionBar
   count={selected.agents.size}
+  showRemove={selectedBeacons.length > 0}
   onkill={() => runBulk(bulk.bulkKill)}
+  onremove={bulkRemoveBeacons}
   onrename={() => runBulk(bulk.bulkRenamePrefix)}
   onaddtag={() => runBulk(bulk.bulkAddTag)}
   onremovetag={() => runBulk(bulk.bulkRemoveTag)}

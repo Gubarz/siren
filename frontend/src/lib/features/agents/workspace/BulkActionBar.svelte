@@ -8,7 +8,9 @@
 
   let {
     count = 0,
+    showRemove = false,
     onkill = () => {},
+    onremove = () => {},
     onrename = () => {},
     onaddtag = () => {},
     onremovetag = () => {},
@@ -23,6 +25,9 @@
       <Button color="dark" size="xs" icon="tag" onclick={onremovetag}>Remove tag</Button>
       <Button color="dark" size="xs" icon="pen" onclick={onrename}>Rename prefix…</Button>
       <Button color="red" size="xs" icon="skull" onclick={onkill}>Kill</Button>
+      {#if showRemove}
+        <Button color="red" size="xs" icon="trash" onclick={onremove}>Remove</Button>
+      {/if}
       <IconButton icon="x" label="Clear selection" tooltip="Clear selection" size="xs" onclick={onclear} />
     </div>
   </div>

@@ -195,3 +195,68 @@ describe('buildAgentActionsSections', () => {
     expect(labels).not.toContain('New Shell')
   })
 })
+
+describe('danger actions — selection aware', () => {
+  function dangerCtx(overrides = {}) {
+    const killAgent = vi.fn()
+    const killAgents = vi.fn()
+    const removeBeaconRecord = vi.fn()
+    const removeBeaconRecords = vi.fn()
+    return {
+      agent: { ID: 'b1', OS: 'windows', Name: 'beacon1', _kind: 'beacon', Hostname: 'PC1' },
+      isBeacon: true,
+      isWindows: true,
+      catalog: [],
+      targetIDs: ['b1'],
+      targetAgents: [],
+      agentTabs: { openTab: vi.fn() },
+      automationRules: [],
+      contextMenuHandlers: { killAgent, killAgents, removeBeaconRecord, removeBeaconRecords },
+      ...overrides,
+    }
+  }
+
+  it('keeps single-agent labels and handlers for one beacon', () => {
+    const ctx = dangerCtx()
+    const sections = buildAgentContextSections(ctx)
+    const kill = sectionItems(sections, 'Kill Agent')
+    const remove = sectionItems(sections, 'Remove Beacon Record')
+    kill.on()
+    remove.on()
+    expect(ctx.contextMenuHandlers.killAgent).toHaveBeenCalledTimes(1)
+    expect(ctx.contextMenuHandlers.killAgents).not.toHaveBeenCalled()
+    expect(ctx.contextMenuHandlers.removeBeaconRecord).toHaveBeenCalledTimes(1)
+    expect(ctx.contextMenuHandlers.removeBeaconRecords).not.toHaveBeenCalled()
+  })
+
+  it('labels and routes to bulk handlers when multiple beacons are selected', () => {
+    const beacons = [
+      { ID: 'b1', OS: 'windows', Name: 'beacon1', _kind: 'beacon', Hostname: 'PC1' },
+      { ID: 'b2', OS: 'windows', Name: 'beacon2', _kind: 'beacon', Hostname: 'PC2' },
+    ]
+    const ctx = dangerCtx({
+      targetIDs: ['b1', 'b2'],
+      targetAgents: beacons,
+    })
+    const sections = buildAgentContextSections(ctx)
+    expect(sectionItems(sections, 'Kill Agent (2)')).not.toBeNull()
+    const remove = sectionItems(sections, 'Remove Beacon Record (2)')
+    expect(remove).not.toBeNull()
+    remove.on()
+    expect(ctx.contextMenuHandlers.removeBeaconRecords).toHaveBeenCalledWith(beacons)
+    expect(ctx.contextMenuHandlers.removeBeaconRecord).not.toHaveBeenCalled()
+  })
+
+  it('hides Remove Beacon Record when no beacon is in the selection', () => {
+    const session = { ID: 's1', OS: 'linux', Name: 'sess', _kind: 'session', Hostname: 'PC1' }
+    const ctx = dangerCtx({
+      agent: session,
+      isBeacon: false,
+      isWindows: false,
+      targetAgents: [session],
+    })
+    const labels = flattenItems(buildAgentContextSections(ctx)).map((i) => i.label)
+    expect(labels).not.toContain('Remove Beacon Record')
+    expect(labels).toContain('Kill Agent')
+  })
+})
