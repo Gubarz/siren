@@ -44,6 +44,40 @@ func TestTaskFinishFiresOnBeaconTaskResult(t *testing.T) {
 	}
 }
 
+func nextTaskResult(t *testing.T, fired <-chan automation.FireEvent) automationevents.TaskResult {
+	t.Helper()
+	select {
+	case fe := <-fired:
+		entry, ok := fe.Data["entry"].(automationevents.TaskResult)
+		if !ok {
+			t.Fatalf("data: %+v", fe.Data)
+		}
+		return entry
+	case <-time.After(2 * time.Second):
+		t.Fatal("task-finish did not fire")
+		return automationevents.TaskResult{}
+	}
+}
+
+// waitForFilterReady publishes warmups until the trigger fires once, then
+// publishes a sync event and drains until it is observed. FIFO delivery makes
+// the sync event a barrier: once observed, every earlier publish has passed
+// through the handler.
+func waitForFilterReady(t *testing.T, b bus.Bus, matching func(string) bus.Event, fired <-chan automation.FireEvent) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for len(fired) == 0 {
+		b.Publish(matching("warmup"))
+		time.Sleep(2 * time.Millisecond)
+		if time.Now().After(deadline) {
+			t.Fatal("task-finish did not fire")
+		}
+	}
+	b.Publish(matching("sync"))
+	for nextTaskResult(t, fired).Hostname != "sync" {
+	}
+}
+
 func TestTaskFinishFiltersVerbAndTarget(t *testing.T) {
 	b := bus.New()
 	tr := TaskFinish(b)
@@ -59,35 +93,8 @@ func TestTaskFinishFiltersVerbAndTarget(t *testing.T) {
 			Verb: "Wanted", TargetID: "b2", TargetKind: "beacon", Hostname: hostname,
 		}}
 	}
-	next := func() automationevents.TaskResult {
-		t.Helper()
-		select {
-		case fe := <-fired:
-			entry, ok := fe.Data["entry"].(automationevents.TaskResult)
-			if !ok {
-				t.Fatalf("data: %+v", fe.Data)
-			}
-			return entry
-		case <-time.After(2 * time.Second):
-			t.Fatal("task-finish did not fire")
-			return automationevents.TaskResult{}
-		}
-	}
 
-	deadline := time.Now().Add(2 * time.Second)
-	for len(fired) == 0 {
-		b.Publish(matching("warmup"))
-		time.Sleep(2 * time.Millisecond)
-		if time.Now().After(deadline) {
-			t.Fatal("task-finish did not fire")
-		}
-	}
-
-	// FIFO delivery makes the sync event a barrier: once observed, every
-	// earlier publish has passed through the handler.
-	b.Publish(matching("sync"))
-	for next().Hostname != "sync" {
-	}
+	waitForFilterReady(t, b, matching, fired)
 
 	// Non-matching publishes precede the sentinel, so an event that wrongly
 	// passed the filter would be observed before it.
@@ -95,7 +102,7 @@ func TestTaskFinishFiltersVerbAndTarget(t *testing.T) {
 	b.Publish(bus.Event{Type: "beacon.task-result", Payload: automationevents.TaskResult{Verb: "Wanted", TargetID: "b9"}})
 	b.Publish(bus.Event{Type: "beacon.task-result", Payload: "not a task result"})
 	b.Publish(matching("sentinel"))
-	entry := next()
+	entry := nextTaskResult(t, fired)
 	if entry.Hostname != "sentinel" {
 		t.Fatalf("filtered event fired: %+v", entry)
 	}

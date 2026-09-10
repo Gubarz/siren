@@ -2,6 +2,8 @@ package tags
 
 import (
 	"testing"
+
+	"siren/internal/testutil"
 )
 
 func TestSetAgentTagsNormalizesDeduplicatesAndSorts(t *testing.T) {
@@ -13,7 +15,7 @@ func TestSetAgentTagsNormalizesDeduplicatesAndSorts(t *testing.T) {
 
 	got := s.GetAgentTags("agent-1")
 	want := []string{"dev", "prod"}
-	assertStringSlice(t, got, want)
+	testutil.AssertSlice(t, got, want)
 }
 
 func TestSetEntityTagsNormalizesDeduplicatesAndSorts(t *testing.T) {
@@ -25,10 +27,10 @@ func TestSetEntityTagsNormalizesDeduplicatesAndSorts(t *testing.T) {
 
 	got := s.GetEntityTags("loot", "loot-1")
 	want := []string{"ioc", "owner:red"}
-	assertStringSlice(t, got, want)
+	testutil.AssertSlice(t, got, want)
 
 	all := s.GetAllEntityTags()
-	assertStringSlice(t, all["loot:loot-1"], want)
+	testutil.AssertSlice(t, all["loot:loot-1"], want)
 }
 
 func TestSetAgentTagsDeletesEmptyLists(t *testing.T) {
@@ -61,7 +63,7 @@ func TestTagsReturnedByServiceAreCopies(t *testing.T) {
 	allTags := s.GetAllTags()
 	allTags["agent-1"][0] = "changed-again"
 
-	assertStringSlice(t, s.GetAgentTags("agent-1"), []string{"prod"})
+	testutil.AssertSlice(t, s.GetAgentTags("agent-1"), []string{"prod"})
 }
 
 func TestEntityTagsReturnedByServiceAreCopies(t *testing.T) {
@@ -76,7 +78,7 @@ func TestEntityTagsReturnedByServiceAreCopies(t *testing.T) {
 	allTags := s.GetAllEntityTags()
 	allTags["host:host-1"][0] = "changed-again"
 
-	assertStringSlice(t, s.GetEntityTags("host", "host-1"), []string{"prod"})
+	testutil.AssertSlice(t, s.GetEntityTags("host", "host-1"), []string{"prod"})
 }
 
 func TestKnownTagsReturnsUniqueSortedTagsAcrossAgents(t *testing.T) {
@@ -89,7 +91,7 @@ func TestKnownTagsReturnsUniqueSortedTagsAcrossAgents(t *testing.T) {
 		t.Fatalf("SetAgentTags returned error: %v", err)
 	}
 
-	assertStringSlice(t, s.KnownTags(), []string{"dev", "prod", "qa"})
+	testutil.AssertSlice(t, s.KnownTags(), []string{"dev", "prod", "qa"})
 }
 
 func TestTagsPersistAndLoad(t *testing.T) {
@@ -104,16 +106,16 @@ func TestTagsPersistAndLoad(t *testing.T) {
 		t.Fatalf("load returned error: %v", err)
 	}
 
-	assertStringSlice(t, loaded.GetAgentTags("agent-1"), []string{"prod"})
+	testutil.AssertSlice(t, loaded.GetAgentTags("agent-1"), []string{"prod"})
 }
 
 func TestLegacyAgentTagsLoadThroughAgentAndEntityApis(t *testing.T) {
 	s := newTestService(t)
 	s.tags["agent-1"] = []string{"prod"}
 
-	assertStringSlice(t, s.GetAgentTags("agent-1"), []string{"prod"})
-	assertStringSlice(t, s.GetEntityTags("agent", "agent-1"), []string{"prod"})
-	assertStringSlice(t, s.GetAllTags()["agent-1"], []string{"prod"})
+	testutil.AssertSlice(t, s.GetAgentTags("agent-1"), []string{"prod"})
+	testutil.AssertSlice(t, s.GetEntityTags("agent", "agent-1"), []string{"prod"})
+	testutil.AssertSlice(t, s.GetAllTags()["agent-1"], []string{"prod"})
 }
 
 func TestSetAgentColorRejectsUnknownColors(t *testing.T) {
@@ -192,16 +194,4 @@ func TestLegacyAgentColorsLoadThroughAgentAndEntityApis(t *testing.T) {
 func newTestService(t *testing.T) *Service {
 	t.Helper()
 	return New(t.TempDir())
-}
-
-func assertStringSlice(t *testing.T, got, want []string) {
-	t.Helper()
-	if len(got) != len(want) {
-		t.Fatalf("len(%v) = %d, want %d", got, len(got), len(want))
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("slice[%d] = %q, want %q (full slice %v)", i, got[i], want[i], got)
-		}
-	}
 }

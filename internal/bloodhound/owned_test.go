@@ -23,7 +23,6 @@ type ownedServer struct {
 	postBody string   // last recorded POST body
 	deletes  []string // recorded DELETE paths
 	created  string   // JSON returned for POST (201)
-	tagCount int
 }
 
 func (s *ownedServer) handler() http.Handler {
@@ -130,11 +129,11 @@ func TestMarkOwnedInvalidatesCorrelationCache(t *testing.T) {
 	searchCalls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.URL.Path == "/api/v2/search":
+		switch r.URL.Path {
+		case "/api/v2/search":
 			searchCalls++
 			_, _ = w.Write([]byte(`{"data":[{"name":"PC1.CORP.LOCAL","objectid":"S-1-5-21-999","type":"Computer"}]}`))
-		case r.URL.Path == "/api/v2/graphs/cypher":
+		case "/api/v2/graphs/cypher":
 			_, _ = w.Write([]byte(`{"data":{"nodes":{},"edges":[]}}`))
 		default:
 			state.handler().ServeHTTP(w, r)

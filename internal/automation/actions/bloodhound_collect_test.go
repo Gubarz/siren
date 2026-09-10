@@ -59,7 +59,7 @@ func runContext(t *testing.T, ctx context.Context, starter *fakeCollector) (*aut
 		Deps: automation.ActionDeps{Collector: starter},
 	}
 	rc.Log = func(args ...any) {
-		output.WriteString(fmt.Sprint(args...))
+		fmt.Fprint(&output, args...)
 	}
 	return rc, &output
 }

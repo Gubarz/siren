@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"siren/internal/testutil"
 )
 
 // fakeIngestServer emulates the collection-upload endpoints with a mutable
@@ -137,7 +139,7 @@ func TestWatchIngestJobCompletes(t *testing.T) {
 	}()
 
 	// First polls observe "ingesting" (6), then flip to complete (2).
-	waitFor(t, "watch progress event", func() bool {
+	testutil.WaitFor(t, "watch progress event", func() bool {
 		return len(b.ofType("bloodhound.ingest.job.progress")) >= 1
 	})
 	f.setStatus(2)

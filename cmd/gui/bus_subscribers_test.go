@@ -11,8 +11,8 @@ import (
 	knownagents "siren/internal/localstate/agents"
 )
 
-func TestKnownAgentFromEventPayload(t *testing.T) {
-	payload := map[string]interface{}{
+func sessionOpenedPayload() map[string]interface{} {
+	return map[string]interface{}{
 		"sessionID":     "sess-a",
 		"name":          "name-a",
 		"hostname":      "host-a",
@@ -22,6 +22,10 @@ func TestKnownAgentFromEventPayload(t *testing.T) {
 		"remoteAddress": "10.0.0.1:443",
 		"transport":     "mtls",
 	}
+}
+
+func TestKnownAgentFromEventPayload(t *testing.T) {
+	payload := sessionOpenedPayload()
 	got, ok := knownAgentFromEventPayload(payload)
 	if !ok {
 		t.Fatal("knownAgentFromEventPayload() ok = false, want true")
@@ -75,58 +79,48 @@ func recvEmission(t *testing.T, ch <-chan emission) emission {
 	}
 }
 
+func captureEmission(known *knownagents.Service, emissions chan<- emission) func(string, any) {
+	return func(_ string, payload any) {
+		p, _ := payload.(map[string]interface{})
+		list := known.List()
+		status := ""
+		if len(list) > 0 {
+			status = list[0].Status
+		}
+		emissions <- emission{payload: p, status: status}
+	}
+}
+
+func publishAndExpectEmission(t *testing.T, b bus.Bus, emissions <-chan emission, ev bus.Event, wantType, wantStatus, statusNote string) {
+	t.Helper()
+	b.Publish(ev)
+	got := recvEmission(t, emissions)
+	if got.payload["type"] != wantType {
+		t.Fatalf("payload type = %v, want %s", got.payload["type"], wantType)
+	}
+	if got.status != wantStatus {
+		t.Fatalf("status at emit = %q, want %s %s", got.status, wantStatus, statusNote)
+	}
+}
+
 func TestHandleSliverEventTracksSessionLifecycleBeforeEmitting(t *testing.T) {
 	known := knownagents.New(t.TempDir())
 	emissions := make(chan emission, 4)
-	deps := sliverEventDeps{
-		known: known,
-		emit: func(_ string, payload any) {
-			p, _ := payload.(map[string]interface{})
-			list := known.List()
-			status := ""
-			if len(list) > 0 {
-				status = list[0].Status
-			}
-			emissions <- emission{payload: p, status: status}
-		},
-	}
+	deps := sliverEventDeps{known: known, emit: captureEmission(known, emissions)}
 
 	b := bus.New()
 	unsub := b.Subscribe(nil, func(ev bus.Event) { handleSliverEvent(deps, ev) })
 	defer unsub()
 
-	b.Publish(bus.Event{
-		Type: "sliver." + consts.SessionOpenedEvent,
-		Payload: map[string]interface{}{
-			"sessionID":     "sess-a",
-			"name":          "name-a",
-			"hostname":      "host-a",
-			"username":      "user-a",
-			"os":            "linux",
-			"arch":          "amd64",
-			"remoteAddress": "10.0.0.1:443",
-			"transport":     "mtls",
-		},
-	})
-	opened := recvEmission(t, emissions)
-	if opened.payload["type"] != "session-connected" {
-		t.Fatalf("opened payload type = %v, want session-connected", opened.payload["type"])
-	}
-	if opened.status != "active" {
-		t.Fatalf("status at emit = %q, want active (observed before emit)", opened.status)
-	}
+	publishAndExpectEmission(t, b, emissions, bus.Event{
+		Type:    "sliver." + consts.SessionOpenedEvent,
+		Payload: sessionOpenedPayload(),
+	}, "session-connected", "active", "(observed before emit)")
 
-	b.Publish(bus.Event{
+	publishAndExpectEmission(t, b, emissions, bus.Event{
 		Type:    "sliver." + consts.SessionClosedEvent,
 		Payload: map[string]interface{}{"sessionID": "sess-a"},
-	})
-	closed := recvEmission(t, emissions)
-	if closed.payload["type"] != "session-disconnected" {
-		t.Fatalf("closed payload type = %v, want session-disconnected", closed.payload["type"])
-	}
-	if closed.status != "lost" {
-		t.Fatalf("status at emit = %q, want lost (marked before emit)", closed.status)
-	}
+	}, "session-disconnected", "lost", "(marked before emit)")
 
 	list := known.List()
 	if len(list) != 1 || list[0].ID != "sess-a" || list[0].Status != "lost" {

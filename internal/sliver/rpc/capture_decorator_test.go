@@ -106,6 +106,27 @@ func TestCaptureDecoratorSkipsPollRPCs(t *testing.T) {
 	}
 }
 
+func waitForCompletion(t *testing.T, st *store.Store, chainRef string) []store.RecordRow {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	var comps []store.RecordRow
+	for time.Now().Before(deadline) {
+		var err error
+		comps, err = st.Query(store.Filter{
+			Kind: store.KindCall, Direction: store.DirectionComplete,
+			ChainRef: chainRef, Limit: 10,
+		})
+		if err != nil {
+			t.Fatalf("query: %v", err)
+		}
+		if len(comps) > 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return comps
+}
+
 func TestEndCallOnContextDoneRecordsCanceled(t *testing.T) {
 	key := make([]byte, 32)
 	st, err := store.Open(store.Config{DBPath: filepath.Join(t.TempDir(), "cancel.sqlite"), Key: key})
@@ -127,26 +148,11 @@ func TestEndCallOnContextDoneRecordsCanceled(t *testing.T) {
 	if err != nil || len(env) != 1 {
 		t.Fatalf("envelope: %v %+v", err, env)
 	}
-	chainRef := env[0].ChainRef
 
 	endCallOnContextDone(call, ctx)
 	cancel()
 
-	deadline := time.Now().Add(5 * time.Second)
-	var comps []store.RecordRow
-	for time.Now().Before(deadline) {
-		comps, err = st.Query(store.Filter{
-			Kind: store.KindCall, Direction: store.DirectionComplete,
-			ChainRef: chainRef, Limit: 10,
-		})
-		if err != nil {
-			t.Fatalf("query: %v", err)
-		}
-		if len(comps) > 0 {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	comps := waitForCompletion(t, st, env[0].ChainRef)
 	if len(comps) != 1 {
 		t.Fatalf("completions = %d, want 1", len(comps))
 	}
