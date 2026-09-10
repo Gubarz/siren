@@ -31,7 +31,11 @@ type detachedAgentTabEnvelope struct {
 type detachedAgentTab struct {
 	payload string
 	tabType string
-	window  *application.WebviewWindow
+	// window and reattach are guarded by App.detachedMu. reattach records that
+	// the tab was reattached while its window was still being created, so the
+	// detach path closes it instead of showing it.
+	window   *application.WebviewWindow
+	reattach bool
 }
 
 // DetachAgentTab creates a standalone Wails window that loads the frontend in
@@ -52,6 +56,28 @@ func (a *App) DetachAgentTab(payload string, x, y int) (string, error) {
 	a.detachedTabs[token] = record
 	a.detachedMu.Unlock()
 
+	options := a.detachedWindowOptions(token, envelope, x, y)
+	window := a.wails.Window.NewWithOptions(options)
+	a.detachedMu.Lock()
+	record.window = window
+	closeEarly := record.reattach
+	a.detachedMu.Unlock()
+	window.OnWindowEvent(wailsevents.Common.WindowClosing, func(_ *application.WindowEvent) {
+		a.detachedAgentTabClosed(token)
+	})
+	a.registerFileDropWindow(window)
+	if closeEarly {
+		// A reattach landed while the window was being created; without this it
+		// would be left open with its record already gone.
+		window.Close()
+		return token, nil
+	}
+	window.Show()
+	return token, nil
+}
+
+// detachedWindowOptions builds the standalone window for a detached tab.
+func (a *App) detachedWindowOptions(token string, envelope detachedAgentTabEnvelope, x, y int) application.WebviewWindowOptions {
 	options := application.WebviewWindowOptions{
 		Name:             "agent-tab-" + token,
 		Title:            envelope.Tab.Label,
@@ -69,17 +95,7 @@ func (a *App) DetachAgentTab(payload string, x, y int) (string, error) {
 		options.InitialPosition = application.WindowXY
 		options.X, options.Y = a.detachedWindowPosition(x, y)
 	}
-
-	window := a.wails.Window.NewWithOptions(options)
-	a.detachedMu.Lock()
-	record.window = window
-	a.detachedMu.Unlock()
-	window.OnWindowEvent(wailsevents.Common.WindowClosing, func(_ *application.WindowEvent) {
-		a.detachedAgentTabClosed(token)
-	})
-	a.registerFileDropWindow(window)
-	window.Show()
-	return token, nil
+	return options
 }
 
 func (a *App) detachedWindowPosition(cursorX, cursorY int) (int, int) {
@@ -108,26 +124,42 @@ func (a *App) GetDetachedAgentTab(token string) (string, error) {
 	return record.payload, nil
 }
 
+// takeDetachedTab removes token from the registry and reports the window that
+// owns it. window is nil when the window had not been created yet, in which
+// case the record is marked so the detach path closes it as soon as it exists.
+func (a *App) takeDetachedTab(token string) (record *detachedAgentTab, window *application.WebviewWindow) {
+	a.detachedMu.Lock()
+	defer a.detachedMu.Unlock()
+	record = a.detachedTabs[token]
+	if record == nil {
+		return nil, nil
+	}
+	delete(a.detachedTabs, token)
+	if record.window == nil {
+		record.reattach = true
+		return record, nil
+	}
+	return record, record.window
+}
+
 // ReattachAgentTab returns a standalone tab to the main workspace and closes
 // its auxiliary window. Removing the record first distinguishes this from a
 // normal close, which releases the detached tab instead.
 func (a *App) ReattachAgentTab(token string) error {
-	a.detachedMu.Lock()
-	record := a.detachedTabs[token]
-	if record != nil {
-		delete(a.detachedTabs, token)
-	}
-	a.detachedMu.Unlock()
+	record, window := a.takeDetachedTab(token)
 	if record == nil {
 		return fmt.Errorf("detached agent tab was not found")
 	}
 
 	a.bridge.Emit("agent-tab-reattach", record.payload)
+	if window == nil {
+		return nil
+	}
+	// Close the pointer captured under the lock: reading record.window here
+	// raced with the detach path assigning it.
 	go func() {
 		time.Sleep(50 * time.Millisecond)
-		if record.window != nil {
-			record.window.Close()
-		}
+		window.Close()
 	}()
 	return nil
 }
