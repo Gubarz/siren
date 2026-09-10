@@ -28,6 +28,7 @@ type TaskPayloadView struct {
 	Preview   string `json:"preview"`
 	JSON      string `json:"json"`
 	Base64    string `json:"base64"`
+	Kind      string `json:"kind"`
 }
 
 func (a *App) ListSessionTasks(sessionID string, limit int) ([]SessionTaskView, error) {
@@ -136,10 +137,10 @@ func getTaskCallPayloads(st *store.Store, chainRef string) ([]TaskPayloadView, e
 		if err != nil {
 			return nil, err
 		}
-		js, b64 := tasksview.Decode(row.Method, row.Direction, payload)
+		js, b64, kind := tasksview.Decode(row.Method, row.Direction, payload)
 		out = append(out, TaskPayloadView{
 			Direction: row.Direction, TS: row.TS, Preview: row.JSON,
-			JSON: js, Base64: b64,
+			JSON: js, Base64: b64, Kind: kind,
 		})
 	}
 	return out, nil

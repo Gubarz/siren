@@ -44,7 +44,7 @@ func seedTask(t *testing.T, st *store.Store) seededTask {
 	ctx := execctx.WithRun(context.Background(), "run-5", "stage-1")
 	rec := capture.NewRecorder(st, captureann.New("op"))
 	req, err := proto.Marshal(&sliverpb.LsReq{
-		Path:    "/tmp",
+		Path:    "/test/dir",
 		Request: &commonpb.Request{SessionID: "sess-9"},
 	})
 	if err != nil {
@@ -56,8 +56,8 @@ func seedTask(t *testing.T, st *store.Store) seededTask {
 	}
 	call.Message(store.DirectionRequest, req, "")
 	resp, err := proto.Marshal(&sliverpb.Ls{
-		Path:  "/tmp",
-		Files: []*sliverpb.FileInfo{{Name: "a.txt", Size: 3}},
+		Path:  "/test/dir",
+		Files: []*sliverpb.FileInfo{{Name: "file-a.txt", Size: 3}},
 	})
 	if err != nil {
 		t.Fatalf("marshal response: %v", err)
@@ -192,8 +192,11 @@ func TestGetTaskCallPayloads(t *testing.T) {
 			response = v
 		}
 	}
-	if !strings.Contains(response.JSON, `"a.txt"`) {
+	if !strings.Contains(response.JSON, `"file-a.txt"`) {
 		t.Fatalf("response json = %s", response.JSON)
+	}
+	if response.Kind != "files" {
+		t.Fatalf("response kind = %q, want files", response.Kind)
 	}
 	raw, err := base64.StdEncoding.DecodeString(response.Base64)
 	if err != nil {
@@ -203,7 +206,54 @@ func TestGetTaskCallPayloads(t *testing.T) {
 	if err := proto.Unmarshal(raw, &ls); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if len(ls.Files) != 1 || ls.Files[0].Name != "a.txt" {
+	if len(ls.Files) != 1 || ls.Files[0].Name != "file-a.txt" {
 		t.Fatalf("decoded ls = %+v", &ls)
+	}
+}
+
+func TestGetTaskCallPayloadsProcessesKind(t *testing.T) {
+	st := openTaskStore(t)
+	ctx := context.Background()
+	rec := capture.NewRecorder(st, captureann.New("op"))
+	req, err := proto.Marshal(&sliverpb.PsReq{Request: &commonpb.Request{SessionID: "sess-9"}})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	call := rec.Begin(ctx, "/rpcpb.SliverRPC/Ps", req)
+	if call == nil {
+		t.Fatal("begin returned nil")
+	}
+	call.Message(store.DirectionRequest, req, "")
+	resp, err := proto.Marshal(&sliverpb.Ps{
+		Processes: []*commonpb.Process{{Pid: 1, Ppid: 2, Executable: "proc-a", Owner: "user-a"}},
+	})
+	if err != nil {
+		t.Fatalf("marshal response: %v", err)
+	}
+	call.Message(store.DirectionResponse, resp, "")
+	call.End(nil)
+
+	env, err := st.Query(store.Filter{
+		Kind: store.KindCall, Direction: store.DirectionRequest, Limit: 1,
+	})
+	if err != nil || len(env) != 1 {
+		t.Fatalf("envelope: %v %+v", err, env)
+	}
+	views, err := getTaskCallPayloads(st, env[0].ChainRef)
+	if err != nil {
+		t.Fatalf("payloads: %v", err)
+	}
+	if len(views) != 2 {
+		t.Fatalf("views = %d, want 2", len(views))
+	}
+	if views[0].Kind != "json" {
+		t.Fatalf("request kind = %q, want json", views[0].Kind)
+	}
+	response := views[1]
+	if response.Kind != "processes" {
+		t.Fatalf("response kind = %q, want processes", response.Kind)
+	}
+	if !strings.Contains(response.JSON, `"Processes"`) || !strings.Contains(response.JSON, `"proc-a"`) {
+		t.Fatalf("response json = %s", response.JSON)
 	}
 }
