@@ -22,13 +22,16 @@
             try { preference = localStorage.getItem('sliver-theme') || 'system'; } catch(e) {}
             var resolved = preference;
             if (preference === 'system') {
-                try {
-                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-                        resolved = 'light';
-                    } else {
-                        resolved = 'dark';
-                    }
-                } catch(e) {}
+                try { resolved = localStorage.getItem('sliver-resolved-theme') || ''; } catch(e) {}
+                if (resolved !== 'dark' && resolved !== 'light') {
+                    try {
+                        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                            resolved = 'light';
+                        } else {
+                            resolved = 'dark';
+                        }
+                    } catch(e) { resolved = 'dark'; }
+                }
             }
             document.documentElement.setAttribute('data-theme', resolved);
         })();
