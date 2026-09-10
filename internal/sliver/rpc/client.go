@@ -283,33 +283,25 @@ func (c *Client) PopulateBeacons(b *clientpb.Beacons) {
 }
 
 func (c *Client) LookupSession(id string) *clientpb.Session {
-	c.cacheMu.RLock()
-	defer c.cacheMu.RUnlock()
-	for _, s := range c.cachedSessions {
-		if s.ID == id {
-			return s
-		}
-	}
-	return nil
+	return findCached(&c.cacheMu, c.cachedSessions, func(s *clientpb.Session) bool { return s.ID == id })
 }
 
 func (c *Client) LookupBeacon(id string) *clientpb.Beacon {
-	c.cacheMu.RLock()
-	defer c.cacheMu.RUnlock()
-	for _, b := range c.cachedBeacons {
-		if b.ID == id {
-			return b
-		}
-	}
-	return nil
+	return findCached(&c.cacheMu, c.cachedBeacons, func(b *clientpb.Beacon) bool { return b.ID == id })
 }
 
 func (c *Client) LookupSessionByBeaconName(name string) *clientpb.Session {
-	c.cacheMu.RLock()
-	defer c.cacheMu.RUnlock()
-	for _, s := range c.cachedSessions {
-		if s.Name == name {
-			return s
+	return findCached(&c.cacheMu, c.cachedSessions, func(s *clientpb.Session) bool { return s.Name == name })
+}
+
+// findCached returns the first cached pointer matching match, or nil. It holds
+// cacheMu for the scan; the returned pointer is the cached element itself.
+func findCached[T any](mu *sync.RWMutex, items []*T, match func(*T) bool) *T {
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, item := range items {
+		if match(item) {
+			return item
 		}
 	}
 	return nil

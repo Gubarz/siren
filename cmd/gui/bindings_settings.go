@@ -26,13 +26,7 @@ func (a *App) GetEnvInfo() envvars.EnvInfo {
 }
 
 func (a *App) SetDataDirOverride(dir string) error {
-	rootDir := assets.GetRootAppDir()
-	cfg, _ := envvars.LoadGUIConfig(rootDir)
-	cfg.DataDirOverride = dir
-	if _, err := envvars.MustDir(dir); err != nil {
-		return err
-	}
-	return envvars.SaveGUIConfig(rootDir, cfg)
+	return setDirOverride(dir, func(cfg *envvars.GUIConfig) { cfg.DataDirOverride = dir })
 }
 
 func (a *App) ClearDataDirOverride() error {
@@ -43,9 +37,15 @@ func (a *App) ClearDataDirOverride() error {
 }
 
 func (a *App) SetLogDirOverride(dir string) error {
+	return setDirOverride(dir, func(cfg *envvars.GUIConfig) { cfg.LogDirOverride = dir })
+}
+
+// setDirOverride persists the mutated GUI config only when dir exists or can
+// be created.
+func setDirOverride(dir string, apply func(*envvars.GUIConfig)) error {
 	rootDir := assets.GetRootAppDir()
 	cfg, _ := envvars.LoadGUIConfig(rootDir)
-	cfg.LogDirOverride = dir
+	apply(cfg)
 	if _, err := envvars.MustDir(dir); err != nil {
 		return err
 	}

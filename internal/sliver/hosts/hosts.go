@@ -29,45 +29,55 @@ func New(rpc *rpc.Client) *Service {
 
 func (s *Service) Close() {}
 
-func (s *Service) List() (*clientpb.AllHosts, error) {
+func (s *Service) client() (hostRPC, error) {
 	if !s.rpc.Connected() {
 		return nil, rpc.ErrNotConnected
 	}
-	return s.rpc.Hosts(context.Background(), &commonpb.Empty{})
+	return s.rpc, nil
+}
+
+func (s *Service) List() (*clientpb.AllHosts, error) {
+	c, err := s.client()
+	if err != nil {
+		return nil, err
+	}
+	return c.Hosts(context.Background(), &commonpb.Empty{})
 }
 
 func (s *Service) Get(hostUUID string) (*clientpb.Host, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
+	c, err := s.client()
+	if err != nil {
+		return nil, err
 	}
 	hostUUID = strings.TrimSpace(hostUUID)
 	if hostUUID == "" {
 		return nil, fmt.Errorf("host UUID is required")
 	}
-	return s.rpc.Host(context.Background(), &clientpb.Host{HostUUID: hostUUID})
+	return c.Host(context.Background(), &clientpb.Host{HostUUID: hostUUID})
 }
 
 func (s *Service) Remove(hostUUID string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	hostUUID = strings.TrimSpace(hostUUID)
-	if hostUUID == "" {
-		return fmt.Errorf("host UUID is required")
-	}
-	_, err := s.rpc.HostRm(context.Background(), &clientpb.Host{HostUUID: hostUUID})
-	return err
+	return removeTarget(s, hostUUID, "host UUID", hostRPC.HostRm, &clientpb.Host{HostUUID: strings.TrimSpace(hostUUID)})
 }
 
 func (s *Service) RemoveIOC(iocID string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	return removeTarget(s, iocID, "IOC ID", hostRPC.HostIOCRm, &clientpb.IOC{ID: strings.TrimSpace(iocID)})
+}
+
+func removeTarget[Req any](
+	s *Service,
+	id, label string,
+	method func(hostRPC, context.Context, Req) (*commonpb.Empty, error),
+	req Req,
+) error {
+	c, err := s.client()
+	if err != nil {
+		return err
 	}
-	iocID = strings.TrimSpace(iocID)
-	if iocID == "" {
-		return fmt.Errorf("IOC ID is required")
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("%s is required", label)
 	}
-	_, err := s.rpc.HostIOCRm(context.Background(), &clientpb.IOC{ID: iocID})
+	_, err = method(c, context.Background(), req)
 	return err
 }
 

@@ -127,42 +127,17 @@ func (s *Service) Observe(records []Record) error {
 		if in.ID == "" {
 			continue
 		}
-		existing, ok := s.records[in.ID]
-		if !ok {
-			r := in
-			r.Status = statusActive
-			r.FirstSeen = now
-			r.LastSeen = now
-			r.LostAt = 0
-			s.records[in.ID] = &r
+		if _, ok := s.records[in.ID]; !ok {
+			s.records[in.ID] = newObservedRecord(in, now)
 			touched = append(touched, in.ID)
 			dirty = true
 			continue
 		}
-		if existing.Status == statusRemoved {
+		if s.records[in.ID].Status == statusRemoved {
 			continue
 		}
 		touched = append(touched, in.ID)
-		if existing.Kind != in.Kind ||
-			existing.Name != in.Name ||
-			existing.Hostname != in.Hostname ||
-			existing.Username != in.Username ||
-			existing.OS != in.OS ||
-			existing.Arch != in.Arch ||
-			existing.RemoteAddress != in.RemoteAddress ||
-			existing.Transport != in.Transport {
-			dirty = true
-		}
-		existing.Kind = in.Kind
-		existing.Name = in.Name
-		existing.Hostname = in.Hostname
-		existing.Username = in.Username
-		existing.OS = in.OS
-		existing.Arch = in.Arch
-		existing.RemoteAddress = in.RemoteAddress
-		existing.Transport = in.Transport
-		existing.LastSeen = now
-		if now-s.persistedAt[in.ID] >= lastSeenPersistInterval.Milliseconds() {
+		if s.updateObservedRecord(in, now) {
 			dirty = true
 		}
 	}
@@ -176,6 +151,40 @@ func (s *Service) Observe(records []Record) error {
 		s.persistedAt[id] = now
 	}
 	return nil
+}
+
+func newObservedRecord(in Record, now int64) *Record {
+	r := in
+	r.Status = statusActive
+	r.FirstSeen = now
+	r.LastSeen = now
+	r.LostAt = 0
+	return &r
+}
+
+func (s *Service) updateObservedRecord(in Record, now int64) bool {
+	existing := s.records[in.ID]
+	dirty := existing.Kind != in.Kind ||
+		existing.Name != in.Name ||
+		existing.Hostname != in.Hostname ||
+		existing.Username != in.Username ||
+		existing.OS != in.OS ||
+		existing.Arch != in.Arch ||
+		existing.RemoteAddress != in.RemoteAddress ||
+		existing.Transport != in.Transport
+	existing.Kind = in.Kind
+	existing.Name = in.Name
+	existing.Hostname = in.Hostname
+	existing.Username = in.Username
+	existing.OS = in.OS
+	existing.Arch = in.Arch
+	existing.RemoteAddress = in.RemoteAddress
+	existing.Transport = in.Transport
+	existing.LastSeen = now
+	if now-s.persistedAt[in.ID] >= lastSeenPersistInterval.Milliseconds() {
+		dirty = true
+	}
+	return dirty
 }
 
 func (s *Service) MarkLost(id string) error {

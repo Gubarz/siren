@@ -1,17 +1,17 @@
 package implants
 
 import (
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 // isEmptyRecordErr reports whether err is the gRPC NotFound the Sliver server
@@ -28,10 +28,7 @@ func isEmptyRecordErr(err error) bool {
 }
 
 func (s *Service) GetImplantBuilds() (*clientpb.ImplantBuilds, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	builds, err := s.rpc.RPC.ImplantBuilds(context.Background(), &commonpb.Empty{})
+	builds, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.ImplantBuilds, &commonpb.Empty{})
 	if isEmptyRecordErr(err) {
 		return &clientpb.ImplantBuilds{Configs: map[string]*clientpb.ImplantConfig{}}, nil
 	}
@@ -39,18 +36,12 @@ func (s *Service) GetImplantBuilds() (*clientpb.ImplantBuilds, error) {
 }
 
 func (s *Service) DeleteImplantBuild(name string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.DeleteImplantBuild(context.Background(), &clientpb.DeleteReq{Name: name})
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.DeleteImplantBuild, &clientpb.DeleteReq{Name: name})
 	return err
 }
 
 func (s *Service) GetProfiles() (*clientpb.ImplantProfiles, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	profiles, err := s.rpc.RPC.ImplantProfiles(context.Background(), &commonpb.Empty{})
+	profiles, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.ImplantProfiles, &commonpb.Empty{})
 	if isEmptyRecordErr(err) {
 		return &clientpb.ImplantProfiles{Profiles: []*clientpb.ImplantProfile{}}, nil
 	}
@@ -58,18 +49,12 @@ func (s *Service) GetProfiles() (*clientpb.ImplantProfiles, error) {
 }
 
 func (s *Service) DeleteProfile(name string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.DeleteImplantProfile(context.Background(), &clientpb.DeleteReq{Name: name})
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.DeleteImplantProfile, &clientpb.DeleteReq{Name: name})
 	return err
 }
 
 func (s *Service) Regenerate(name string) (string, error) {
-	if !s.rpc.Connected() {
-		return "", rpc.ErrNotConnected
-	}
-	resp, err := s.rpc.RPC.Regenerate(context.Background(), &clientpb.RegenerateReq{ImplantName: name})
+	resp, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.Regenerate, &clientpb.RegenerateReq{ImplantName: name})
 	if err != nil {
 		return "", err
 	}

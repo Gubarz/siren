@@ -34,12 +34,21 @@ func (bloodhoundCollect) Execute(rc *automation.RunContext) error {
 	if rc.Deps.Collector == nil {
 		return fmt.Errorf("bloodhound: collection is not available")
 	}
-	cfg := rc.Action.Config
+	req := collectorRequestFromConfig(rc.Action.Config)
+	id, err := rc.Deps.Collector.StartCollection(rc.Ctx, rc.Target.ID, rc.Target.Kind, rc.Target.OS, req)
+	if err != nil {
+		return err
+	}
+	rc.Log("bloodhound collection started: ", id)
+	return awaitCollectionCompletion(rc, id, req.TimeoutSeconds)
+}
+
+func collectorRequestFromConfig(cfg map[string]any) automation.CollectorRequest {
 	collector := cfgString("collector", cfg)
 	if strings.TrimSpace(collector) == "" {
 		collector = "sharphound"
 	}
-	req := automation.CollectorRequest{
+	return automation.CollectorRequest{
 		Collector:      strings.ToLower(strings.TrimSpace(collector)),
 		Methods:        splitCommaList(cfgString("methods", cfg), "Default"),
 		Flags:          strings.Fields(cfgString("flags", cfg)),
@@ -48,14 +57,10 @@ func (bloodhoundCollect) Execute(rc *automation.RunContext) error {
 		Ingest:         cfgBoolOr(cfg, "autoIngest", true),
 		Loot:           cfgBoolOr(cfg, "archiveLoot", true),
 	}
+}
 
-	id, err := rc.Deps.Collector.StartCollection(rc.Ctx, rc.Target.ID, rc.Target.Kind, rc.Target.OS, req)
-	if err != nil {
-		return err
-	}
-	rc.Log("bloodhound collection started: ", id)
-
-	timeout := time.Duration(req.TimeoutSeconds) * time.Second
+func awaitCollectionCompletion(rc *automation.RunContext, id string, timeoutSeconds int) error {
+	timeout := time.Duration(timeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 15 * time.Minute
 	}

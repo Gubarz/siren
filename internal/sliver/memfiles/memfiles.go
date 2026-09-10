@@ -1,12 +1,11 @@
 package memfiles
 
 import (
-	"context"
-
-	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type Service struct {
@@ -20,29 +19,13 @@ func New(rpc *rpc.Client) *Service {
 func (s *Service) Close() {}
 
 func (s *Service) List(sessionID string) (*sliverpb.Ls, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.MemfilesList(context.Background(), &sliverpb.MemfilesListReq{
-		Request: &commonpb.Request{SessionID: sessionID},
-	})
+	return rpcwrap.CallTarget(s.rpc, rpcpb.SliverRPCClient.MemfilesList, &sliverpb.MemfilesListReq{}, sessionID)
 }
 
 func (s *Service) Add(sessionID string) (*sliverpb.MemfilesAdd, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.MemfilesAdd(context.Background(), &sliverpb.MemfilesAddReq{
-		Request: &commonpb.Request{SessionID: sessionID},
-	})
+	return rpcwrap.CallTarget(s.rpc, rpcpb.SliverRPCClient.MemfilesAdd, &sliverpb.MemfilesAddReq{}, sessionID)
 }
 
 func (s *Service) Remove(sessionID string, fd int64) (*sliverpb.MemfilesRm, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.MemfilesRm(context.Background(), &sliverpb.MemfilesRmReq{
-		Fd:      fd,
-		Request: &commonpb.Request{SessionID: sessionID},
-	})
+	return rpcwrap.CallTarget(s.rpc, rpcpb.SliverRPCClient.MemfilesRm, &sliverpb.MemfilesRmReq{Fd: fd}, sessionID)
 }

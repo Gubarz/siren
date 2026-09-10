@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -69,11 +69,11 @@ func (s *Service) GetNetworkDiscoveries() []NetworkDiscovery {
 			devices = append(devices, device)
 		}
 	}
-	sort.Slice(devices, func(i, j int) bool {
-		if devices[i].AgentID == devices[j].AgentID {
-			return devices[i].IP < devices[j].IP
+	slices.SortFunc(devices, func(a, b NetworkDiscovery) int {
+		if a.AgentID != b.AgentID {
+			return strings.Compare(a.AgentID, b.AgentID)
 		}
-		return devices[i].AgentID < devices[j].AgentID
+		return strings.Compare(a.IP, b.IP)
 	})
 	return devices
 }

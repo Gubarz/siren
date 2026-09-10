@@ -7,22 +7,17 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 
-	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 func (s *Service) GetCredentials() (*clientpb.Credentials, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.Creds(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.Creds, &commonpb.Empty{})
 }
 
 func (s *Service) AddCredential(username, plaintext, hash, collection string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CredsAdd(context.Background(), &clientpb.Credentials{
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CredsAdd, &clientpb.Credentials{
 		Credentials: []*clientpb.Credential{{
 			Username: username, Plaintext: plaintext,
 			Hash: hash, Collection: collection,
@@ -36,10 +31,7 @@ func (s *Service) AddCredential(username, plaintext, hash, collection string) er
 }
 
 func (s *Service) RemoveCredential(id string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CredsRm(context.Background(), &clientpb.Credentials{
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CredsRm, &clientpb.Credentials{
 		Credentials: []*clientpb.Credential{{ID: id}},
 	})
 	return err
@@ -61,13 +53,14 @@ type UpdateCredentialRequest struct {
 // merges by ID, so any zero fields overwrite prior values — the UI must
 // always send the full record it's showing.
 func (s *Service) UpdateCredential(req UpdateCredentialRequest) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return err
 	}
 	if strings.TrimSpace(req.ID) == "" {
 		return fmt.Errorf("credential ID is required")
 	}
-	_, err := s.rpc.RPC.CredsUpdate(context.Background(), &clientpb.Credentials{
+	_, err = c.RPC.CredsUpdate(context.Background(), &clientpb.Credentials{
 		Credentials: []*clientpb.Credential{{
 			ID:         req.ID,
 			Username:   req.Username,
@@ -84,22 +77,13 @@ func (s *Service) UpdateCredential(req UpdateCredentialRequest) error {
 // GetCredentialByID pulls a single credential — used by the detail drawer
 // so we don't have to re-fetch the whole list to refresh one row.
 func (s *Service) GetCredentialByID(id string) (*clientpb.Credential, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	if strings.TrimSpace(id) == "" {
-		return nil, fmt.Errorf("credential ID is required")
-	}
-	return s.rpc.RPC.GetCredByID(context.Background(), &clientpb.Credential{ID: id})
+	return rpcwrap.CallRequired(s.rpc, rpcpb.SliverRPCClient.GetCredByID, &clientpb.Credential{ID: id}, id, "credential ID")
 }
 
 // GetCredentialsByHashType filters server-side by hash algorithm — cheaper
 // than pulling everything and filtering in the GUI when we've got 10k+ creds.
 func (s *Service) GetCredentialsByHashType(hashType int32) (*clientpb.Credentials, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.GetCredsByHashType(context.Background(), &clientpb.Credential{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.GetCredsByHashType, &clientpb.Credential{
 		HashType: clientpb.HashType(hashType),
 	})
 }
@@ -107,10 +91,7 @@ func (s *Service) GetCredentialsByHashType(hashType int32) (*clientpb.Credential
 // GetPlaintextCredentialsByHashType returns only cracked (plaintext-known)
 // creds of a given hash type — useful for spraying / pass-the-hash prep.
 func (s *Service) GetPlaintextCredentialsByHashType(hashType int32) (*clientpb.Credentials, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.GetPlaintextCredsByHashType(context.Background(), &clientpb.Credential{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.GetPlaintextCredsByHashType, &clientpb.Credential{
 		HashType: clientpb.HashType(hashType),
 	})
 }
@@ -118,11 +99,5 @@ func (s *Service) GetPlaintextCredentialsByHashType(hashType int32) (*clientpb.C
 // SniffCredentialHashType asks the server to classify a raw hash blob —
 // paste-and-detect flow so operators don't have to know the algorithm.
 func (s *Service) SniffCredentialHashType(hash string) (*clientpb.Credential, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	if strings.TrimSpace(hash) == "" {
-		return nil, fmt.Errorf("hash is required")
-	}
-	return s.rpc.RPC.CredsSniffHashType(context.Background(), &clientpb.Credential{Hash: hash})
+	return rpcwrap.CallRequired(s.rpc, rpcpb.SliverRPCClient.CredsSniffHashType, &clientpb.Credential{Hash: hash}, hash, "hash")
 }

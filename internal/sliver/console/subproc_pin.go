@@ -50,45 +50,27 @@ func pinSliverTargetCommands(base reefconsole.Commands, sessionID string, con *s
 			}, func() {})
 		}
 		if socksCmd := findTopLevelCommand(root, "socks5"); socksCmd != nil {
-			pinSocksCommand(socksCmd)
+			pinConsoleCommand(socksCmd, socksCommandLine)
 		}
 		if portfwdCmd := findTopLevelCommand(root, "portfwd"); portfwdCmd != nil {
-			pinPortfwdCommand(portfwdCmd)
+			pinConsoleCommand(portfwdCmd, portfwdCommandLine)
 		}
 		if rportfwdCmd := findTopLevelCommand(root, "rportfwd"); rportfwdCmd != nil {
-			pinRportfwdCommand(rportfwdCmd)
+			pinConsoleCommand(rportfwdCmd, rportfwdCommandLine)
 		}
 		return root
 	}
 }
 
-func pinSocksCommand(cmd *cobra.Command) {
+// pinConsoleCommand routes every invocation of cmd and its descendants to the
+// GUI as a console command frame instead of running the Sliver client action.
+func pinConsoleCommand(cmd *cobra.Command, commandLine func(*cobra.Command, []string) string) {
 	wrapCommandRun(cmd, func(command *cobra.Command, args []string) bool {
-		emitConsoleCommandFrame(socksCommandLine(command, args))
+		emitConsoleCommandFrame(commandLine(command, args))
 		return false
 	}, func() {})
 	for _, child := range cmd.Commands() {
-		pinSocksCommand(child)
-	}
-}
-
-func pinPortfwdCommand(cmd *cobra.Command) {
-	wrapCommandRun(cmd, func(command *cobra.Command, args []string) bool {
-		emitConsoleCommandFrame(portfwdCommandLine(command, args))
-		return false
-	}, func() {})
-	for _, child := range cmd.Commands() {
-		pinPortfwdCommand(child)
-	}
-}
-
-func pinRportfwdCommand(cmd *cobra.Command) {
-	wrapCommandRun(cmd, func(command *cobra.Command, args []string) bool {
-		emitConsoleCommandFrame(rportfwdCommandLine(command, args))
-		return false
-	}, func() {})
-	for _, child := range cmd.Commands() {
-		pinRportfwdCommand(child)
+		pinConsoleCommand(child, commandLine)
 	}
 }
 

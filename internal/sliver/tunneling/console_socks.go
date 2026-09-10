@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/kballard/go-shellquote"
@@ -123,26 +122,7 @@ func handleConsoleSocksStart(start func(string, string, string, string) (uint64,
 }
 
 func (s *Service) handleConsoleSocksStop(args []string) (string, error) {
-	flags := pflag.NewFlagSet("socks5 stop", pflag.ContinueOnError)
-	flags.SetOutput(&strings.Builder{})
-	id := flags.Uint64P("id", "i", 0, "")
-	if err := flags.Parse(args); err != nil {
-		return "", err
-	}
-	if *id == 0 && flags.NArg() > 0 {
-		parsed, err := strconv.ParseUint(flags.Arg(0), 10, 64)
-		if err != nil {
-			return "", fmt.Errorf("must specify a valid socks5 id")
-		}
-		*id = parsed
-	}
-	if *id == 0 {
-		return "", fmt.Errorf("must specify a valid socks5 id")
-	}
-	if err := s.StopSocks(*id); err != nil {
-		return "", err
-	}
-	return "[*] Removed socks5\n", nil
+	return removeProxy("socks5 stop", "socks5", "[*] Removed socks5\n", s.StopSocks, args)
 }
 
 func (s *Service) renderSocksList(sessionID string) string {

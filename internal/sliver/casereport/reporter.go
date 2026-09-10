@@ -201,20 +201,34 @@ func (r *reporter) agentLabel(agentID string) string {
 	}
 	ctx := context.Background()
 	if sessions, err := r.rpc.RPC.GetSessions(ctx, &commonpb.Empty{}); err == nil {
-		for _, sess := range sessions.GetSessions() {
-			if sess.GetID() == agentID || sess.GetUUID() == agentID {
-				return agentDisplayName(sess.GetUsername(), sess.GetHostname(), sess.GetID())
-			}
+		if label, ok := findAgentLabel(agentID, sessions.GetSessions()); ok {
+			return label
 		}
 	}
 	if beacons, err := r.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{}); err == nil {
-		for _, beacon := range beacons.GetBeacons() {
-			if beacon.GetID() == agentID || beacon.GetUUID() == agentID {
-				return agentDisplayName(beacon.GetUsername(), beacon.GetHostname(), beacon.GetID())
-			}
+		if label, ok := findAgentLabel(agentID, beacons.GetBeacons()); ok {
+			return label
 		}
 	}
 	return ""
+}
+
+type agentInfo interface {
+	GetID() string
+	GetUUID() string
+	GetUsername() string
+	GetHostname() string
+}
+
+// findAgentLabel matches an agent by ID or UUID. The bool distinguishes a
+// match with an empty display name from no match at all.
+func findAgentLabel[T agentInfo](agentID string, items []T) (string, bool) {
+	for _, item := range items {
+		if item.GetID() == agentID || item.GetUUID() == agentID {
+			return agentDisplayName(item.GetUsername(), item.GetHostname(), item.GetID()), true
+		}
+	}
+	return "", false
 }
 
 func shortID(id string) string {

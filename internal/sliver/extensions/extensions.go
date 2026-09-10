@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type Service struct {
@@ -27,10 +29,7 @@ func New(rpc *rpc.Client) *Service {
 func (s *Service) Close() {}
 
 func (s *Service) RegisterExtension(sessionID, name string, data []byte, os, init string) (*sliverpb.RegisterExtension, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.RegisterExtension(context.Background(), &sliverpb.RegisterExtensionReq{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.RegisterExtension, &sliverpb.RegisterExtensionReq{
 		Name:    name,
 		Data:    data,
 		OS:      os,
@@ -40,8 +39,9 @@ func (s *Service) RegisterExtension(sessionID, name string, data []byte, os, ini
 }
 
 func (s *Service) RegisterExtensionFromPath(sessionID, name, localPath, targetOS, init string) (*sliverpb.RegisterExtension, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return nil, err
 	}
 	data, err := os.ReadFile(localPath)
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *Service) RegisterExtensionFromPath(sessionID, name, localPath, targetOS
 	if name == "" {
 		name = filepath.Base(localPath)
 	}
-	return s.rpc.RPC.RegisterExtension(context.Background(), &sliverpb.RegisterExtensionReq{
+	return c.RPC.RegisterExtension(context.Background(), &sliverpb.RegisterExtensionReq{
 		Name:    name,
 		Data:    data,
 		OS:      targetOS,
@@ -60,19 +60,13 @@ func (s *Service) RegisterExtensionFromPath(sessionID, name, localPath, targetOS
 }
 
 func (s *Service) ListExtensions(sessionID string) (*sliverpb.ListExtensions, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.ListExtensions(context.Background(), &sliverpb.ListExtensionsReq{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.ListExtensions, &sliverpb.ListExtensionsReq{
 		Request: &commonpb.Request{SessionID: sessionID},
 	})
 }
 
 func (s *Service) CallExtension(sessionID, name, export string, args []byte, serverStore bool) (*sliverpb.CallExtension, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.CallExtension(context.Background(), &sliverpb.CallExtensionReq{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CallExtension, &sliverpb.CallExtensionReq{
 		Name:        name,
 		Export:      export,
 		Args:        args,
@@ -82,10 +76,7 @@ func (s *Service) CallExtension(sessionID, name, export string, args []byte, ser
 }
 
 func (s *Service) RegisterWasmExtension(sessionID, name string, wasmGz []byte) (*sliverpb.RegisterWasmExtension, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.RegisterWasmExtension(context.Background(), &sliverpb.RegisterWasmExtensionReq{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.RegisterWasmExtension, &sliverpb.RegisterWasmExtensionReq{
 		Name:    name,
 		WasmGz:  wasmGz,
 		Request: &commonpb.Request{SessionID: sessionID},
@@ -93,8 +84,9 @@ func (s *Service) RegisterWasmExtension(sessionID, name string, wasmGz []byte) (
 }
 
 func (s *Service) RegisterWasmExtensionFromPath(sessionID, name, localPath string) (*sliverpb.RegisterWasmExtension, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return nil, err
 	}
 	data, err := os.ReadFile(localPath)
 	if err != nil {
@@ -110,7 +102,7 @@ func (s *Service) RegisterWasmExtensionFromPath(sessionID, name, localPath strin
 	if name == "" {
 		name = filepath.Base(localPath)
 	}
-	return s.rpc.RPC.RegisterWasmExtension(context.Background(), &sliverpb.RegisterWasmExtensionReq{
+	return c.RPC.RegisterWasmExtension(context.Background(), &sliverpb.RegisterWasmExtensionReq{
 		Name:    name,
 		WasmGz:  wasmGz,
 		Request: &commonpb.Request{SessionID: sessionID},
@@ -138,19 +130,13 @@ func gzipWasmExtension(data []byte) ([]byte, error) {
 }
 
 func (s *Service) ListWasmExtensions(sessionID string) (*sliverpb.ListWasmExtensions, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.ListWasmExtensions(context.Background(), &sliverpb.ListWasmExtensionsReq{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.ListWasmExtensions, &sliverpb.ListWasmExtensionsReq{
 		Request: &commonpb.Request{SessionID: sessionID},
 	})
 }
 
 func (s *Service) ExecWasmExtension(sessionID, name string, args []string, interactive bool) (*sliverpb.ExecWasmExtension, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.ExecWasmExtension(context.Background(), &sliverpb.ExecWasmExtensionReq{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.ExecWasmExtension, &sliverpb.ExecWasmExtensionReq{
 		Name:        name,
 		Args:        args,
 		Interactive: interactive,

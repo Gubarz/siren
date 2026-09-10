@@ -7,9 +7,11 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 	"siren/internal/wailsadapter"
 )
 
@@ -31,17 +33,11 @@ func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 }
 
 func (s *Service) GetLoot() (*clientpb.AllLoot, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.LootAll(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.LootAll, &commonpb.Empty{})
 }
 
 func (s *Service) DownloadLoot(lootID string) (string, error) {
-	if !s.rpc.Connected() {
-		return "", rpc.ErrNotConnected
-	}
-	loot, err := s.rpc.RPC.LootContent(context.Background(), &clientpb.Loot{ID: lootID})
+	loot, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.LootContent, &clientpb.Loot{ID: lootID})
 	if err != nil {
 		return "", err
 	}
@@ -69,20 +65,14 @@ func (s *Service) DownloadLoot(lootID string) (string, error) {
 }
 
 func (s *Service) RemoveLoot(id string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.LootRm(context.Background(), &clientpb.Loot{ID: id})
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.LootRm, &clientpb.Loot{ID: id})
 	return err
 }
 
 const maxPreviewBytes = 1 << 20 // 1 MiB
 
 func (s *Service) Add(ctx context.Context, name string, fileType clientpb.FileType, data []byte) (*clientpb.Loot, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	resp, err := s.rpc.RPC.LootAdd(ctx, &clientpb.Loot{
+	resp, err := rpcwrap.CallContext(ctx, s.rpc, rpcpb.SliverRPCClient.LootAdd, &clientpb.Loot{
 		Name:     name,
 		FileType: fileType,
 		File:     &commonpb.File{Data: data},
@@ -101,17 +91,11 @@ func (s *Service) Add(ctx context.Context, name string, fileType clientpb.FileTy
 }
 
 func (s *Service) Update(ctx context.Context, id string, name string) (*clientpb.Loot, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.LootUpdate(ctx, &clientpb.Loot{ID: id, Name: name})
+	return rpcwrap.CallContext(ctx, s.rpc, rpcpb.SliverRPCClient.LootUpdate, &clientpb.Loot{ID: id, Name: name})
 }
 
 func (s *Service) Content(ctx context.Context, id string) ([]byte, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	resp, err := s.rpc.RPC.LootContent(ctx, &clientpb.Loot{ID: id})
+	resp, err := rpcwrap.CallContext(ctx, s.rpc, rpcpb.SliverRPCClient.LootContent, &clientpb.Loot{ID: id})
 	if err != nil {
 		return nil, err
 	}

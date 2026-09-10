@@ -73,7 +73,13 @@ func handleConsolePortfwdAdd(start func(string, string, string) (uint64, error),
 }
 
 func (s *Service) handleConsolePortfwdRemove(args []string) (string, error) {
-	flags := pflag.NewFlagSet("portfwd rm", pflag.ContinueOnError)
+	return removeProxy("portfwd rm", "portfwd", "[*] Removed portfwd\n", s.StopPortfwd, args)
+}
+
+// removeProxy parses the shared --id flag or positional id convention, stops
+// the proxy through stop, and returns the success message.
+func removeProxy(flagSetName, kind, success string, stop func(uint64) error, args []string) (string, error) {
+	flags := pflag.NewFlagSet(flagSetName, pflag.ContinueOnError)
 	flags.SetOutput(&strings.Builder{})
 	id := flags.Uint64P("id", "i", 0, "")
 	if err := flags.Parse(args); err != nil {
@@ -82,17 +88,17 @@ func (s *Service) handleConsolePortfwdRemove(args []string) (string, error) {
 	if *id == 0 && flags.NArg() > 0 {
 		parsed, err := strconv.ParseUint(flags.Arg(0), 10, 64)
 		if err != nil {
-			return "", fmt.Errorf("must specify a valid portfwd id")
+			return "", fmt.Errorf("must specify a valid %s id", kind)
 		}
 		*id = parsed
 	}
 	if *id == 0 {
-		return "", fmt.Errorf("must specify a valid portfwd id")
+		return "", fmt.Errorf("must specify a valid %s id", kind)
 	}
-	if err := s.StopPortfwd(*id); err != nil {
+	if err := stop(*id); err != nil {
 		return "", err
 	}
-	return "[*] Removed portfwd\n", nil
+	return success, nil
 }
 
 func (s *Service) renderPortfwdList(sessionID string) string {

@@ -1,6 +1,7 @@
 package websites
 
 import (
+	"context"
 	"fmt"
 	"mime"
 	"os"
@@ -8,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"google.golang.org/grpc"
 
-	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 // AddContentRequest describes one path we want served under a site. Only
@@ -26,26 +29,21 @@ type AddContentRequest struct {
 // creates the site if it doesn't exist yet, so this is also our "create
 // site" path.
 func (s *Service) AddContent(req AddContentRequest) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	entry, err := buildWebContent(req)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := ctxWithTimeout()
-	defer cancel()
-	_, err = s.rpc.RPC.WebsiteAddContent(ctx, &clientpb.WebsiteAddContent{
-		Name:     req.Name,
-		Contents: map[string]*clientpb.WebContent{req.Path: entry},
-	})
-	return err
+	return s.submitContent(req, rpcpb.SliverRPCClient.WebsiteAddContent)
 }
 
 // UpdateContent replaces the bytes / content-type at an existing path.
 func (s *Service) UpdateContent(req AddContentRequest) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	return s.submitContent(req, rpcpb.SliverRPCClient.WebsiteUpdateContent)
+}
+
+func (s *Service) submitContent(
+	req AddContentRequest,
+	method func(rpcpb.SliverRPCClient, context.Context, *clientpb.WebsiteAddContent, ...grpc.CallOption) (*clientpb.Website, error),
+) error {
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return err
 	}
 	entry, err := buildWebContent(req)
 	if err != nil {
@@ -53,7 +51,7 @@ func (s *Service) UpdateContent(req AddContentRequest) error {
 	}
 	ctx, cancel := ctxWithTimeout()
 	defer cancel()
-	_, err = s.rpc.RPC.WebsiteUpdateContent(ctx, &clientpb.WebsiteAddContent{
+	_, err = method(c.RPC, ctx, &clientpb.WebsiteAddContent{
 		Name:     req.Name,
 		Contents: map[string]*clientpb.WebContent{req.Path: entry},
 	})
@@ -62,8 +60,9 @@ func (s *Service) UpdateContent(req AddContentRequest) error {
 
 // RemoveContent drops a set of URL paths from a site.
 func (s *Service) RemoveContent(name string, paths []string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return err
 	}
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -74,7 +73,7 @@ func (s *Service) RemoveContent(name string, paths []string) error {
 	}
 	ctx, cancel := ctxWithTimeout()
 	defer cancel()
-	_, err := s.rpc.RPC.WebsiteRemoveContent(ctx, &clientpb.WebsiteRemoveContent{
+	_, err = c.RPC.WebsiteRemoveContent(ctx, &clientpb.WebsiteRemoveContent{
 		Name:  name,
 		Paths: paths,
 	})

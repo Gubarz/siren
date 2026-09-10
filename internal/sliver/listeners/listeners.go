@@ -7,8 +7,10 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type Service struct {
@@ -20,35 +22,30 @@ func New(rpc *rpc.Client) *Service {
 }
 
 func (s *Service) GetJobs() (*clientpb.Jobs, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.GetJobs(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.GetJobs, &commonpb.Empty{})
 }
 
 func (s *Service) KillJob(id uint32) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.KillJob(context.Background(), &clientpb.KillJobReq{ID: id})
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.KillJob, &clientpb.KillJobReq{ID: id})
 	return err
 }
 
 func (s *Service) StartListener(protocol, host string, port uint32, domains string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return err
 	}
 	ctx := context.Background()
 
 	switch strings.ToLower(protocol) {
 	case "mtls":
-		_, err := s.rpc.RPC.StartMTLSListener(ctx, &clientpb.MTLSListenerReq{Host: host, Port: port})
+		_, err := c.RPC.StartMTLSListener(ctx, &clientpb.MTLSListenerReq{Host: host, Port: port})
 		return err
 	case "http":
-		_, err := s.rpc.RPC.StartHTTPListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: false})
+		_, err := c.RPC.StartHTTPListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: false})
 		return err
 	case "https":
-		_, err := s.rpc.RPC.StartHTTPSListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: true})
+		_, err := c.RPC.StartHTTPSListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: true})
 		return err
 	case "dns":
 		var doms []string
@@ -57,7 +54,7 @@ func (s *Service) StartListener(protocol, host string, port uint32, domains stri
 				doms = append(doms, d)
 			}
 		}
-		_, err := s.rpc.RPC.StartDNSListener(ctx, &clientpb.DNSListenerReq{Domains: doms, Host: host, Port: port})
+		_, err := c.RPC.StartDNSListener(ctx, &clientpb.DNSListenerReq{Domains: doms, Host: host, Port: port})
 		return err
 	default:
 		return fmt.Errorf("unknown listener protocol: %s", protocol)

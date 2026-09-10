@@ -4,11 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 	"siren/internal/wailsadapter"
 )
 
@@ -65,122 +67,61 @@ type PathResponse interface {
 	GetPath() string
 }
 
-type protobufResponse interface {
-	rpc.ResponseWithError
-	proto.Message
-}
-
-func (s *Service) runPathCommand(
+func runPathCommand[Req proto.Message, Resp PathResponse](
+	s *Service,
 	sessionID string,
-	execute func(context.Context, *commonpb.Request) (PathResponse, error),
+	method func(rpcpb.SliverRPCClient, context.Context, Req, ...grpc.CallOption) (Resp, error),
+	req Req,
 ) (string, error) {
-	if !s.rpc.Connected() {
-		return "", rpc.ErrNotConnected
-	}
-	req, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
+	resp, err := rpcwrap.TargetCall(s.rpc, sessionID, defaultRPCTimeout, method, req)
 	if err != nil {
-		return "", err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
-	defer cancel()
-	resp, err := execute(ctx, req)
-	if err != nil {
-		return "", err
-	}
-	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
 		return "", err
 	}
 	return resp.GetPath(), nil
 }
 
-func (s *Service) runVoidCommand(
+func runVoidCommand[Req proto.Message, Resp rpcwrap.TargetResponse](
+	s *Service,
 	sessionID string,
-	execute func(context.Context, *commonpb.Request) (protobufResponse, error),
+	method func(rpcpb.SliverRPCClient, context.Context, Req, ...grpc.CallOption) (Resp, error),
+	req Req,
 ) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	req, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
-	defer cancel()
-	resp, err := execute(ctx, req)
-	if err != nil {
-		return err
-	}
-	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
+	_, err := rpcwrap.TargetCall(s.rpc, sessionID, defaultRPCTimeout, method, req)
+	return err
 }
 
 func (s *Service) MakeDir(sessionID, path string) error {
-	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
-		return s.rpc.RPC.Mkdir(ctx, &sliverpb.MkdirReq{
-			Request: req, Path: path,
-		})
-	})
+	return runVoidCommand(s, sessionID, rpcpb.SliverRPCClient.Mkdir, &sliverpb.MkdirReq{Path: path})
 }
 
 func (s *Service) RemovePath(sessionID, path string, recursive bool) error {
-	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
-		return s.rpc.RPC.Rm(ctx, &sliverpb.RmReq{
-			Request: req, Path: path, Recursive: recursive, Force: true,
-		})
+	return runVoidCommand(s, sessionID, rpcpb.SliverRPCClient.Rm, &sliverpb.RmReq{
+		Path:      path,
+		Recursive: recursive,
+		Force:     true,
 	})
 }
 
 func (s *Service) RenamePath(sessionID, src, dst string) error {
-	return s.runVoidCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (protobufResponse, error) {
-		return s.rpc.RPC.Mv(ctx, &sliverpb.MvReq{
-			Request: req, Src: src, Dst: dst,
-		})
+	return runVoidCommand(s, sessionID, rpcpb.SliverRPCClient.Mv, &sliverpb.MvReq{
+		Src: src,
+		Dst: dst,
 	})
 }
 
 func (s *Service) Cd(sessionID, path string) (string, error) {
-	return s.runPathCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (PathResponse, error) {
-		return s.rpc.RPC.Cd(ctx, &sliverpb.CdReq{
-			Request: req,
-			Path:    path,
-		})
-	})
+	return runPathCommand(s, sessionID, rpcpb.SliverRPCClient.Cd, &sliverpb.CdReq{Path: path})
 }
 
 func (s *Service) Pwd(sessionID string) (string, error) {
-	return s.runPathCommand(sessionID, func(ctx context.Context, req *commonpb.Request) (PathResponse, error) {
-		return s.rpc.RPC.Pwd(ctx, &sliverpb.PwdReq{
-			Request: req,
-		})
-	})
+	return runPathCommand(s, sessionID, rpcpb.SliverRPCClient.Pwd, &sliverpb.PwdReq{})
 }
 
 func (s *Service) GetFileList(sessionID string, path string) (*sliverpb.Ls, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-
 	if path == "" {
 		path = "."
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
-	defer cancel()
-
-	request, err := s.rpc.TargetRequest(sessionID, defaultRPCTimeout)
-	if err != nil {
-		return nil, err
-	}
-	req := &sliverpb.LsReq{
-		Request: request,
+	return rpcwrap.TargetCall(s.rpc, sessionID, defaultRPCTimeout, rpcpb.SliverRPCClient.Ls, &sliverpb.LsReq{
 		Path: path,
-	}
-
-	resp, err := s.rpc.RPC.Ls(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
-		return nil, err
-	}
-	return resp, nil
+	})
 }

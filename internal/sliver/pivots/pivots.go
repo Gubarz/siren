@@ -7,9 +7,11 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type PivotListenerSnapshot struct {
@@ -34,10 +36,7 @@ func New(rpc *rpc.Client) *Service {
 }
 
 func (s *Service) StartListener(sessionID string, pivotType sliverpb.PivotType, bindAddr string) (*sliverpb.PivotListener, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.PivotStartListener(context.Background(), &sliverpb.PivotStartListenerReq{
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.PivotStartListener, &sliverpb.PivotStartListenerReq{
 		Type:        pivotType,
 		BindAddress: bindAddr,
 		Request:     &commonpb.Request{SessionID: sessionID},
@@ -45,10 +44,7 @@ func (s *Service) StartListener(sessionID string, pivotType sliverpb.PivotType, 
 }
 
 func (s *Service) StopListener(sessionID string, id uint32) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.PivotStopListener(context.Background(), &sliverpb.PivotStopListenerReq{
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.PivotStopListener, &sliverpb.PivotStopListenerReq{
 		ID:      id,
 		Request: &commonpb.Request{SessionID: sessionID},
 	})
@@ -56,18 +52,11 @@ func (s *Service) StopListener(sessionID string, id uint32) error {
 }
 
 func (s *Service) GetPivots() (*clientpb.PivotGraph, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.PivotGraph(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.PivotGraph, &commonpb.Empty{})
 }
 
 func (s *Service) GetPivotListeners() ([]PivotListenerSnapshot, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-
-	sessions, err := s.rpc.RPC.GetSessions(context.Background(), &commonpb.Empty{})
+	sessions, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.GetSessions, &commonpb.Empty{})
 	if err != nil {
 		return nil, err
 	}

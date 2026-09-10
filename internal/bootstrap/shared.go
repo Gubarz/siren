@@ -70,20 +70,27 @@ func resolveDataDir(deps Dependencies) string {
 
 func NewShared(deps Dependencies) *SharedStack {
 	deps.DataDir = resolveDataDir(deps)
-	busImpl := bus.New()
-	captureDir := filepath.Join(deps.DataDir, "capture")
+	return buildSharedStack(deps, bus.New(), openCaptureStore(deps.DataDir))
+}
+
+func openCaptureStore(dataDir string) *store.Store {
+	captureDir := filepath.Join(dataDir, "capture")
 	if err := os.MkdirAll(captureDir, 0o700); err != nil {
 		slog.Error("capture dir create failed", "error", err)
 	}
 	captureStore, err := store.Open(store.Config{
 		DBPath:  filepath.Join(captureDir, "capture.sqlite"),
-		DataDir: deps.DataDir,
+		DataDir: dataDir,
 		Source:  "embedded",
 	})
 	if err != nil {
 		slog.Error("capture store open failed", "error", err)
-		captureStore = nil
+		return nil
 	}
+	return captureStore
+}
+
+func buildSharedStack(deps Dependencies, busImpl bus.Bus, captureStore *store.Store) *SharedStack {
 	rpcClient := rpc.NewClient()
 	rpcClient.CaptureStore = captureStore
 	con := console.New(rpcClient)
@@ -99,14 +106,10 @@ func NewShared(deps Dependencies) *SharedStack {
 	executor.SetStore(captureStore)
 	targets := automationexec.NewTargetProvider(rpcClient)
 	lootWriter := automationexec.NewLootWriter(rpcClient)
-	var records automation.RecordQuerier
-	if captureStore != nil {
-		records = captureStore
-	}
 	eng := automation.New(automation.Dependencies{
 		Store: automationstate.New(deps.DataDir), Emitter: deps.Emitter,
 		Executor: executor, Targets: targets, Tags: tagsSvc,
-		Bus: busImpl, Records: records, Cases: caseSvc,
+		Bus: busImpl, Records: captureRecords(captureStore), Cases: caseSvc,
 		Loot: lootWriter,
 	})
 	registerBuiltinTriggers(eng, busImpl)
@@ -120,6 +123,13 @@ func NewShared(deps Dependencies) *SharedStack {
 		Events: eventsStore, KnownAgents: knownAgents, Bus: busImpl,
 		CaptureStore: captureStore,
 	}
+}
+
+func captureRecords(captureStore *store.Store) automation.RecordQuerier {
+	if captureStore == nil {
+		return nil
+	}
+	return captureStore
 }
 
 func registerBuiltinTriggers(eng *automation.Engine, b bus.Bus) {

@@ -2,7 +2,6 @@ package automation
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sort"
 )
@@ -32,30 +31,17 @@ type configValidator interface {
 }
 
 func (e *Engine) RegisterTrigger(t Trigger) error {
-	e.triggersMu.Lock()
-	defer e.triggersMu.Unlock()
-	if _, exists := e.triggers[t.Type()]; exists {
-		return fmt.Errorf("trigger already registered: %s", t.Type())
-	}
-	e.triggers[t.Type()] = t
-	return nil
+	return registerIn(&e.triggersMu, e.triggers, "trigger", t.Type(), t)
 }
 
 func (e *Engine) triggerByType(typ string) (Trigger, bool) {
-	e.triggersMu.RLock()
-	defer e.triggersMu.RUnlock()
-	t, ok := e.triggers[typ]
-	return t, ok
+	return lookupIn(&e.triggersMu, e.triggers, typ)
 }
 
 func (e *Engine) TriggerSchemas() map[string][]FieldSpec {
 	e.triggersMu.RLock()
 	defer e.triggersMu.RUnlock()
-	out := make(map[string][]FieldSpec, len(e.triggers))
-	for typ, t := range e.triggers {
-		out[typ] = t.ConfigSchema()
-	}
-	return out
+	return collectSchemas(e.triggers)
 }
 
 func (e *Engine) armRule(rule AutomationRule) {

@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"siren/internal/localstate/jsonstore"
+	"siren/internal/localstate/mapslice"
 )
 
 const persistPrefix = "gui-agent-tags"
@@ -201,13 +202,7 @@ func (s *Service) GetAllEntityColors() map[string]string {
 func (s *Service) GetAllEntityTags() map[string][]string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make(map[string][]string, len(s.tags))
-	for id, list := range s.tags {
-		copyList := make([]string, len(list))
-		copy(copyList, list)
-		out[id] = copyList
-	}
-	return out
+	return mapslice.Clone(s.tags)
 }
 
 // GetAgentTags returns the tag list for one agent, empty slice if none.

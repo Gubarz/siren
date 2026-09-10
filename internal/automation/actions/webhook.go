@@ -85,7 +85,7 @@ func webhookOnce(rc *automation.RunContext, method, url, body string, cfg map[st
 	if err != nil {
 		return fmt.Errorf("webhook: request failed")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, webhookMaxResponseBody))
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("webhook: HTTP %d", resp.StatusCode)
