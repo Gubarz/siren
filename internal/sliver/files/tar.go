@@ -16,9 +16,14 @@ func addDirToTar(tw *tar.Writer, baseName string, r io.Reader) error {
 			break
 		}
 		if err != nil {
-			break
+			// Breaking here reported success for a truncated archive, so a
+			// partial download looked like a complete one.
+			return fmt.Errorf("read archive: %w", err)
 		}
-		hdr.Name = filepath.Join(baseName, hdr.Name)
+		// Join cleans the name, so an entry called "../x" would otherwise land
+		// outside baseName. Anchoring it first neutralises both that and an
+		// absolute entry name.
+		hdr.Name = filepath.Join(baseName, filepath.Clean("/"+hdr.Name))
 		if err := tw.WriteHeader(hdr); err != nil {
 			return fmt.Errorf("failed to write header for %s: %w", hdr.Name, err)
 		}
