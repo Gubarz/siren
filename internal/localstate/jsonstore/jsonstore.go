@@ -76,12 +76,49 @@ func (s *ScopedStore[T]) saveLocked(val T) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
+	dir := filepath.Dir(s.path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	// A fixed "<path>.tmp" is shared by every writer, so a leftover temp file,
+	// a stale directory, or the second process that shares the data dir (the
+	// GUI and cmd/headless) collides with it. CreateTemp also supplies the
+	// 0600 mode this needs.
+	tmp, err := os.CreateTemp(dir, filepath.Base(s.path)+".*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.path)
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	// Flush the contents before the rename. Without this a crash can leave the
+	// new name pointing at a file whose data never reached the disk.
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, s.path); err != nil {
+		return err
+	}
+	syncDir(dir)
+	return nil
+}
+
+// syncDir flushes the directory entry so the rename itself survives a crash.
+// Platforms that will not open a directory for this (Windows does not) are
+// skipped: the contents are already synced by the time it is called.
+func syncDir(dir string) {
+	d, err := os.Open(dir)
+	if err != nil {
+		return
+	}
+	_ = d.Sync()
+	_ = d.Close()
 }
