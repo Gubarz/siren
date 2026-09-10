@@ -20,6 +20,9 @@
   import { dispatchCommand } from '$stores/console.svelte.js'
   import { commandModal } from '$stores/ui/commandModal.svelte.js'
   import { selection } from '$stores/ui/selection.svelte.js'
+  import { sessions } from '$stores/resources/sessions.svelte.js'
+  import { beacons } from '$stores/resources/beacons.svelte.js'
+  import { liveAgentIDSet } from '../../../utils/agents.js'
   import { Modal } from '$stores/ui/Modal.svelte.js'
 
   let serverCategories = $state([])
@@ -34,6 +37,14 @@
   let isSessionBound = $derived(commandModal.useSession && commandModal.targetIDs.length > 0)
   let combinedSessionIDs = $derived(isSessionBound ? commandModal.targetIDs.join(', ') : '')
   let firstSessionID = $derived(isSessionBound ? commandModal.targetIDs[0] : '')
+
+  // Lost rows are table history, never command targets. Session command
+  // palette items are hidden entirely (requiresLiveAgents) when nothing live
+  // is selected.
+  function liveSelectionIDs() {
+    const live = liveAgentIDSet(sessions.data, beacons.data)
+    return [...selection.agents].filter((id) => live.has(id))
+  }
 
   onMount(async () => {
     try {
@@ -53,9 +64,17 @@
         }
       }
       serverCategories = [...merged.values()]
+      // Session commands need a live target; server commands run through the
+      // server console with an empty target list.
+      const sessionCommandNames = new Set(
+        (sessionCatalog?.groups ?? []).flatMap((group) =>
+          (group.commands ?? []).map((cmd) => cmd.name),
+        ),
+      )
       const paletteActions = []
       for (const cat of serverCategories) {
         for (const cmd of cat.commands) {
+          const sessionBound = sessionCommandNames.has(cmd.name)
           paletteActions.push({
             id: `cmd-${cmd.name}`,
             label: `Run: ${cmd.name}`,
@@ -63,11 +82,16 @@
             icon: 'command',
             section: `Commands - ${cat.category}`,
             tags: [cmd.name, cat.category],
-            on: () => commandModal.open({
-              command: cmd,
-              useSession: true,
-              targetIDs: [...selection.agents],
-            }),
+            ...(sessionBound ? { requiresLiveAgents: true } : {}),
+            on: () => {
+              if (!sessionBound) {
+                commandModal.open({ command: cmd, useSession: false, targetIDs: [] })
+                return
+              }
+              const targetIDs = liveSelectionIDs()
+              if (targetIDs.length === 0) return
+              commandModal.open({ command: cmd, useSession: true, targetIDs })
+            },
           })
         }
       }

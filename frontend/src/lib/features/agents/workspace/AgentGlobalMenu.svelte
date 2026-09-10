@@ -18,17 +18,18 @@
   import { sessions } from '$stores/resources/sessions.svelte.js'
   import { beacons } from '$stores/resources/beacons.svelte.js'
   import { discoveries } from '$stores/resources/discoveries.svelte.js'
+  import { knownAgents } from '$stores/knownAgents.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
   import { SetAgentColor } from '../../../api/tags.js'
-  import { RenameAgent } from '../../../api/agents.js'
+  import { RemoveKnownAgent } from '../../../api/agents.js'
   import { errorMessage } from '../../../utils/errors.js'
   import { runGuiAction } from '../../palette/GuiActions.js'
   import { ROW_COLORS, colorHex } from '../../../utils/agentColors.js'
-  import { buildAgentMap } from '../../../utils/agents.js'
   import { Modal } from '$stores/ui/Modal.svelte.js'
   import BeaconDetailModal from '../modals/BeaconDetailModal.svelte'
   import { createAgentActions } from './agentActions.js'
-  import { buildAgentActionsSections, buildCommandCategories } from './agentContextActions.js'
+  import { buildAgentActionsSections, buildAgentContextSections, buildCommandCategories } from './agentContextActions.js'
+  import { mergeLostAgents } from './useAgentData.svelte.js'
 
   useResource(sessions, beacons, agentColors)
 
@@ -36,79 +37,112 @@
 
   const beaconDetail = new Modal()
 
-  let selectedAgents = $derived(selection.agents)
   let workspaceOpen = $state(false)
   let guiCommands = $derived((categories.find((category) => category.category === 'GUI')?.commands || []).filter(isAgentWorkspaceCommand))
   let commandCategories = $derived(categories.filter((category) => category.category !== 'GUI' && category.category !== 'Generic'))
 
-  // NOTE: must be $derived.by — plain $derived would store the function
-  // itself as the value and agentMap.get(...) would throw.
-  let agentMap = $derived.by(() => buildAgentMap(sessions.data, beacons.data))
-  let contextAgent = $derived(
-    [...selection.agents].map((id) => agentMap.get(id)).filter(Boolean)[0] ?? null,
+  // The global menus resolve selection against the same live+known merge the
+  // table renders, so a lost-only selection yields lost rows (not null) and
+  // the context builder can hand back the reduced history menu.
+  let knownAgentData = $derived(knownAgents.data)
+  let combinedData = $derived.by(() => {
+    const live = [
+      ...(beacons.data ?? []).map((b) => ({ ...b, _kind: 'beacon' })),
+      ...(sessions.data ?? []).map((s) => ({ ...s, _kind: 'session' })),
+    ]
+    return [...live, ...mergeLostAgents(live, knownAgentData)]
+  })
+  let agentMap = $derived.by(() => new Map(combinedData.map((agent) => [agent.ID, agent])))
+  let selectedAgentRows = $derived(
+    [...selection.agents].map((id) => agentMap.get(id)).filter(Boolean),
   )
+  let liveSelectedRows = $derived(selectedAgentRows.filter((agent) => !agent._lost))
+  let contextAgent = $derived(selectedAgentRows[0] ?? null)
 
   const actions = createAgentActions({
     dialog,
     discoveries,
     agentTabs,
+    // Discovery targets are live rows only; the anchor is appended so a
+    // lost-only selection still resolves to itself for the history menu.
     selectedAgentIDsIncluding: (agent) => [
-      ...[...selection.agents].filter((id) => id !== agent.ID),
+      ...liveSelectedRows.filter((row) => row.ID !== agent.ID).map((row) => row.ID),
       agent.ID,
     ],
   })
-  const { promoteBeacon, demoteSession } = actions
+  const {
+    runDiscovery, promptPingSweep, clearDiscoveries,
+    killAgent, killAgents, newShell, renameAgent, removeBeaconRecord, removeBeaconRecords,
+    promoteBeacon, demoteSession, runAutomationRule,
+  } = actions
 
   function getAgentLabel(id) {
     const a = agentMap.get(id)
     return a?.Name || a?.Hostname || id
   }
 
-  async function renameSelected() {
-    if (selectedAgents.size === 0) return
-    const id = [...selectedAgents][0]
-    const label = getAgentLabel(id)
-    const name = await dialog.prompt('New name:', 'Rename Agent', label)
-    if (!name || name === label) return
-    try {
-      await RenameAgent(id, name)
-    } catch (err) {
-      await dialog.alert(errorMessage(err, 'Rename failed: '), 'Rename Agent')
-    }
+  function renameSelected() {
+    const agent = liveSelectedRows[0]
+    if (agent) void renameAgent(agent)
   }
 
   function openReconfigureSelected() {
-    if (selectedAgents.size === 0) return
-    const id = [...selectedAgents][0]
-    const agent = agentMap.get(id)
+    const agent = liveSelectedRows[0]
     if (agent) onReconfigure(agent)
   }
 
   function openTagsForSelected() {
-    if (selectedAgents.size === 0) return
-    const id = [...selectedAgents][0]
-    tagsModal.openTags('agent', id, getAgentLabel(id))
+    const agent = selectedAgentRows[0]
+    if (agent) tagsModal.openTags('agent', agent.ID, getAgentLabel(agent.ID))
   }
 
   function openCommentsForSelected() {
-    if (selectedAgents.size === 0) return
-    const id = [...selectedAgents][0]
-    commentsModal.openComments('agent', id, getAgentLabel(id))
+    const agent = selectedAgentRows[0]
+    if (agent) commentsModal.openComments('agent', agent.ID, getAgentLabel(agent.ID))
   }
 
   function openAddToCaseForSelected() {
-    if (selectedAgents.size === 0) return
-    const id = [...selectedAgents][0]
-    addToCase.open({ collection: 'agent', itemID: id, label: getAgentLabel(id) })
+    const agent = selectedAgentRows[0]
+    if (agent) addToCase.open({ collection: 'agent', itemID: agent.ID, label: getAgentLabel(agent.ID) })
   }
 
   async function setColorForSelected(color) {
-    if (selectedAgents.size === 0) return
+    if (selection.agents.size === 0) return
     try {
-      await Promise.all([...selectedAgents].map(id => SetAgentColor(id, color)))
+      await Promise.all([...selection.agents].map((id) => SetAgentColor(id, color)))
       await agentColors.refresh()
     } catch (err) {
       await dialog.alert(errorMessage(err, 'Color failed: '), 'Row Color')
+    }
+  }
+
+  async function setAgentRowColor(agents, color) {
+    try {
+      await Promise.all(agents.map((agent) => SetAgentColor(agent.ID, color)))
+      await agentColors.refresh()
+    } catch (err) {
+      await dialog.alert(errorMessage(err, 'Color failed: '), 'Row Color')
+    }
+  }
+
+  function copyAgentIDs(agents) {
+    const ids = (agents || []).map((agent) => agent?.ID).filter(Boolean).join('\n')
+    if (ids) navigator.clipboard?.writeText(ids)
+  }
+
+  async function removeLostAgents(agents) {
+    const targets = (agents || []).filter((agent) => agent?._lost)
+    if (targets.length === 0) return
+    const label = targets.length > 1
+      ? `${targets.length} lost sessions`
+      : `"${targets[0].Name || targets[0].Hostname || targets[0].ID}"`
+    if (!(await dialog.confirm(`Remove ${label} from known agents?`, 'Confirm Remove'))) return
+    try {
+      await Promise.all(targets.map((target) => RemoveKnownAgent(target.ID)))
+      await knownAgents.load()
+      selection.clear()
+    } catch (err) {
+      await dialog.alert(errorMessage(err, 'Remove failed: '), 'Remove Lost Session')
     }
   }
 
@@ -119,45 +153,88 @@
     return !action.view || action.view === 'agents'
   }
 
-  function isDisabled(cmd) {
-    return !cmd.guiAction && selectedAgents.size === 0
-  }
-
-  function executeCommand(command) {
-    if (isDisabled(command)) return
+  function executeCommand(command, targetIDs = []) {
     workspaceOpen = false
     if (command.guiAction) {
       runGuiAction(command.guiAction, { navigation, overlays, config })
-    } else {
-      commandModal.open({ command, useSession: true, targetIDs: [...selectedAgents] })
+      return
     }
+    if (targetIDs.length === 0) return
+    commandModal.open({ command, useSession: true, targetIDs })
   }
 
   function openActionsMenu(event) {
     event.stopPropagation()
     workspaceOpen = false
     const rect = event.currentTarget.getBoundingClientRect()
-    const targetAgents = [...selection.agents].map((id) => agentMap.get(id)).filter(Boolean)
     const agent = contextAgent
     const isBeacon = agent?._kind === 'beacon'
     const isWindows = (agent?.OS || '').toLowerCase() === 'windows'
     const hasInteractiveSession = isBeacon && (sessions.data ?? []).some((s) => s.Name === agent?.Name)
+
+    // Empty selection keeps the old disabled core menu; lost/mixed selections
+    // go through the context builder so lost rows get history actions and
+    // live actions only ever target live agents.
+    if (selectedAgentRows.length === 0) {
+      contextMenu.open({
+        x: rect.left,
+        y: rect.bottom + 4,
+        sections: buildAgentActionsSections({
+          agent: null,
+          isBeacon: false,
+          isWindows: false,
+          hasInteractiveSession: false,
+          targetAgents: [],
+          agentTabs,
+          promoteBeacon,
+          demoteSession,
+          newShell,
+          findAttackPaths: (agents) => {
+            for (const target of agents) agentTabs.openTab(target.ID, 'bloodhound')
+          },
+        }),
+      })
+      return
+    }
+
     contextMenu.open({
       x: rect.left,
       y: rect.bottom + 4,
-      sections: buildAgentActionsSections({
+      sections: buildAgentContextSections({
         agent,
         isBeacon,
         isWindows,
         hasInteractiveSession,
-        targetAgents,
+        catalog: liveSelectedRows.length > 0 ? commandCategories : [],
+        targetIDs: [...selection.agents],
+        targetAgents: selectedAgentRows,
         agentTabs,
-        openBeaconDetail: (a) => beaconDetail.show(a.ID),
-        promoteBeacon,
-        demoteSession,
-        newShell: (a) => agentTabs.launchShell(a.ID, ''),
-        findAttackPaths: (agents) => {
-          for (const target of agents) agentTabs.openTab(target.ID, 'bloodhound');
+        automationRules: [],
+        contextMenuHandlers: {
+          openReconfigure: (a) => onReconfigure(a),
+          openTags: (type, id, label) => tagsModal.openTags(type, id, label),
+          openComments: (type, id, label) => commentsModal.openComments(type, id, label),
+          openBeaconDetail: (a) => beaconDetail.show(a.ID),
+          promoteBeacon,
+          demoteSession,
+          newShell,
+          runDiscovery,
+          promptPingSweep,
+          clearDiscoveries,
+          renameAgent,
+          runAutomationRule,
+          setAgentRowColor,
+          addToCase: (payload) => addToCase.open(payload),
+          killAgent,
+          killAgents,
+          removeBeaconRecord,
+          removeBeaconRecords,
+          copyID: copyAgentIDs,
+          onremovelost: removeLostAgents,
+          executeAgentCommand: (command, targetIDs) => commandModal.open({ command, useSession: true, targetIDs }),
+          findAttackPaths: (agents) => {
+            for (const target of agents) agentTabs.openTab(target.ID, 'bloodhound')
+          },
         },
       }),
     })
@@ -167,14 +244,19 @@
     event.stopPropagation()
     workspaceOpen = false
     const rect = event.currentTarget.getBoundingClientRect()
-    const items = commandCategories.length === 0
-      ? [{ label: 'Loading commands...', disabled: true }]
-      : buildCommandCategories({
-          catalog: commandCategories,
-          targetIDs: [...selectedAgents],
-          executeAgentCommand: executeCommand,
-          isDisabled,
-        })
+    const liveTargetIDs = liveSelectedRows.map((agent) => agent.ID)
+    let items
+    if (commandCategories.length === 0) {
+      items = [{ label: 'Loading commands...', disabled: true }]
+    } else if (liveTargetIDs.length === 0) {
+      items = [{ label: 'No live agents selected', disabled: true }]
+    } else {
+      items = buildCommandCategories({
+        catalog: commandCategories,
+        targetIDs: liveTargetIDs,
+        executeAgentCommand: executeCommand,
+      })
+    }
 
     contextMenu.open({
       x: rect.left,
@@ -187,7 +269,8 @@
     event.stopPropagation()
     workspaceOpen = false
     const rect = event.currentTarget.getBoundingClientRect()
-    const disabled = selectedAgents.size === 0
+    const noSelection = selectedAgentRows.length === 0
+    const noLiveSelection = liveSelectedRows.length === 0
     const paletteItems = ROW_COLORS.map((name) => ({
       label: name[0].toUpperCase() + name.slice(1),
       color: colorHex(name),
@@ -199,11 +282,11 @@
       sections: [
         {
           items: [
-            { icon: 'pen', label: 'Rename Agent\u2026', disabled, on: renameSelected },
-            { icon: 'sliders', label: 'Reconfigure\u2026', disabled, on: openReconfigureSelected },
-            { icon: 'tag', label: 'Tags / Color\u2026', disabled, on: openTagsForSelected },
-            { icon: 'message-square', label: 'Comments / Notes\u2026', disabled, on: openCommentsForSelected },
-            { icon: 'folder-plus', label: 'Add to case\u2026', disabled, on: openAddToCaseForSelected },
+            { icon: 'pen', label: 'Rename Agent\u2026', disabled: noLiveSelection, on: renameSelected },
+            { icon: 'sliders', label: 'Reconfigure\u2026', disabled: noLiveSelection, on: openReconfigureSelected },
+            { icon: 'tag', label: 'Tags / Color\u2026', disabled: noSelection, on: openTagsForSelected },
+            { icon: 'message-square', label: 'Comments / Notes\u2026', disabled: noSelection, on: openCommentsForSelected },
+            { icon: 'folder-plus', label: 'Add to case\u2026', disabled: noSelection, on: openAddToCaseForSelected },
           ],
         },
         { palette: true, items: paletteItems, clearItem: { label: 'Clear', on: () => setColorForSelected('') } },

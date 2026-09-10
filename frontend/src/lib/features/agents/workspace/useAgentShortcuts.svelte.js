@@ -63,8 +63,8 @@ export function useAgentShortcuts({ activeView, filteredData, filterInput }) {
     registerShortcut('Enter', agentOnly(() => {
       const data = filteredData()
       if (data.length === 0) return
-      const id = data[cursor]?.ID
-      if (id) agentTabs.openTab(id, 'console')
+      const row = data[cursor]
+      if (row?.ID && !row._lost) agentTabs.openTab(row.ID, 'console')
     }), 'Interact with agent', 'agents')
     
     registerShortcut('Escape', agentOnly(() => {

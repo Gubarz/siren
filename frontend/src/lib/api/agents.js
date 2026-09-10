@@ -4,6 +4,7 @@ import {
   GetFileList,
   GetProcessList,
   GetSessions,
+  ListKnownAgents,
 } from '../../../bindings/siren/cmd/gui/app.js';
 import { responseField } from './normalize.js';
 
@@ -26,6 +27,7 @@ export {
   Pwd,
   RemovePath,
   RemoveBeacon,
+  RemoveKnownAgent,
   RenameAgent,
   RenamePath,
   TakeScreenshot,
@@ -53,6 +55,13 @@ export async function listBeacons() {
 
 export async function listSessions() {
   return responseField(await GetSessions(), 'Sessions', []);
+}
+
+// Known agents include lost sessions the backend retained; the binding can
+// return null when no service is wired, so normalize to an array here.
+export async function listKnownAgents() {
+  const records = await ListKnownAgents();
+  return Array.isArray(records) ? records : [];
 }
 
 export async function listBeaconTasks(beaconID) {

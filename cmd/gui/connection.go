@@ -63,6 +63,7 @@ func (a *App) Connect(profileName string) error {
 		a.Automation.SetServer(a.RPC.Config.LHost, uint32(a.RPC.Config.LPort))
 		a.Tags.SetServer(a.RPC.Config.LHost, uint32(a.RPC.Config.LPort))
 		a.Comments.SetServer(a.RPC.Config.LHost, uint32(a.RPC.Config.LPort))
+		a.KnownAgents.SetServer(a.RPC.Config.LHost, uint32(a.RPC.Config.LPort))
 	}
 	if a.ClientLog != nil {
 		if err := a.ClientLog.Start(a.ctx); err != nil {

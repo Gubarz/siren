@@ -34,12 +34,15 @@
   import { dialog } from '$stores/ui/dialog.svelte.js'
   import { commentsModal } from '$stores/ui/commentsModal.svelte.js'
   import { tagsModal } from '$stores/ui/tagsModal.svelte.js'
+  import { knownAgents } from '$stores/knownAgents.svelte.js'
 
   import { RemoveNetworkDiscoveries } from '../../../api/discovery.js'
+  import { RemoveKnownAgent } from '../../../api/agents.js'
   import { GetCommandCatalog } from '../../../api/console.js'
   import { SetAgentColor } from '../../../api/tags.js'
   import { errorMessage } from '../../../utils/errors.js'
   import { discoveryKey } from '../../../utils/discovery.js'
+  import { liveAgentIDSet } from '../../../utils/agents.js'
 
   import { createAgentActions } from './agentActions.js'
   import { createBulkActions } from './agentBulkActions.js'
@@ -67,6 +70,7 @@
   let pivotData = $derived(pivots?.data || [])
   let pivotListenersData = $derived(pivotListeners?.data || [])
   let rawDiscoveredData = $derived(discoveries?.data || [])
+  let knownAgentData = $derived(knownAgents.data)
   let selected = $derived(selection)
   let tagsByAgent = $derived(
     agentTags?.data && typeof agentTags.data === 'object' ? { ...agentTags.data } : {},
@@ -78,7 +82,7 @@
   // --- Data engine: single call, every derived list back at once ---
   const dataModel = createAgentDataModel()
   let processed = $derived(
-    dataModel.process(agentFilter, sessionData, beaconData, rawDiscoveredData, pivotData, tagsByAgent),
+    dataModel.process(agentFilter, sessionData, beaconData, rawDiscoveredData, pivotData, tagsByAgent, knownAgentData),
   )
   let discoveredData = $derived(processed.discoveredData)
   let combinedData = $derived(processed.combinedData)
@@ -119,6 +123,7 @@
   // --- Lifecycle ---
   onMount(async () => {
     subscribeBloodhound();
+    void knownAgents.load();
     try {
       const [sessCatalog, beaconCatalog] = await Promise.all([
         GetCommandCatalog('session'),
@@ -137,9 +142,13 @@
     selection.select('agent', id, additive)
   }
 
+  // Live rows only: lost history must never reach discovery or command
+  // targets. The anchor is appended so a lost-only selection resolves to
+  // itself for the reduced history menu.
   function selectedAgentIDsIncluding(agent) {
+    const live = liveAgentIDSet(sessionData, beaconData)
     return [
-      ...[...selected.agents].filter((id) => id !== agent.ID),
+      ...[...selected.agents].filter((id) => id !== agent.ID && live.has(id)),
       agent.ID,
     ]
   }
@@ -164,10 +173,11 @@
     promoteBeacon, demoteSession, runAutomationRule,
   } = actions
 
-  let selectedBeacons = $derived(selectedAgents.filter((a) => a._kind === 'beacon'))
+  let selectedBeacons = $derived(selectedAgents.filter((a) => a._kind === 'beacon' && !a._lost))
+  let liveSelectedAgents = $derived(selectedAgents.filter((a) => !a._lost))
 
-  async function runBulk(fn) {
-    await fn(selectedAgents)
+  async function runBulk(fn, agents = selectedAgents) {
+    await fn(agents)
     selection.clear()
   }
 
@@ -198,6 +208,27 @@
       await agentColors.refresh()
     } catch (err) {
       await dialog.alert(errorMessage(err, 'Row color failed: '), 'Row Color')
+    }
+  }
+
+  function copyAgentIDs(agents) {
+    const ids = (agents || []).map((a) => a?.ID).filter(Boolean).join('\n')
+    if (ids) navigator.clipboard?.writeText(ids)
+  }
+
+  async function removeLostAgents(agents) {
+    const targets = (agents || []).filter((a) => a?._lost)
+    if (targets.length === 0) return
+    const label = targets.length > 1
+      ? `${targets.length} lost sessions`
+      : `"${targets[0].Name || targets[0].Hostname || targets[0].ID}"`
+    if (!(await dialog.confirm(`Remove ${label} from known agents?`, 'Confirm Remove'))) return
+    try {
+      await Promise.all(targets.map((target) => RemoveKnownAgent(target.ID)))
+      await knownAgents.load()
+      selection.clear()
+    } catch (err) {
+      await dialog.alert(errorMessage(err, 'Remove failed: '), 'Remove Lost Session')
     }
   }
 
@@ -240,6 +271,8 @@
           setAgentRowColor,
           addToCase: (payload) => addToCase.open(payload),
           killAgent, killAgents, removeBeaconRecord, removeBeaconRecords,
+          copyID: copyAgentIDs,
+          onremovelost: removeLostAgents,
           executeAgentCommand,
           findAttackPaths: (agents) => {
             for (const target of agents) {
@@ -326,11 +359,11 @@
 
   <div class="ml-auto flex items-center gap-2">
   <BulkActionBar
-  count={selected.agents.size}
+  count={liveSelectedAgents.length}
   showRemove={selectedBeacons.length > 0}
-  onkill={() => runBulk(bulk.bulkKill)}
+  onkill={() => runBulk(bulk.bulkKill, liveSelectedAgents)}
   onremove={bulkRemoveBeacons}
-  onrename={() => runBulk(bulk.bulkRenamePrefix)}
+  onrename={() => runBulk(bulk.bulkRenamePrefix, liveSelectedAgents)}
   onaddtag={() => runBulk(bulk.bulkAddTag)}
   onremovetag={() => runBulk(bulk.bulkRemoveTag)}
   onclear={() => selection.clear()}

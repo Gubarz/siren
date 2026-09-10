@@ -156,6 +156,37 @@ function buildCoreActions({
   return { topLevel, moreItems }
 }
 
+// Lost sessions are history-only: no console, shells, discovery, or kill.
+// Tags/comments/tasks still work against the persisted record, and Remove
+// dismisses it from the known-agent list for good.
+function buildLostActions({ agent, targets, agentTabs, contextMenuHandlers }) {
+  const copyID = contextMenuHandlers.copyID || contextMenuHandlers.copyAgentID
+  const openTags = contextMenuHandlers.openTags
+  const openComments = contextMenuHandlers.openComments
+  const removeLost = contextMenuHandlers.onremovelost
+  const label = agent?.Name || agent?.Hostname || agent?.ID || ''
+  const taskTab = agent?._kind === 'beacon' ? 'tasks' : 'sessionTasks'
+
+  return [
+    { items: [
+      tabAction(agentTabs, targets, taskTab, targets.length),
+      { icon: 'copy', label: 'Copy ID', disabled: !copyID, on: () => copyID(targets) },
+      { icon: 'tag', label: 'Tags / Color…', disabled: !openTags, on: () => openTags('agent', agent.ID, label) },
+      { icon: 'message-square', label: 'Comments / Notes…', disabled: !openComments, on: () => openComments('agent', agent.ID, label) },
+    ] },
+    { divider: true },
+    { items: [
+      {
+        icon: 'trash',
+        label: bulkLabel('Remove', targets.length),
+        danger: true,
+        disabled: !removeLost,
+        on: () => removeLost(targets),
+      },
+    ] },
+  ]
+}
+
 // Sections wrapper around buildCoreActions: top-level items, then the
 // "More" submenu, then a divider. Imported by both the right-click menu
 // and the workspace Actions dropdown.
@@ -295,17 +326,40 @@ export function buildAgentContextSections(ctx) {
     isWindows,
     hasInteractiveSession,
     catalog,
-    targetIDs,
     targetAgents,
     agentTabs,
     automationRules,
     contextMenuHandlers,
   } = ctx
 
+  const targets = targetAgents?.length > 0 ? targetAgents : (agent ? [agent] : [])
+  const lostTargets = targets.filter((target) => target?._lost)
+  const liveTargets = targets.filter((target) => target && !target._lost)
+
+  // Lost-only selection: the reduced history menu, never live actions.
+  if (lostTargets.length > 0 && liveTargets.length === 0) {
+    return buildLostActions({ agent, targets: lostTargets, agentTabs, contextMenuHandlers })
+  }
+
+  // Mixed selection: every live action runs against the live targets only.
+  // When the right-clicked row itself is lost, anchor the single-agent
+  // actions on a live target instead so rename/kill cannot hit history.
+  const hasLost = lostTargets.length > 0
+  const effectiveTargetAgents = hasLost ? liveTargets : targetAgents
+  // Command targets are always live ids, so a selection id with no resolved
+  // live row can never reach the command modal.
+  const effectiveTargetIDs = liveTargets.map((target) => target.ID)
+  const lostAnchor = hasLost && agent?._lost
+  const actionAgent = lostAnchor ? (liveTargets[0] ?? agent) : agent
+  const actionIsBeacon = lostAnchor ? actionAgent?._kind === 'beacon' : isBeacon
+  const actionIsWindows = lostAnchor
+    ? (actionAgent?.OS || '').toLowerCase() === 'windows'
+    : isWindows
+
   const sections = buildAgentActionsSections({
-    agent, isBeacon, isWindows,
+    agent: actionAgent, isBeacon: actionIsBeacon, isWindows: actionIsWindows,
     hasInteractiveSession: hasInteractiveSession ?? false,
-    targetAgents, agentTabs,
+    targetAgents: effectiveTargetAgents, agentTabs,
     openBeaconDetail: contextMenuHandlers.openBeaconDetail,
     promoteBeacon: contextMenuHandlers.promoteBeacon,
     demoteSession: contextMenuHandlers.demoteSession,
@@ -314,7 +368,7 @@ export function buildAgentContextSections(ctx) {
   })
 
   const discoveryItems = buildDiscoveryActions({
-    agent,
+    agent: actionAgent,
     runDiscovery: contextMenuHandlers.runDiscovery,
     promptPingSweep: contextMenuHandlers.promptPingSweep,
     clearDiscoveries: contextMenuHandlers.clearDiscoveries,
@@ -322,14 +376,14 @@ export function buildAgentContextSections(ctx) {
   })
 
   const automationActions = buildAutomationActions({
-    agent,
+    agent: actionAgent,
     automationRules,
     runAutomationRule: contextMenuHandlers.runAutomationRule,
-    targetAgents,
+    targetAgents: effectiveTargetAgents,
   })
 
   const managementItems = buildManagementActions({
-    agent,
+    agent: actionAgent,
     renameAgent: contextMenuHandlers.renameAgent,
     openReconfigure: contextMenuHandlers.openReconfigure,
     openTags: contextMenuHandlers.openTags,
@@ -338,17 +392,17 @@ export function buildAgentContextSections(ctx) {
   })
 
   const paletteItems = buildColorPalette({
-    agent, targetAgents,
+    agent: actionAgent, targetAgents: effectiveTargetAgents,
     setAgentRowColor: contextMenuHandlers.setAgentRowColor,
   })
 
   const paletteClear = buildColorClearItem({
-    agent, targetAgents,
+    agent: actionAgent, targetAgents: effectiveTargetAgents,
     setAgentRowColor: contextMenuHandlers.setAgentRowColor,
   })
 
   const dangerActions = buildDangerActions({
-    agent, targetAgents,
+    agent: actionAgent, targetAgents: effectiveTargetAgents,
     killAgent: contextMenuHandlers.killAgent,
     killAgents: contextMenuHandlers.killAgents,
     removeBeaconRecord: contextMenuHandlers.removeBeaconRecord,
@@ -356,7 +410,7 @@ export function buildAgentContextSections(ctx) {
   })
 
   const commandCategories = buildCommandCategories({
-    catalog, targetIDs,
+    catalog, targetIDs: effectiveTargetIDs,
     executeAgentCommand: contextMenuHandlers.executeAgentCommand,
   })
 

@@ -3,7 +3,9 @@ import { navigation } from '$stores/ui/navigation.svelte.js'
 import { config } from '$stores/config.svelte.js'
 import { sessions } from '$stores/resources/sessions.svelte.js'
 import { beacons } from '$stores/resources/beacons.svelte.js'
+import { selection } from '$stores/ui/selection.svelte.js'
 import { agentTabs } from '$stores/agentTabs.svelte.js'
+import { liveAgentIDSet } from '$utils/agents.js'
 import { GUI_ACTIONS, toPaletteAction } from './GuiActions.js'
 import { getRegisteredActions } from './registry.js'
 
@@ -36,6 +38,16 @@ function openAgentTabActions() {
   return actions
 }
 
+// Registered command actions are session-bound; hide them when the current
+// selection has no live agent so a lost row can never be a command target.
+function hasLiveAgentSelection() {
+  const live = liveAgentIDSet(sessions.data, beacons.data)
+  for (const id of selection.agents) {
+    if (live.has(id)) return true
+  }
+  return false
+}
+
 export function getActions() {
   const dynamic = []
 
@@ -61,5 +73,8 @@ export function getActions() {
     })
   }
 
-  return [...staticActions, ...openAgentTabActions(), ...dynamic, ...getRegisteredActions()]
+  const registered = getRegisteredActions().filter(
+    (action) => !action.requiresLiveAgents || hasLiveAgentSelection(),
+  )
+  return [...staticActions, ...openAgentTabActions(), ...dynamic, ...registered]
 }

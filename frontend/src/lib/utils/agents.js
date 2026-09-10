@@ -86,6 +86,15 @@ export function buildAgentMap(sessionsList, beaconsList) {
   return map
 }
 
+// IDs of live sessions/beacons only. Lost history is merged into the table
+// for display but must never be routed into live command targets.
+export function liveAgentIDSet(sessionList, beaconList) {
+  const ids = new Set()
+  for (const session of sessionList || []) ids.add(session.ID)
+  for (const beacon of beaconList || []) ids.add(beacon.ID)
+  return ids
+}
+
 export function isHighPrivilege(username) {
   const lower = String(username || '').toLowerCase();
   const account = lower.split(/[\\/]/).pop() || '';

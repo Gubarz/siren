@@ -127,6 +127,7 @@ func NewApp(wailsApp *application.App, window *application.WebviewWindow) *App {
 		Env:          env.New(shared.RPC),
 		BloodHound:   bloodhound.New(shared.DataDir, shared.Bus),
 	}
+	app.Agents.SetKnownAgents(shared.KnownAgents)
 	app.Files.SetBus(shared.Bus)
 	app.Procs.SetBus(shared.Bus)
 	app.Implants.SetBus(shared.Bus)
