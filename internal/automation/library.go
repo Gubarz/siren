@@ -119,9 +119,12 @@ func scrubRuleSecrets(rule AutomationRule) AutomationRule {
 		}
 		cfg := make(map[string]any, len(spec.Config))
 		for k, v := range spec.Config {
-			if k != "url" {
-				cfg[k] = v
+			// The URL can carry a token in its query string, and the headers
+			// normally hold an Authorization or API key.
+			if k == "url" || k == "headers" {
+				continue
 			}
+			cfg[k] = v
 		}
 		scrubbed[j] = ActionSpec{Type: spec.Type, Config: cfg}
 		modified = true
