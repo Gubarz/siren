@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"regexp"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -15,6 +16,17 @@ import (
 // into "run a sliver client console" mode. main.go checks for it before
 // spawning the wails app.
 const ConsoleModeFlag = "--sliver-console"
+
+// sessionIDPattern matches Sliver's session and beacon IDs, which are hex UUIDs.
+var sessionIDPattern = regexp.MustCompile(`^[0-9a-fA-F-]{8,64}$`)
+
+// validSessionID reports whether id can be interpolated into the console
+// subprocess's rcScript. Sliver reads that script line by line, so an id
+// carrying a newline would be executed as an extra console command in the
+// subprocess. An empty id means "do not pin a session" and is allowed.
+func validSessionID(id string) bool {
+	return id == "" || sessionIDPattern.MatchString(id)
+}
 
 // consolePTY is the GUI-side end of the console subprocess's terminal:
 // unix PTY master on unix, ConPTY pipes on Windows. Writes land on the
