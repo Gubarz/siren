@@ -194,7 +194,6 @@ func (je *jsExec) scriptRecordsQuery(call sobek.FunctionCall) sobek.Value {
 	rows, err := je.rc.Deps.Records.Query(store.Filter{
 		Kind:      store.KindCall,
 		Direction: store.DirectionComplete,
-		Status:    filter.Status,
 		Limit:     scriptRecordsFetchLimit,
 	})
 	if err != nil {
@@ -235,9 +234,14 @@ func applyRecordFilter(obj *sobek.Object, f *recordFilter) {
 }
 
 // mapRecordRows maps completion rows to the historical entry shape. Method
-// suffix, target, and time filters run here because the store filter cannot
-// express suffix or session-or-beacon matching.
+// suffix, target, time, and status filters run here because the store filter
+// cannot express suffix, session-or-beacon matching, or status normalization.
+// Known limitation: since/until and verb/target filters apply after the
+// 500-row fetch, and actorKind is unsupported.
 func mapRecordRows(rows []store.RecordRow, f recordFilter) ([]recordEntry, int) {
+	if f.Status != "" {
+		f.Status = normalizeRecordStatus(f.Status)
+	}
 	entries := make([]recordEntry, 0, len(rows))
 	for _, row := range rows {
 		verb := shortRecordMethod(row.Method)
@@ -245,6 +249,10 @@ func mapRecordRows(rows []store.RecordRow, f recordFilter) ([]recordEntry, int) 
 			continue
 		}
 		if f.TargetID != "" && row.SessionID != f.TargetID && row.BeaconID != f.TargetID {
+			continue
+		}
+		status := normalizeRecordStatus(row.Status)
+		if f.Status != "" && status != f.Status {
 			continue
 		}
 		if f.Since != 0 && row.TS < f.Since {
@@ -265,7 +273,7 @@ func mapRecordRows(rows []store.RecordRow, f recordFilter) ([]recordEntry, int) 
 			Verb:          verb,
 			TargetID:      targetID,
 			TargetKind:    targetKind,
-			Status:        row.Status,
+			Status:        status,
 			Err:           completionError(row.JSON),
 			CorrelationID: row.RunID,
 		})
@@ -286,6 +294,20 @@ func shortRecordMethod(method string) string {
 		return method[i+1:]
 	}
 	return method
+}
+
+// normalizeRecordStatus collapses the vocabulary mismatch between envelope
+// rows ("attempted") and completion rows (gRPC code strings such as "OK" or
+// "Canceled") into the three script-facing statuses.
+func normalizeRecordStatus(status string) string {
+	switch status {
+	case "OK", "ok":
+		return "ok"
+	case "", "attempted":
+		return "attempted"
+	default:
+		return "error"
+	}
 }
 
 func completionError(preview string) string {

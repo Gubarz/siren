@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Enforce the layer decoupling contract (docs/superpowers/specs/
-# 2026-07-24-substrate-bus-journal-design.md). A package "violates" the
-# contract when its transitive dependency set contains a forbidden import.
+# Enforce the layer decoupling contract. A package "violates" the contract
+# when its transitive dependency set contains a forbidden import.
 set -euo pipefail
 
 fail=0
@@ -23,58 +22,33 @@ if out=$(external_imports ./internal/bus) && [ -n "$out" ]; then
     fail=1
 fi
 
-# Rule 2: internal/journal imports no sliver/wails and only internal/bus internally.
-# (google/uuid and other non-sliver externals are allowed.)
-if out=$(external_imports ./internal/journal | grep -E '^github\.com/(bishopfox|wailsapp)') && [ -n "$out" ]; then
-    echo "boundary: internal/journal must not import sliver or wails:" >&2
-    echo "$out" >&2
-    fail=1
-fi
-if out=$(internal_imports ./internal/journal | grep -v '^siren/internal/\(journal\|bus\)$') && [ -n "$out" ]; then
-    echo "boundary: internal/journal may only import internal/bus:" >&2
-    echo "$out" >&2
-    fail=1
-fi
-
-# Rule 3: internal/localstate/journal imports no sliver/wails and only internal/journal internally.
-if out=$(external_imports ./internal/localstate/journal | grep -E '^github\.com/(bishopfox|wailsapp)') && [ -n "$out" ]; then
-    echo "boundary: internal/localstate/journal must not import sliver or wails:" >&2
-    echo "$out" >&2
-    fail=1
-fi
-if out=$(internal_imports ./internal/localstate/journal | grep -v '^siren/internal/\(localstate/journal\|journal\|bus\)$') && [ -n "$out" ]; then
-    echo "boundary: internal/localstate/journal may only import internal/journal:" >&2
-    echo "$out" >&2
-    fail=1
-fi
-
-# Rule 4: internal/automation imports no sliver/wails and only bus+journal internally.
+# Rule 2: internal/automation imports no sliver/wails and only bus+execctx internally.
 if out=$(external_imports ./internal/automation | grep -E '^github\.com/(bishopfox|wailsapp)') && [ -n "$out" ]; then
     echo "boundary: internal/automation must not import sliver or wails:" >&2
     echo "$out" >&2
     fail=1
 fi
-if out=$(internal_imports ./internal/automation | grep -v '^siren/internal/\(automation\|bus\|journal\)$') && [ -n "$out" ]; then
-    echo "boundary: internal/automation may only import internal/bus and internal/journal:" >&2
+if out=$(internal_imports ./internal/automation | grep -v '^siren/internal/\(automation\|bus\|execctx\)$') && [ -n "$out" ]; then
+    echo "boundary: internal/automation may only import internal/bus and internal/execctx:" >&2
     echo "$out" >&2
     fail=1
 fi
 
-# Rule 4b: automation subpackages (triggers, actions) follow the same contract.
+# Rule 2b: automation subpackages (triggers, actions) follow the same contract.
 for sub in ./internal/automation/triggers ./internal/automation/actions; do
     if out=$(external_imports "$sub" | grep -E '^github\.com/(bishopfox|wailsapp)') && [ -n "$out" ]; then
         echo "boundary: $sub must not import sliver or wails:" >&2
         echo "$out" >&2
         fail=1
     fi
-    if out=$(internal_imports "$sub" | grep -v '^siren/internal/\(automation\|automation/triggers\|automation/actions\|bus\|journal\)$') && [ -n "$out" ]; then
-        echo "boundary: $sub may only import internal/automation, internal/bus, internal/journal:" >&2
+    if out=$(internal_imports "$sub" | grep -v '^siren/internal/\(automation\|automation/events\|automation/triggers\|automation/actions\|bus\|execctx\)$') && [ -n "$out" ]; then
+        echo "boundary: $sub may only import internal/automation, internal/automation/events, internal/bus, internal/execctx:" >&2
         echo "$out" >&2
         fail=1
     fi
 done
 
-# Rule 5: within internal/sliver/*, only automationexec may import internal/automation.
+# Rule 3: within internal/sliver/*, only automationexec may import internal/automation.
 while IFS= read -r pkg; do
     case "$pkg" in
         siren/internal/sliver/automationexec) continue ;;

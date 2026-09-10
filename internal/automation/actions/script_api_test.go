@@ -1,10 +1,76 @@
 package actions
 
 import (
+	"context"
+	"path/filepath"
 	"testing"
 
+	"github.com/gubarz/revils/capture"
 	"github.com/gubarz/revils/store"
+
+	"siren/internal/captureann"
 )
+
+func TestNormalizeRecordStatus(t *testing.T) {
+	cases := map[string]string{
+		"OK":        "ok",
+		"ok":        "ok",
+		"":          "attempted",
+		"attempted": "attempted",
+		"Canceled":  "error",
+		"Unknown":   "error",
+		"error":     "error",
+	}
+	for in, want := range cases {
+		if got := normalizeRecordStatus(in); got != want {
+			t.Fatalf("normalize(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestMapRecordRowsNormalizesRealCompletionStatus(t *testing.T) {
+	st, err := store.Open(store.Config{
+		DBPath: filepath.Join(t.TempDir(), "records.sqlite"),
+		Key:    make([]byte, 32),
+	})
+	if err != nil {
+		t.Fatalf("store: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+
+	rec := capture.NewRecorder(st, captureann.New("op"))
+	call := rec.Begin(context.Background(), "/rpcpb.SliverRPC/Ls", nil)
+	if call == nil {
+		t.Fatal("begin returned nil")
+	}
+	call.End(nil)
+
+	rows, err := st.Query(store.Filter{
+		Kind: store.KindCall, Direction: store.DirectionComplete, Limit: 10,
+	})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("rows: %v %+v", err, rows)
+	}
+	if rows[0].Status != "OK" {
+		t.Fatalf("seeded status = %q, want gRPC code OK", rows[0].Status)
+	}
+	entries, total := mapRecordRows(rows, recordFilter{})
+	if total != 1 || len(entries) != 1 || entries[0].Status != "ok" {
+		t.Fatalf("normalized: %+v total %d", entries, total)
+	}
+	entries, total = mapRecordRows(rows, recordFilter{Status: "ok"})
+	if total != 1 || len(entries) != 1 {
+		t.Fatalf("status ok filter: %+v total %d", entries, total)
+	}
+	entries, total = mapRecordRows(rows, recordFilter{Status: "OK"})
+	if total != 1 || len(entries) != 1 {
+		t.Fatalf("raw code filter: %+v total %d", entries, total)
+	}
+	entries, total = mapRecordRows(rows, recordFilter{Status: "error"})
+	if total != 0 || len(entries) != 0 {
+		t.Fatalf("status error filter: %+v total %d", entries, total)
+	}
+}
 
 func TestMapRecordRowsMapsCompletionFields(t *testing.T) {
 	rows := []store.RecordRow{

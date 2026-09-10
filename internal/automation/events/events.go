@@ -3,10 +3,10 @@
 package events
 
 type TaskResult struct {
-	Verb       string
-	TargetID   string
-	TargetKind string
-	Hostname   string
-	Status     string
-	Error      string
+	Verb       string `json:"verb"`
+	TargetID   string `json:"targetId"`
+	TargetKind string `json:"targetKind"`
+	Hostname   string `json:"hostname"`
+	Status     string `json:"status"`
+	Error      string `json:"error"`
 }
