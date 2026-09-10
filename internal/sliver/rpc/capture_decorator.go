@@ -36,12 +36,8 @@ func endCallOnContextDone(call *capture.Call, ctx context.Context) {
 	}()
 }
 
-func (d *captureDecorator) preview(ctx context.Context, method, direction string, msg proto.Message) string {
+func (d *captureDecorator) preview(ctx context.Context, method, direction string, payload []byte, msg proto.Message) string {
 	if msg == nil {
-		return ""
-	}
-	payload, err := proto.Marshal(msg)
-	if err != nil {
 		return ""
 	}
 	ann := d.rec.Annotate(ctx, method, direction, payload)
@@ -57,14 +53,14 @@ func (d *captureDecorator) GetVersion(ctx context.Context, in *commonpb.Empty, o
 	if call == nil {
 		return d.inner.GetVersion(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetVersion", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetVersion", "request", payload, in))
 	resp, err := d.inner.GetVersion(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetVersion", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetVersion", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -86,14 +82,14 @@ func (d *captureDecorator) GetOperators(ctx context.Context, in *commonpb.Empty,
 	if call == nil {
 		return d.inner.GetOperators(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetOperators", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetOperators", "request", payload, in))
 	resp, err := d.inner.GetOperators(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetOperators", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetOperators", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -104,14 +100,14 @@ func (d *captureDecorator) Kill(ctx context.Context, in *sliverpb.KillReq, opts 
 	if call == nil {
 		return d.inner.Kill(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Kill", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Kill", "request", payload, in))
 	resp, err := d.inner.Kill(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Kill", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Kill", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -122,14 +118,14 @@ func (d *captureDecorator) Reconfigure(ctx context.Context, in *sliverpb.Reconfi
 	if call == nil {
 		return d.inner.Reconfigure(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Reconfigure", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Reconfigure", "request", payload, in))
 	resp, err := d.inner.Reconfigure(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Reconfigure", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Reconfigure", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -140,14 +136,14 @@ func (d *captureDecorator) Rename(ctx context.Context, in *clientpb.RenameReq, o
 	if call == nil {
 		return d.inner.Rename(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Rename", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Rename", "request", payload, in))
 	resp, err := d.inner.Rename(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Rename", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Rename", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -162,14 +158,14 @@ func (d *captureDecorator) MonitorStart(ctx context.Context, in *commonpb.Empty,
 	if call == nil {
 		return d.inner.MonitorStart(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStart", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStart", "request", payload, in))
 	resp, err := d.inner.MonitorStart(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStart", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStart", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -180,14 +176,14 @@ func (d *captureDecorator) MonitorStop(ctx context.Context, in *commonpb.Empty, 
 	if call == nil {
 		return d.inner.MonitorStop(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStop", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStop", "request", payload, in))
 	resp, err := d.inner.MonitorStop(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStop", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorStop", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -198,14 +194,14 @@ func (d *captureDecorator) MonitorListConfig(ctx context.Context, in *commonpb.E
 	if call == nil {
 		return d.inner.MonitorListConfig(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorListConfig", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorListConfig", "request", payload, in))
 	resp, err := d.inner.MonitorListConfig(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorListConfig", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorListConfig", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -216,14 +212,14 @@ func (d *captureDecorator) MonitorAddConfig(ctx context.Context, in *clientpb.Mo
 	if call == nil {
 		return d.inner.MonitorAddConfig(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorAddConfig", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorAddConfig", "request", payload, in))
 	resp, err := d.inner.MonitorAddConfig(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorAddConfig", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorAddConfig", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -234,14 +230,14 @@ func (d *captureDecorator) MonitorDelConfig(ctx context.Context, in *clientpb.Mo
 	if call == nil {
 		return d.inner.MonitorDelConfig(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorDelConfig", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorDelConfig", "request", payload, in))
 	resp, err := d.inner.MonitorDelConfig(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorDelConfig", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MonitorDelConfig", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -252,14 +248,14 @@ func (d *captureDecorator) GetAIProviders(ctx context.Context, in *commonpb.Empt
 	if call == nil {
 		return d.inner.GetAIProviders(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIProviders", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIProviders", "request", payload, in))
 	resp, err := d.inner.GetAIProviders(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIProviders", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIProviders", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -270,14 +266,14 @@ func (d *captureDecorator) GetAIConversations(ctx context.Context, in *commonpb.
 	if call == nil {
 		return d.inner.GetAIConversations(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversations", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversations", "request", payload, in))
 	resp, err := d.inner.GetAIConversations(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversations", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversations", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -288,14 +284,14 @@ func (d *captureDecorator) GetAIConversation(ctx context.Context, in *clientpb.A
 	if call == nil {
 		return d.inner.GetAIConversation(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversation", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversation", "request", payload, in))
 	resp, err := d.inner.GetAIConversation(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversation", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversation", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -306,14 +302,14 @@ func (d *captureDecorator) SaveAIConversation(ctx context.Context, in *clientpb.
 	if call == nil {
 		return d.inner.SaveAIConversation(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversation", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversation", "request", payload, in))
 	resp, err := d.inner.SaveAIConversation(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversation", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversation", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -324,14 +320,14 @@ func (d *captureDecorator) DeleteAIConversation(ctx context.Context, in *clientp
 	if call == nil {
 		return d.inner.DeleteAIConversation(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteAIConversation", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteAIConversation", "request", payload, in))
 	resp, err := d.inner.DeleteAIConversation(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteAIConversation", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteAIConversation", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -342,14 +338,14 @@ func (d *captureDecorator) GetAIConversationMessages(ctx context.Context, in *cl
 	if call == nil {
 		return d.inner.GetAIConversationMessages(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversationMessages", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversationMessages", "request", payload, in))
 	resp, err := d.inner.GetAIConversationMessages(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversationMessages", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetAIConversationMessages", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -360,14 +356,14 @@ func (d *captureDecorator) SaveAIConversationMessage(ctx context.Context, in *cl
 	if call == nil {
 		return d.inner.SaveAIConversationMessage(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversationMessage", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversationMessage", "request", payload, in))
 	resp, err := d.inner.SaveAIConversationMessage(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversationMessage", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveAIConversationMessage", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -378,14 +374,14 @@ func (d *captureDecorator) StartMTLSListener(ctx context.Context, in *clientpb.M
 	if call == nil {
 		return d.inner.StartMTLSListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartMTLSListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartMTLSListener", "request", payload, in))
 	resp, err := d.inner.StartMTLSListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartMTLSListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartMTLSListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -396,14 +392,14 @@ func (d *captureDecorator) StartWGListener(ctx context.Context, in *clientpb.WGL
 	if call == nil {
 		return d.inner.StartWGListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartWGListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartWGListener", "request", payload, in))
 	resp, err := d.inner.StartWGListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartWGListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartWGListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -414,14 +410,14 @@ func (d *captureDecorator) StartDNSListener(ctx context.Context, in *clientpb.DN
 	if call == nil {
 		return d.inner.StartDNSListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartDNSListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartDNSListener", "request", payload, in))
 	resp, err := d.inner.StartDNSListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartDNSListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartDNSListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -432,14 +428,14 @@ func (d *captureDecorator) StartHTTPSListener(ctx context.Context, in *clientpb.
 	if call == nil {
 		return d.inner.StartHTTPSListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPSListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPSListener", "request", payload, in))
 	resp, err := d.inner.StartHTTPSListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPSListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPSListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -450,14 +446,14 @@ func (d *captureDecorator) StartHTTPListener(ctx context.Context, in *clientpb.H
 	if call == nil {
 		return d.inner.StartHTTPListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPListener", "request", payload, in))
 	resp, err := d.inner.StartHTTPListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartHTTPListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -472,14 +468,14 @@ func (d *captureDecorator) GetBeacon(ctx context.Context, in *clientpb.Beacon, o
 	if call == nil {
 		return d.inner.GetBeacon(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeacon", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeacon", "request", payload, in))
 	resp, err := d.inner.GetBeacon(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeacon", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeacon", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -490,14 +486,14 @@ func (d *captureDecorator) RmBeacon(ctx context.Context, in *clientpb.Beacon, op
 	if call == nil {
 		return d.inner.RmBeacon(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RmBeacon", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RmBeacon", "request", payload, in))
 	resp, err := d.inner.RmBeacon(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RmBeacon", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RmBeacon", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -516,14 +512,14 @@ func (d *captureDecorator) CancelBeaconTask(ctx context.Context, in *clientpb.Be
 	if call == nil {
 		return d.inner.CancelBeaconTask(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CancelBeaconTask", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CancelBeaconTask", "request", payload, in))
 	resp, err := d.inner.CancelBeaconTask(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CancelBeaconTask", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CancelBeaconTask", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -534,14 +530,14 @@ func (d *captureDecorator) UpdateBeaconIntegrityInformation(ctx context.Context,
 	if call == nil {
 		return d.inner.UpdateBeaconIntegrityInformation(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/UpdateBeaconIntegrityInformation", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/UpdateBeaconIntegrityInformation", "request", payload, in))
 	resp, err := d.inner.UpdateBeaconIntegrityInformation(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/UpdateBeaconIntegrityInformation", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/UpdateBeaconIntegrityInformation", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -552,14 +548,14 @@ func (d *captureDecorator) GetJobs(ctx context.Context, in *commonpb.Empty, opts
 	if call == nil {
 		return d.inner.GetJobs(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetJobs", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetJobs", "request", payload, in))
 	resp, err := d.inner.GetJobs(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetJobs", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetJobs", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -570,14 +566,14 @@ func (d *captureDecorator) KillJob(ctx context.Context, in *clientpb.KillJobReq,
 	if call == nil {
 		return d.inner.KillJob(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/KillJob", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/KillJob", "request", payload, in))
 	resp, err := d.inner.KillJob(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/KillJob", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/KillJob", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -588,14 +584,14 @@ func (d *captureDecorator) RestartJobs(ctx context.Context, in *clientpb.Restart
 	if call == nil {
 		return d.inner.RestartJobs(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RestartJobs", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RestartJobs", "request", payload, in))
 	resp, err := d.inner.RestartJobs(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RestartJobs", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RestartJobs", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -606,14 +602,14 @@ func (d *captureDecorator) StartTCPStagerListener(ctx context.Context, in *clien
 	if call == nil {
 		return d.inner.StartTCPStagerListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartTCPStagerListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartTCPStagerListener", "request", payload, in))
 	resp, err := d.inner.StartTCPStagerListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartTCPStagerListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartTCPStagerListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -624,14 +620,14 @@ func (d *captureDecorator) LootAdd(ctx context.Context, in *clientpb.Loot, opts 
 	if call == nil {
 		return d.inner.LootAdd(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootAdd", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootAdd", "request", payload, in))
 	resp, err := d.inner.LootAdd(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootAdd", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootAdd", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -642,14 +638,14 @@ func (d *captureDecorator) LootRm(ctx context.Context, in *clientpb.Loot, opts .
 	if call == nil {
 		return d.inner.LootRm(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootRm", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootRm", "request", payload, in))
 	resp, err := d.inner.LootRm(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootRm", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootRm", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -660,14 +656,14 @@ func (d *captureDecorator) LootUpdate(ctx context.Context, in *clientpb.Loot, op
 	if call == nil {
 		return d.inner.LootUpdate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootUpdate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootUpdate", "request", payload, in))
 	resp, err := d.inner.LootUpdate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootUpdate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootUpdate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -678,14 +674,14 @@ func (d *captureDecorator) LootContent(ctx context.Context, in *clientpb.Loot, o
 	if call == nil {
 		return d.inner.LootContent(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootContent", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootContent", "request", payload, in))
 	resp, err := d.inner.LootContent(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootContent", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootContent", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -696,14 +692,14 @@ func (d *captureDecorator) LootAll(ctx context.Context, in *commonpb.Empty, opts
 	if call == nil {
 		return d.inner.LootAll(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootAll", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/LootAll", "request", payload, in))
 	resp, err := d.inner.LootAll(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootAll", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/LootAll", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -714,14 +710,14 @@ func (d *captureDecorator) Creds(ctx context.Context, in *commonpb.Empty, opts .
 	if call == nil {
 		return d.inner.Creds(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Creds", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Creds", "request", payload, in))
 	resp, err := d.inner.Creds(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Creds", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Creds", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -732,14 +728,14 @@ func (d *captureDecorator) CredsAdd(ctx context.Context, in *clientpb.Credential
 	if call == nil {
 		return d.inner.CredsAdd(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsAdd", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsAdd", "request", payload, in))
 	resp, err := d.inner.CredsAdd(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsAdd", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsAdd", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -750,14 +746,14 @@ func (d *captureDecorator) CredsRm(ctx context.Context, in *clientpb.Credentials
 	if call == nil {
 		return d.inner.CredsRm(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsRm", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsRm", "request", payload, in))
 	resp, err := d.inner.CredsRm(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsRm", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsRm", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -768,14 +764,14 @@ func (d *captureDecorator) CredsUpdate(ctx context.Context, in *clientpb.Credent
 	if call == nil {
 		return d.inner.CredsUpdate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsUpdate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsUpdate", "request", payload, in))
 	resp, err := d.inner.CredsUpdate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsUpdate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsUpdate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -786,14 +782,14 @@ func (d *captureDecorator) GetCredByID(ctx context.Context, in *clientpb.Credent
 	if call == nil {
 		return d.inner.GetCredByID(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredByID", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredByID", "request", payload, in))
 	resp, err := d.inner.GetCredByID(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredByID", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredByID", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -804,14 +800,14 @@ func (d *captureDecorator) GetCredsByHashType(ctx context.Context, in *clientpb.
 	if call == nil {
 		return d.inner.GetCredsByHashType(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredsByHashType", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredsByHashType", "request", payload, in))
 	resp, err := d.inner.GetCredsByHashType(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredsByHashType", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCredsByHashType", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -822,14 +818,14 @@ func (d *captureDecorator) GetPlaintextCredsByHashType(ctx context.Context, in *
 	if call == nil {
 		return d.inner.GetPlaintextCredsByHashType(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetPlaintextCredsByHashType", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetPlaintextCredsByHashType", "request", payload, in))
 	resp, err := d.inner.GetPlaintextCredsByHashType(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetPlaintextCredsByHashType", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetPlaintextCredsByHashType", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -840,14 +836,14 @@ func (d *captureDecorator) CredsSniffHashType(ctx context.Context, in *clientpb.
 	if call == nil {
 		return d.inner.CredsSniffHashType(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsSniffHashType", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CredsSniffHashType", "request", payload, in))
 	resp, err := d.inner.CredsSniffHashType(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsSniffHashType", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CredsSniffHashType", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -858,14 +854,14 @@ func (d *captureDecorator) Hosts(ctx context.Context, in *commonpb.Empty, opts .
 	if call == nil {
 		return d.inner.Hosts(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Hosts", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Hosts", "request", payload, in))
 	resp, err := d.inner.Hosts(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Hosts", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Hosts", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -876,14 +872,14 @@ func (d *captureDecorator) Host(ctx context.Context, in *clientpb.Host, opts ...
 	if call == nil {
 		return d.inner.Host(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Host", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Host", "request", payload, in))
 	resp, err := d.inner.Host(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Host", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Host", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -894,14 +890,14 @@ func (d *captureDecorator) HostRm(ctx context.Context, in *clientpb.Host, opts .
 	if call == nil {
 		return d.inner.HostRm(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/HostRm", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/HostRm", "request", payload, in))
 	resp, err := d.inner.HostRm(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/HostRm", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/HostRm", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -912,14 +908,14 @@ func (d *captureDecorator) HostIOCRm(ctx context.Context, in *clientpb.IOC, opts
 	if call == nil {
 		return d.inner.HostIOCRm(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/HostIOCRm", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/HostIOCRm", "request", payload, in))
 	resp, err := d.inner.HostIOCRm(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/HostIOCRm", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/HostIOCRm", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -930,14 +926,14 @@ func (d *captureDecorator) Generate(ctx context.Context, in *clientpb.GenerateRe
 	if call == nil {
 		return d.inner.Generate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Generate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Generate", "request", payload, in))
 	resp, err := d.inner.Generate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Generate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Generate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -948,14 +944,14 @@ func (d *captureDecorator) GenerateSpoofMetadata(ctx context.Context, in *client
 	if call == nil {
 		return d.inner.GenerateSpoofMetadata(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateSpoofMetadata", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateSpoofMetadata", "request", payload, in))
 	resp, err := d.inner.GenerateSpoofMetadata(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateSpoofMetadata", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateSpoofMetadata", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -966,14 +962,14 @@ func (d *captureDecorator) GenerateExternal(ctx context.Context, in *clientpb.Ex
 	if call == nil {
 		return d.inner.GenerateExternal(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternal", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternal", "request", payload, in))
 	resp, err := d.inner.GenerateExternal(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternal", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternal", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -984,14 +980,14 @@ func (d *captureDecorator) GenerateExternalSaveBuild(ctx context.Context, in *cl
 	if call == nil {
 		return d.inner.GenerateExternalSaveBuild(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalSaveBuild", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalSaveBuild", "request", payload, in))
 	resp, err := d.inner.GenerateExternalSaveBuild(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalSaveBuild", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalSaveBuild", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1002,14 +998,14 @@ func (d *captureDecorator) GenerateExternalGetBuildConfig(ctx context.Context, i
 	if call == nil {
 		return d.inner.GenerateExternalGetBuildConfig(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalGetBuildConfig", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalGetBuildConfig", "request", payload, in))
 	resp, err := d.inner.GenerateExternalGetBuildConfig(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalGetBuildConfig", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateExternalGetBuildConfig", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1020,14 +1016,14 @@ func (d *captureDecorator) GenerateStage(ctx context.Context, in *clientpb.Gener
 	if call == nil {
 		return d.inner.GenerateStage(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateStage", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateStage", "request", payload, in))
 	resp, err := d.inner.GenerateStage(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateStage", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateStage", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1038,14 +1034,14 @@ func (d *captureDecorator) StageImplantBuild(ctx context.Context, in *clientpb.I
 	if call == nil {
 		return d.inner.StageImplantBuild(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StageImplantBuild", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StageImplantBuild", "request", payload, in))
 	resp, err := d.inner.StageImplantBuild(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StageImplantBuild", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StageImplantBuild", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1056,14 +1052,14 @@ func (d *captureDecorator) GetHTTPC2Profiles(ctx context.Context, in *commonpb.E
 	if call == nil {
 		return d.inner.GetHTTPC2Profiles(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2Profiles", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2Profiles", "request", payload, in))
 	resp, err := d.inner.GetHTTPC2Profiles(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2Profiles", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2Profiles", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1074,14 +1070,14 @@ func (d *captureDecorator) GetHTTPC2ProfileByName(ctx context.Context, in *clien
 	if call == nil {
 		return d.inner.GetHTTPC2ProfileByName(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2ProfileByName", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2ProfileByName", "request", payload, in))
 	resp, err := d.inner.GetHTTPC2ProfileByName(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2ProfileByName", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetHTTPC2ProfileByName", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1092,14 +1088,14 @@ func (d *captureDecorator) SaveHTTPC2Profile(ctx context.Context, in *clientpb.H
 	if call == nil {
 		return d.inner.SaveHTTPC2Profile(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveHTTPC2Profile", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveHTTPC2Profile", "request", payload, in))
 	resp, err := d.inner.SaveHTTPC2Profile(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveHTTPC2Profile", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveHTTPC2Profile", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1122,14 +1118,14 @@ func (d *captureDecorator) BuilderTrigger(ctx context.Context, in *clientpb.Even
 	if call == nil {
 		return d.inner.BuilderTrigger(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/BuilderTrigger", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/BuilderTrigger", "request", payload, in))
 	resp, err := d.inner.BuilderTrigger(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/BuilderTrigger", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/BuilderTrigger", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1140,14 +1136,14 @@ func (d *captureDecorator) Builders(ctx context.Context, in *commonpb.Empty, opt
 	if call == nil {
 		return d.inner.Builders(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Builders", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Builders", "request", payload, in))
 	resp, err := d.inner.Builders(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Builders", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Builders", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1158,14 +1154,14 @@ func (d *captureDecorator) GetCertificateInfo(ctx context.Context, in *clientpb.
 	if call == nil {
 		return d.inner.GetCertificateInfo(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateInfo", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateInfo", "request", payload, in))
 	resp, err := d.inner.GetCertificateInfo(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateInfo", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateInfo", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1176,14 +1172,14 @@ func (d *captureDecorator) GetCertificateAuthorityInfo(ctx context.Context, in *
 	if call == nil {
 		return d.inner.GetCertificateAuthorityInfo(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateAuthorityInfo", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateAuthorityInfo", "request", payload, in))
 	resp, err := d.inner.GetCertificateAuthorityInfo(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateAuthorityInfo", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCertificateAuthorityInfo", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1194,14 +1190,14 @@ func (d *captureDecorator) Crack(ctx context.Context, in *clientpb.CrackCommand,
 	if call == nil {
 		return d.inner.Crack(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Crack", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Crack", "request", payload, in))
 	resp, err := d.inner.Crack(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Crack", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Crack", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1224,14 +1220,14 @@ func (d *captureDecorator) CrackstationTrigger(ctx context.Context, in *clientpb
 	if call == nil {
 		return d.inner.CrackstationTrigger(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationTrigger", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationTrigger", "request", payload, in))
 	resp, err := d.inner.CrackstationTrigger(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationTrigger", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationTrigger", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1242,14 +1238,14 @@ func (d *captureDecorator) CrackstationBenchmark(ctx context.Context, in *client
 	if call == nil {
 		return d.inner.CrackstationBenchmark(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationBenchmark", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationBenchmark", "request", payload, in))
 	resp, err := d.inner.CrackstationBenchmark(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationBenchmark", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackstationBenchmark", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1260,14 +1256,14 @@ func (d *captureDecorator) Crackstations(ctx context.Context, in *commonpb.Empty
 	if call == nil {
 		return d.inner.Crackstations(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Crackstations", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Crackstations", "request", payload, in))
 	resp, err := d.inner.Crackstations(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Crackstations", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Crackstations", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1278,14 +1274,14 @@ func (d *captureDecorator) CrackTaskByID(ctx context.Context, in *clientpb.Crack
 	if call == nil {
 		return d.inner.CrackTaskByID(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskByID", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskByID", "request", payload, in))
 	resp, err := d.inner.CrackTaskByID(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskByID", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskByID", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1296,14 +1292,14 @@ func (d *captureDecorator) CrackTaskUpdate(ctx context.Context, in *clientpb.Cra
 	if call == nil {
 		return d.inner.CrackTaskUpdate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskUpdate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskUpdate", "request", payload, in))
 	resp, err := d.inner.CrackTaskUpdate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskUpdate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackTaskUpdate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1314,14 +1310,14 @@ func (d *captureDecorator) CrackFilesList(ctx context.Context, in *clientpb.Crac
 	if call == nil {
 		return d.inner.CrackFilesList(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFilesList", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFilesList", "request", payload, in))
 	resp, err := d.inner.CrackFilesList(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFilesList", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFilesList", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1332,14 +1328,14 @@ func (d *captureDecorator) CrackFileCreate(ctx context.Context, in *clientpb.Cra
 	if call == nil {
 		return d.inner.CrackFileCreate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileCreate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileCreate", "request", payload, in))
 	resp, err := d.inner.CrackFileCreate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileCreate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileCreate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1350,14 +1346,14 @@ func (d *captureDecorator) CrackFileChunkUpload(ctx context.Context, in *clientp
 	if call == nil {
 		return d.inner.CrackFileChunkUpload(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkUpload", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkUpload", "request", payload, in))
 	resp, err := d.inner.CrackFileChunkUpload(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkUpload", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkUpload", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1368,14 +1364,14 @@ func (d *captureDecorator) CrackFileChunkDownload(ctx context.Context, in *clien
 	if call == nil {
 		return d.inner.CrackFileChunkDownload(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkDownload", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkDownload", "request", payload, in))
 	resp, err := d.inner.CrackFileChunkDownload(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkDownload", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileChunkDownload", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1386,14 +1382,14 @@ func (d *captureDecorator) CrackFileComplete(ctx context.Context, in *clientpb.C
 	if call == nil {
 		return d.inner.CrackFileComplete(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileComplete", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileComplete", "request", payload, in))
 	resp, err := d.inner.CrackFileComplete(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileComplete", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileComplete", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1404,14 +1400,14 @@ func (d *captureDecorator) CrackFileDelete(ctx context.Context, in *clientpb.Cra
 	if call == nil {
 		return d.inner.CrackFileDelete(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileDelete", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileDelete", "request", payload, in))
 	resp, err := d.inner.CrackFileDelete(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileDelete", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CrackFileDelete", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1422,14 +1418,14 @@ func (d *captureDecorator) Regenerate(ctx context.Context, in *clientpb.Regenera
 	if call == nil {
 		return d.inner.Regenerate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Regenerate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Regenerate", "request", payload, in))
 	resp, err := d.inner.Regenerate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Regenerate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Regenerate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1440,14 +1436,14 @@ func (d *captureDecorator) ImplantBuilds(ctx context.Context, in *commonpb.Empty
 	if call == nil {
 		return d.inner.ImplantBuilds(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantBuilds", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantBuilds", "request", payload, in))
 	resp, err := d.inner.ImplantBuilds(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantBuilds", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantBuilds", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1458,14 +1454,14 @@ func (d *captureDecorator) DeleteImplantBuild(ctx context.Context, in *clientpb.
 	if call == nil {
 		return d.inner.DeleteImplantBuild(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantBuild", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantBuild", "request", payload, in))
 	resp, err := d.inner.DeleteImplantBuild(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantBuild", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantBuild", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1476,14 +1472,14 @@ func (d *captureDecorator) Canaries(ctx context.Context, in *commonpb.Empty, opt
 	if call == nil {
 		return d.inner.Canaries(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Canaries", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Canaries", "request", payload, in))
 	resp, err := d.inner.Canaries(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Canaries", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Canaries", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1494,14 +1490,14 @@ func (d *captureDecorator) GenerateWGClientConfig(ctx context.Context, in *commo
 	if call == nil {
 		return d.inner.GenerateWGClientConfig(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateWGClientConfig", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateWGClientConfig", "request", payload, in))
 	resp, err := d.inner.GenerateWGClientConfig(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateWGClientConfig", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateWGClientConfig", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1512,14 +1508,14 @@ func (d *captureDecorator) GenerateUniqueIP(ctx context.Context, in *commonpb.Em
 	if call == nil {
 		return d.inner.GenerateUniqueIP(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateUniqueIP", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateUniqueIP", "request", payload, in))
 	resp, err := d.inner.GenerateUniqueIP(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateUniqueIP", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GenerateUniqueIP", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1530,14 +1526,14 @@ func (d *captureDecorator) ImplantProfiles(ctx context.Context, in *commonpb.Emp
 	if call == nil {
 		return d.inner.ImplantProfiles(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantProfiles", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantProfiles", "request", payload, in))
 	resp, err := d.inner.ImplantProfiles(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantProfiles", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ImplantProfiles", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1548,14 +1544,14 @@ func (d *captureDecorator) DeleteImplantProfile(ctx context.Context, in *clientp
 	if call == nil {
 		return d.inner.DeleteImplantProfile(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantProfile", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantProfile", "request", payload, in))
 	resp, err := d.inner.DeleteImplantProfile(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantProfile", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/DeleteImplantProfile", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1566,14 +1562,14 @@ func (d *captureDecorator) SaveImplantProfile(ctx context.Context, in *clientpb.
 	if call == nil {
 		return d.inner.SaveImplantProfile(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveImplantProfile", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SaveImplantProfile", "request", payload, in))
 	resp, err := d.inner.SaveImplantProfile(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveImplantProfile", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SaveImplantProfile", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1584,14 +1580,14 @@ func (d *captureDecorator) ShellcodeRDI(ctx context.Context, in *clientpb.Shellc
 	if call == nil {
 		return d.inner.ShellcodeRDI(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeRDI", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeRDI", "request", payload, in))
 	resp, err := d.inner.ShellcodeRDI(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeRDI", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeRDI", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1602,14 +1598,14 @@ func (d *captureDecorator) GetCompiler(ctx context.Context, in *commonpb.Empty, 
 	if call == nil {
 		return d.inner.GetCompiler(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCompiler", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetCompiler", "request", payload, in))
 	resp, err := d.inner.GetCompiler(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCompiler", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetCompiler", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1620,14 +1616,14 @@ func (d *captureDecorator) ShellcodeEncoder(ctx context.Context, in *clientpb.Sh
 	if call == nil {
 		return d.inner.ShellcodeEncoder(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoder", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoder", "request", payload, in))
 	resp, err := d.inner.ShellcodeEncoder(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoder", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoder", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1638,14 +1634,14 @@ func (d *captureDecorator) ShellcodeEncoderMap(ctx context.Context, in *commonpb
 	if call == nil {
 		return d.inner.ShellcodeEncoderMap(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoderMap", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoderMap", "request", payload, in))
 	resp, err := d.inner.ShellcodeEncoderMap(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoderMap", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellcodeEncoderMap", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1656,14 +1652,14 @@ func (d *captureDecorator) TrafficEncoderMap(ctx context.Context, in *commonpb.E
 	if call == nil {
 		return d.inner.TrafficEncoderMap(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderMap", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderMap", "request", payload, in))
 	resp, err := d.inner.TrafficEncoderMap(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderMap", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderMap", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1674,14 +1670,14 @@ func (d *captureDecorator) TrafficEncoderAdd(ctx context.Context, in *clientpb.T
 	if call == nil {
 		return d.inner.TrafficEncoderAdd(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderAdd", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderAdd", "request", payload, in))
 	resp, err := d.inner.TrafficEncoderAdd(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderAdd", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderAdd", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1692,14 +1688,14 @@ func (d *captureDecorator) TrafficEncoderRm(ctx context.Context, in *clientpb.Tr
 	if call == nil {
 		return d.inner.TrafficEncoderRm(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderRm", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderRm", "request", payload, in))
 	resp, err := d.inner.TrafficEncoderRm(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderRm", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/TrafficEncoderRm", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1710,14 +1706,14 @@ func (d *captureDecorator) Websites(ctx context.Context, in *commonpb.Empty, opt
 	if call == nil {
 		return d.inner.Websites(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Websites", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Websites", "request", payload, in))
 	resp, err := d.inner.Websites(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Websites", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Websites", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1728,14 +1724,14 @@ func (d *captureDecorator) Website(ctx context.Context, in *clientpb.Website, op
 	if call == nil {
 		return d.inner.Website(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Website", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Website", "request", payload, in))
 	resp, err := d.inner.Website(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Website", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Website", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1746,14 +1742,14 @@ func (d *captureDecorator) WebsiteRemove(ctx context.Context, in *clientpb.Websi
 	if call == nil {
 		return d.inner.WebsiteRemove(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemove", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemove", "request", payload, in))
 	resp, err := d.inner.WebsiteRemove(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemove", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemove", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1764,14 +1760,14 @@ func (d *captureDecorator) WebsiteAddContent(ctx context.Context, in *clientpb.W
 	if call == nil {
 		return d.inner.WebsiteAddContent(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteAddContent", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteAddContent", "request", payload, in))
 	resp, err := d.inner.WebsiteAddContent(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteAddContent", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteAddContent", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1782,14 +1778,14 @@ func (d *captureDecorator) WebsiteUpdateContent(ctx context.Context, in *clientp
 	if call == nil {
 		return d.inner.WebsiteUpdateContent(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteUpdateContent", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteUpdateContent", "request", payload, in))
 	resp, err := d.inner.WebsiteUpdateContent(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteUpdateContent", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteUpdateContent", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1800,14 +1796,14 @@ func (d *captureDecorator) WebsiteRemoveContent(ctx context.Context, in *clientp
 	if call == nil {
 		return d.inner.WebsiteRemoveContent(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemoveContent", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemoveContent", "request", payload, in))
 	resp, err := d.inner.WebsiteRemoveContent(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemoveContent", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WebsiteRemoveContent", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1818,14 +1814,14 @@ func (d *captureDecorator) Ping(ctx context.Context, in *sliverpb.Ping, opts ...
 	if call == nil {
 		return d.inner.Ping(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ping", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ping", "request", payload, in))
 	resp, err := d.inner.Ping(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ping", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ping", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1836,14 +1832,14 @@ func (d *captureDecorator) Ps(ctx context.Context, in *sliverpb.PsReq, opts ...g
 	if call == nil {
 		return d.inner.Ps(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ps", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ps", "request", payload, in))
 	resp, err := d.inner.Ps(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ps", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ps", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1854,14 +1850,14 @@ func (d *captureDecorator) Terminate(ctx context.Context, in *sliverpb.Terminate
 	if call == nil {
 		return d.inner.Terminate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Terminate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Terminate", "request", payload, in))
 	resp, err := d.inner.Terminate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Terminate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Terminate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1872,14 +1868,14 @@ func (d *captureDecorator) Ifconfig(ctx context.Context, in *sliverpb.IfconfigRe
 	if call == nil {
 		return d.inner.Ifconfig(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ifconfig", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ifconfig", "request", payload, in))
 	resp, err := d.inner.Ifconfig(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ifconfig", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ifconfig", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1890,14 +1886,14 @@ func (d *captureDecorator) Netstat(ctx context.Context, in *sliverpb.NetstatReq,
 	if call == nil {
 		return d.inner.Netstat(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Netstat", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Netstat", "request", payload, in))
 	resp, err := d.inner.Netstat(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Netstat", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Netstat", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1908,14 +1904,14 @@ func (d *captureDecorator) Ls(ctx context.Context, in *sliverpb.LsReq, opts ...g
 	if call == nil {
 		return d.inner.Ls(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ls", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Ls", "request", payload, in))
 	resp, err := d.inner.Ls(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ls", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Ls", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1926,14 +1922,14 @@ func (d *captureDecorator) Cd(ctx context.Context, in *sliverpb.CdReq, opts ...g
 	if call == nil {
 		return d.inner.Cd(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Cd", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Cd", "request", payload, in))
 	resp, err := d.inner.Cd(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Cd", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Cd", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1944,14 +1940,14 @@ func (d *captureDecorator) Pwd(ctx context.Context, in *sliverpb.PwdReq, opts ..
 	if call == nil {
 		return d.inner.Pwd(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Pwd", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Pwd", "request", payload, in))
 	resp, err := d.inner.Pwd(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Pwd", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Pwd", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1962,14 +1958,14 @@ func (d *captureDecorator) Mv(ctx context.Context, in *sliverpb.MvReq, opts ...g
 	if call == nil {
 		return d.inner.Mv(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Mv", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Mv", "request", payload, in))
 	resp, err := d.inner.Mv(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Mv", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Mv", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1980,14 +1976,14 @@ func (d *captureDecorator) Cp(ctx context.Context, in *sliverpb.CpReq, opts ...g
 	if call == nil {
 		return d.inner.Cp(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Cp", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Cp", "request", payload, in))
 	resp, err := d.inner.Cp(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Cp", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Cp", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -1998,14 +1994,14 @@ func (d *captureDecorator) Rm(ctx context.Context, in *sliverpb.RmReq, opts ...g
 	if call == nil {
 		return d.inner.Rm(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Rm", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Rm", "request", payload, in))
 	resp, err := d.inner.Rm(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Rm", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Rm", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2016,14 +2012,14 @@ func (d *captureDecorator) Mkdir(ctx context.Context, in *sliverpb.MkdirReq, opt
 	if call == nil {
 		return d.inner.Mkdir(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Mkdir", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Mkdir", "request", payload, in))
 	resp, err := d.inner.Mkdir(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Mkdir", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Mkdir", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2034,14 +2030,14 @@ func (d *captureDecorator) Download(ctx context.Context, in *sliverpb.DownloadRe
 	if call == nil {
 		return d.inner.Download(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Download", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Download", "request", payload, in))
 	resp, err := d.inner.Download(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Download", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Download", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2052,14 +2048,14 @@ func (d *captureDecorator) Upload(ctx context.Context, in *sliverpb.UploadReq, o
 	if call == nil {
 		return d.inner.Upload(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Upload", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Upload", "request", payload, in))
 	resp, err := d.inner.Upload(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Upload", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Upload", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2070,14 +2066,14 @@ func (d *captureDecorator) Grep(ctx context.Context, in *sliverpb.GrepReq, opts 
 	if call == nil {
 		return d.inner.Grep(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Grep", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Grep", "request", payload, in))
 	resp, err := d.inner.Grep(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Grep", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Grep", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2088,14 +2084,14 @@ func (d *captureDecorator) Chmod(ctx context.Context, in *sliverpb.ChmodReq, opt
 	if call == nil {
 		return d.inner.Chmod(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Chmod", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Chmod", "request", payload, in))
 	resp, err := d.inner.Chmod(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Chmod", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Chmod", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2106,14 +2102,14 @@ func (d *captureDecorator) Chown(ctx context.Context, in *sliverpb.ChownReq, opt
 	if call == nil {
 		return d.inner.Chown(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Chown", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Chown", "request", payload, in))
 	resp, err := d.inner.Chown(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Chown", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Chown", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2124,14 +2120,14 @@ func (d *captureDecorator) Chtimes(ctx context.Context, in *sliverpb.ChtimesReq,
 	if call == nil {
 		return d.inner.Chtimes(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Chtimes", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Chtimes", "request", payload, in))
 	resp, err := d.inner.Chtimes(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Chtimes", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Chtimes", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2142,14 +2138,14 @@ func (d *captureDecorator) MemfilesList(ctx context.Context, in *sliverpb.Memfil
 	if call == nil {
 		return d.inner.MemfilesList(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesList", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesList", "request", payload, in))
 	resp, err := d.inner.MemfilesList(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesList", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesList", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2160,14 +2156,14 @@ func (d *captureDecorator) MemfilesAdd(ctx context.Context, in *sliverpb.Memfile
 	if call == nil {
 		return d.inner.MemfilesAdd(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesAdd", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesAdd", "request", payload, in))
 	resp, err := d.inner.MemfilesAdd(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesAdd", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesAdd", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2178,14 +2174,14 @@ func (d *captureDecorator) MemfilesRm(ctx context.Context, in *sliverpb.Memfiles
 	if call == nil {
 		return d.inner.MemfilesRm(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesRm", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesRm", "request", payload, in))
 	resp, err := d.inner.MemfilesRm(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesRm", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MemfilesRm", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2196,14 +2192,14 @@ func (d *captureDecorator) Mount(ctx context.Context, in *sliverpb.MountReq, opt
 	if call == nil {
 		return d.inner.Mount(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Mount", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Mount", "request", payload, in))
 	resp, err := d.inner.Mount(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Mount", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Mount", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2214,14 +2210,14 @@ func (d *captureDecorator) ProcessDump(ctx context.Context, in *sliverpb.Process
 	if call == nil {
 		return d.inner.ProcessDump(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ProcessDump", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ProcessDump", "request", payload, in))
 	resp, err := d.inner.ProcessDump(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ProcessDump", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ProcessDump", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2232,14 +2228,14 @@ func (d *captureDecorator) RunAs(ctx context.Context, in *sliverpb.RunAsReq, opt
 	if call == nil {
 		return d.inner.RunAs(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RunAs", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RunAs", "request", payload, in))
 	resp, err := d.inner.RunAs(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RunAs", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RunAs", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2250,14 +2246,14 @@ func (d *captureDecorator) Impersonate(ctx context.Context, in *sliverpb.Imperso
 	if call == nil {
 		return d.inner.Impersonate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Impersonate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Impersonate", "request", payload, in))
 	resp, err := d.inner.Impersonate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Impersonate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Impersonate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2268,14 +2264,14 @@ func (d *captureDecorator) RevToSelf(ctx context.Context, in *sliverpb.RevToSelf
 	if call == nil {
 		return d.inner.RevToSelf(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RevToSelf", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RevToSelf", "request", payload, in))
 	resp, err := d.inner.RevToSelf(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RevToSelf", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RevToSelf", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2286,14 +2282,14 @@ func (d *captureDecorator) GetSystem(ctx context.Context, in *clientpb.GetSystem
 	if call == nil {
 		return d.inner.GetSystem(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetSystem", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetSystem", "request", payload, in))
 	resp, err := d.inner.GetSystem(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetSystem", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetSystem", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2304,14 +2300,14 @@ func (d *captureDecorator) Task(ctx context.Context, in *sliverpb.TaskReq, opts 
 	if call == nil {
 		return d.inner.Task(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Task", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Task", "request", payload, in))
 	resp, err := d.inner.Task(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Task", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Task", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2322,14 +2318,14 @@ func (d *captureDecorator) Msf(ctx context.Context, in *clientpb.MSFReq, opts ..
 	if call == nil {
 		return d.inner.Msf(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Msf", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Msf", "request", payload, in))
 	resp, err := d.inner.Msf(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Msf", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Msf", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2340,14 +2336,14 @@ func (d *captureDecorator) MsfRemote(ctx context.Context, in *clientpb.MSFRemote
 	if call == nil {
 		return d.inner.MsfRemote(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MsfRemote", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MsfRemote", "request", payload, in))
 	resp, err := d.inner.MsfRemote(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MsfRemote", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MsfRemote", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2358,14 +2354,14 @@ func (d *captureDecorator) ExecuteAssembly(ctx context.Context, in *sliverpb.Exe
 	if call == nil {
 		return d.inner.ExecuteAssembly(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteAssembly", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteAssembly", "request", payload, in))
 	resp, err := d.inner.ExecuteAssembly(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteAssembly", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteAssembly", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2376,14 +2372,14 @@ func (d *captureDecorator) Migrate(ctx context.Context, in *clientpb.MigrateReq,
 	if call == nil {
 		return d.inner.Migrate(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Migrate", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Migrate", "request", payload, in))
 	resp, err := d.inner.Migrate(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Migrate", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Migrate", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2394,14 +2390,14 @@ func (d *captureDecorator) Execute(ctx context.Context, in *sliverpb.ExecuteReq,
 	if call == nil {
 		return d.inner.Execute(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Execute", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Execute", "request", payload, in))
 	resp, err := d.inner.Execute(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Execute", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Execute", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2412,14 +2408,14 @@ func (d *captureDecorator) ExecuteWindows(ctx context.Context, in *sliverpb.Exec
 	if call == nil {
 		return d.inner.ExecuteWindows(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteWindows", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteWindows", "request", payload, in))
 	resp, err := d.inner.ExecuteWindows(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteWindows", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteWindows", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2430,14 +2426,14 @@ func (d *captureDecorator) ExecuteChildren(ctx context.Context, in *sliverpb.Exe
 	if call == nil {
 		return d.inner.ExecuteChildren(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteChildren", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteChildren", "request", payload, in))
 	resp, err := d.inner.ExecuteChildren(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteChildren", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecuteChildren", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2448,14 +2444,14 @@ func (d *captureDecorator) Sideload(ctx context.Context, in *sliverpb.SideloadRe
 	if call == nil {
 		return d.inner.Sideload(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Sideload", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Sideload", "request", payload, in))
 	resp, err := d.inner.Sideload(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Sideload", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Sideload", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2466,14 +2462,14 @@ func (d *captureDecorator) SpawnDll(ctx context.Context, in *sliverpb.InvokeSpaw
 	if call == nil {
 		return d.inner.SpawnDll(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SpawnDll", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SpawnDll", "request", payload, in))
 	resp, err := d.inner.SpawnDll(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SpawnDll", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SpawnDll", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2484,14 +2480,14 @@ func (d *captureDecorator) Screenshot(ctx context.Context, in *sliverpb.Screensh
 	if call == nil {
 		return d.inner.Screenshot(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Screenshot", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Screenshot", "request", payload, in))
 	resp, err := d.inner.Screenshot(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Screenshot", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Screenshot", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2502,14 +2498,14 @@ func (d *captureDecorator) CurrentTokenOwner(ctx context.Context, in *sliverpb.C
 	if call == nil {
 		return d.inner.CurrentTokenOwner(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CurrentTokenOwner", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CurrentTokenOwner", "request", payload, in))
 	resp, err := d.inner.CurrentTokenOwner(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CurrentTokenOwner", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CurrentTokenOwner", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2520,14 +2516,14 @@ func (d *captureDecorator) Services(ctx context.Context, in *sliverpb.ServicesRe
 	if call == nil {
 		return d.inner.Services(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Services", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Services", "request", payload, in))
 	resp, err := d.inner.Services(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Services", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Services", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2538,14 +2534,14 @@ func (d *captureDecorator) ServiceDetail(ctx context.Context, in *sliverpb.Servi
 	if call == nil {
 		return d.inner.ServiceDetail(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ServiceDetail", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ServiceDetail", "request", payload, in))
 	resp, err := d.inner.ServiceDetail(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ServiceDetail", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ServiceDetail", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2556,14 +2552,14 @@ func (d *captureDecorator) StartServiceByName(ctx context.Context, in *sliverpb.
 	if call == nil {
 		return d.inner.StartServiceByName(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartServiceByName", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartServiceByName", "request", payload, in))
 	resp, err := d.inner.StartServiceByName(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartServiceByName", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartServiceByName", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2574,14 +2570,14 @@ func (d *captureDecorator) PivotStartListener(ctx context.Context, in *sliverpb.
 	if call == nil {
 		return d.inner.PivotStartListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStartListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStartListener", "request", payload, in))
 	resp, err := d.inner.PivotStartListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStartListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStartListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2592,14 +2588,14 @@ func (d *captureDecorator) PivotStopListener(ctx context.Context, in *sliverpb.P
 	if call == nil {
 		return d.inner.PivotStopListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStopListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStopListener", "request", payload, in))
 	resp, err := d.inner.PivotStopListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStopListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotStopListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2610,14 +2606,14 @@ func (d *captureDecorator) PivotSessionListeners(ctx context.Context, in *sliver
 	if call == nil {
 		return d.inner.PivotSessionListeners(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotSessionListeners", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotSessionListeners", "request", payload, in))
 	resp, err := d.inner.PivotSessionListeners(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotSessionListeners", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotSessionListeners", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2628,14 +2624,14 @@ func (d *captureDecorator) PivotGraph(ctx context.Context, in *commonpb.Empty, o
 	if call == nil {
 		return d.inner.PivotGraph(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotGraph", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/PivotGraph", "request", payload, in))
 	resp, err := d.inner.PivotGraph(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotGraph", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/PivotGraph", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2646,14 +2642,14 @@ func (d *captureDecorator) StartService(ctx context.Context, in *sliverpb.StartS
 	if call == nil {
 		return d.inner.StartService(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartService", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartService", "request", payload, in))
 	resp, err := d.inner.StartService(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartService", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartService", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2664,14 +2660,14 @@ func (d *captureDecorator) StopService(ctx context.Context, in *sliverpb.StopSer
 	if call == nil {
 		return d.inner.StopService(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StopService", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StopService", "request", payload, in))
 	resp, err := d.inner.StopService(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StopService", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StopService", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2682,14 +2678,14 @@ func (d *captureDecorator) RemoveService(ctx context.Context, in *sliverpb.Remov
 	if call == nil {
 		return d.inner.RemoveService(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RemoveService", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RemoveService", "request", payload, in))
 	resp, err := d.inner.RemoveService(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RemoveService", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RemoveService", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2700,14 +2696,14 @@ func (d *captureDecorator) MakeToken(ctx context.Context, in *sliverpb.MakeToken
 	if call == nil {
 		return d.inner.MakeToken(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MakeToken", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/MakeToken", "request", payload, in))
 	resp, err := d.inner.MakeToken(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MakeToken", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/MakeToken", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2718,14 +2714,14 @@ func (d *captureDecorator) GetEnv(ctx context.Context, in *sliverpb.EnvReq, opts
 	if call == nil {
 		return d.inner.GetEnv(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetEnv", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetEnv", "request", payload, in))
 	resp, err := d.inner.GetEnv(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetEnv", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetEnv", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2736,14 +2732,14 @@ func (d *captureDecorator) SetEnv(ctx context.Context, in *sliverpb.SetEnvReq, o
 	if call == nil {
 		return d.inner.SetEnv(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SetEnv", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/SetEnv", "request", payload, in))
 	resp, err := d.inner.SetEnv(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SetEnv", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/SetEnv", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2754,14 +2750,14 @@ func (d *captureDecorator) UnsetEnv(ctx context.Context, in *sliverpb.UnsetEnvRe
 	if call == nil {
 		return d.inner.UnsetEnv(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/UnsetEnv", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/UnsetEnv", "request", payload, in))
 	resp, err := d.inner.UnsetEnv(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/UnsetEnv", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/UnsetEnv", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2772,14 +2768,14 @@ func (d *captureDecorator) Backdoor(ctx context.Context, in *clientpb.BackdoorRe
 	if call == nil {
 		return d.inner.Backdoor(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Backdoor", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Backdoor", "request", payload, in))
 	resp, err := d.inner.Backdoor(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Backdoor", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Backdoor", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2790,14 +2786,14 @@ func (d *captureDecorator) RegistryRead(ctx context.Context, in *sliverpb.Regist
 	if call == nil {
 		return d.inner.RegistryRead(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryRead", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryRead", "request", payload, in))
 	resp, err := d.inner.RegistryRead(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryRead", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryRead", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2808,14 +2804,14 @@ func (d *captureDecorator) RegistryWrite(ctx context.Context, in *sliverpb.Regis
 	if call == nil {
 		return d.inner.RegistryWrite(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryWrite", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryWrite", "request", payload, in))
 	resp, err := d.inner.RegistryWrite(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryWrite", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryWrite", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2826,14 +2822,14 @@ func (d *captureDecorator) RegistryCreateKey(ctx context.Context, in *sliverpb.R
 	if call == nil {
 		return d.inner.RegistryCreateKey(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryCreateKey", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryCreateKey", "request", payload, in))
 	resp, err := d.inner.RegistryCreateKey(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryCreateKey", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryCreateKey", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2844,14 +2840,14 @@ func (d *captureDecorator) RegistryDeleteKey(ctx context.Context, in *sliverpb.R
 	if call == nil {
 		return d.inner.RegistryDeleteKey(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryDeleteKey", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryDeleteKey", "request", payload, in))
 	resp, err := d.inner.RegistryDeleteKey(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryDeleteKey", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryDeleteKey", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2862,14 +2858,14 @@ func (d *captureDecorator) RegistryListSubKeys(ctx context.Context, in *sliverpb
 	if call == nil {
 		return d.inner.RegistryListSubKeys(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListSubKeys", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListSubKeys", "request", payload, in))
 	resp, err := d.inner.RegistryListSubKeys(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListSubKeys", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListSubKeys", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2880,14 +2876,14 @@ func (d *captureDecorator) RegistryListValues(ctx context.Context, in *sliverpb.
 	if call == nil {
 		return d.inner.RegistryListValues(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListValues", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListValues", "request", payload, in))
 	resp, err := d.inner.RegistryListValues(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListValues", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryListValues", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2898,14 +2894,14 @@ func (d *captureDecorator) RegistryReadHive(ctx context.Context, in *sliverpb.Re
 	if call == nil {
 		return d.inner.RegistryReadHive(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryReadHive", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryReadHive", "request", payload, in))
 	resp, err := d.inner.RegistryReadHive(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryReadHive", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegistryReadHive", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2916,14 +2912,14 @@ func (d *captureDecorator) RunSSHCommand(ctx context.Context, in *sliverpb.SSHCo
 	if call == nil {
 		return d.inner.RunSSHCommand(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RunSSHCommand", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RunSSHCommand", "request", payload, in))
 	resp, err := d.inner.RunSSHCommand(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RunSSHCommand", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RunSSHCommand", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2934,14 +2930,14 @@ func (d *captureDecorator) HijackDLL(ctx context.Context, in *clientpb.DllHijack
 	if call == nil {
 		return d.inner.HijackDLL(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/HijackDLL", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/HijackDLL", "request", payload, in))
 	resp, err := d.inner.HijackDLL(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/HijackDLL", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/HijackDLL", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2952,14 +2948,14 @@ func (d *captureDecorator) GetPrivs(ctx context.Context, in *sliverpb.GetPrivsRe
 	if call == nil {
 		return d.inner.GetPrivs(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetPrivs", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetPrivs", "request", payload, in))
 	resp, err := d.inner.GetPrivs(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetPrivs", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetPrivs", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2970,14 +2966,14 @@ func (d *captureDecorator) StartRportFwdListener(ctx context.Context, in *sliver
 	if call == nil {
 		return d.inner.StartRportFwdListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartRportFwdListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StartRportFwdListener", "request", payload, in))
 	resp, err := d.inner.StartRportFwdListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartRportFwdListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StartRportFwdListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -2988,14 +2984,14 @@ func (d *captureDecorator) GetRportFwdListeners(ctx context.Context, in *sliverp
 	if call == nil {
 		return d.inner.GetRportFwdListeners(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetRportFwdListeners", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetRportFwdListeners", "request", payload, in))
 	resp, err := d.inner.GetRportFwdListeners(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetRportFwdListeners", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetRportFwdListeners", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3006,14 +3002,14 @@ func (d *captureDecorator) StopRportFwdListener(ctx context.Context, in *sliverp
 	if call == nil {
 		return d.inner.StopRportFwdListener(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StopRportFwdListener", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/StopRportFwdListener", "request", payload, in))
 	resp, err := d.inner.StopRportFwdListener(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StopRportFwdListener", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/StopRportFwdListener", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3024,14 +3020,14 @@ func (d *captureDecorator) OpenSession(ctx context.Context, in *sliverpb.OpenSes
 	if call == nil {
 		return d.inner.OpenSession(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/OpenSession", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/OpenSession", "request", payload, in))
 	resp, err := d.inner.OpenSession(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/OpenSession", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/OpenSession", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3042,14 +3038,14 @@ func (d *captureDecorator) CloseSession(ctx context.Context, in *sliverpb.CloseS
 	if call == nil {
 		return d.inner.CloseSession(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSession", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSession", "request", payload, in))
 	resp, err := d.inner.CloseSession(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSession", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSession", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3060,14 +3056,14 @@ func (d *captureDecorator) RegisterExtension(ctx context.Context, in *sliverpb.R
 	if call == nil {
 		return d.inner.RegisterExtension(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterExtension", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterExtension", "request", payload, in))
 	resp, err := d.inner.RegisterExtension(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterExtension", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterExtension", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3078,14 +3074,14 @@ func (d *captureDecorator) CallExtension(ctx context.Context, in *sliverpb.CallE
 	if call == nil {
 		return d.inner.CallExtension(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CallExtension", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CallExtension", "request", payload, in))
 	resp, err := d.inner.CallExtension(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CallExtension", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CallExtension", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3096,14 +3092,14 @@ func (d *captureDecorator) ListExtensions(ctx context.Context, in *sliverpb.List
 	if call == nil {
 		return d.inner.ListExtensions(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ListExtensions", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ListExtensions", "request", payload, in))
 	resp, err := d.inner.ListExtensions(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ListExtensions", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ListExtensions", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3114,14 +3110,14 @@ func (d *captureDecorator) RegisterWasmExtension(ctx context.Context, in *sliver
 	if call == nil {
 		return d.inner.RegisterWasmExtension(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterWasmExtension", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterWasmExtension", "request", payload, in))
 	resp, err := d.inner.RegisterWasmExtension(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterWasmExtension", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/RegisterWasmExtension", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3132,14 +3128,14 @@ func (d *captureDecorator) ListWasmExtensions(ctx context.Context, in *sliverpb.
 	if call == nil {
 		return d.inner.ListWasmExtensions(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ListWasmExtensions", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ListWasmExtensions", "request", payload, in))
 	resp, err := d.inner.ListWasmExtensions(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ListWasmExtensions", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ListWasmExtensions", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3150,14 +3146,14 @@ func (d *captureDecorator) ExecWasmExtension(ctx context.Context, in *sliverpb.E
 	if call == nil {
 		return d.inner.ExecWasmExtension(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecWasmExtension", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ExecWasmExtension", "request", payload, in))
 	resp, err := d.inner.ExecWasmExtension(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecWasmExtension", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ExecWasmExtension", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3168,14 +3164,14 @@ func (d *captureDecorator) WGStartPortForward(ctx context.Context, in *sliverpb.
 	if call == nil {
 		return d.inner.WGStartPortForward(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartPortForward", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartPortForward", "request", payload, in))
 	resp, err := d.inner.WGStartPortForward(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartPortForward", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartPortForward", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3186,14 +3182,14 @@ func (d *captureDecorator) WGStopPortForward(ctx context.Context, in *sliverpb.W
 	if call == nil {
 		return d.inner.WGStopPortForward(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopPortForward", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopPortForward", "request", payload, in))
 	resp, err := d.inner.WGStopPortForward(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopPortForward", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopPortForward", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3204,14 +3200,14 @@ func (d *captureDecorator) WGStartSocks(ctx context.Context, in *sliverpb.WGSock
 	if call == nil {
 		return d.inner.WGStartSocks(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartSocks", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartSocks", "request", payload, in))
 	resp, err := d.inner.WGStartSocks(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartSocks", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStartSocks", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3222,14 +3218,14 @@ func (d *captureDecorator) WGStopSocks(ctx context.Context, in *sliverpb.WGSocks
 	if call == nil {
 		return d.inner.WGStopSocks(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopSocks", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopSocks", "request", payload, in))
 	resp, err := d.inner.WGStopSocks(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopSocks", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGStopSocks", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3240,14 +3236,14 @@ func (d *captureDecorator) WGListForwarders(ctx context.Context, in *sliverpb.WG
 	if call == nil {
 		return d.inner.WGListForwarders(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGListForwarders", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGListForwarders", "request", payload, in))
 	resp, err := d.inner.WGListForwarders(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGListForwarders", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGListForwarders", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3258,14 +3254,14 @@ func (d *captureDecorator) WGListSocksServers(ctx context.Context, in *sliverpb.
 	if call == nil {
 		return d.inner.WGListSocksServers(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGListSocksServers", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/WGListSocksServers", "request", payload, in))
 	resp, err := d.inner.WGListSocksServers(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGListSocksServers", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/WGListSocksServers", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3276,14 +3272,14 @@ func (d *captureDecorator) Shell(ctx context.Context, in *sliverpb.ShellReq, opt
 	if call == nil {
 		return d.inner.Shell(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Shell", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Shell", "request", payload, in))
 	resp, err := d.inner.Shell(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Shell", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Shell", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3294,14 +3290,14 @@ func (d *captureDecorator) ShellResize(ctx context.Context, in *sliverpb.ShellRe
 	if call == nil {
 		return d.inner.ShellResize(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellResize", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/ShellResize", "request", payload, in))
 	resp, err := d.inner.ShellResize(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellResize", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/ShellResize", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3312,14 +3308,14 @@ func (d *captureDecorator) Portfwd(ctx context.Context, in *sliverpb.PortfwdReq,
 	if call == nil {
 		return d.inner.Portfwd(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Portfwd", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/Portfwd", "request", payload, in))
 	resp, err := d.inner.Portfwd(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Portfwd", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/Portfwd", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3330,14 +3326,14 @@ func (d *captureDecorator) CreateSocks(ctx context.Context, in *sliverpb.Socks, 
 	if call == nil {
 		return d.inner.CreateSocks(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CreateSocks", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CreateSocks", "request", payload, in))
 	resp, err := d.inner.CreateSocks(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CreateSocks", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CreateSocks", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3348,14 +3344,14 @@ func (d *captureDecorator) CloseSocks(ctx context.Context, in *sliverpb.Socks, o
 	if call == nil {
 		return d.inner.CloseSocks(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSocks", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSocks", "request", payload, in))
 	resp, err := d.inner.CloseSocks(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSocks", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CloseSocks", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3377,14 +3373,14 @@ func (d *captureDecorator) CreateTunnel(ctx context.Context, in *sliverpb.Tunnel
 	if call == nil {
 		return d.inner.CreateTunnel(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CreateTunnel", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CreateTunnel", "request", payload, in))
 	resp, err := d.inner.CreateTunnel(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CreateTunnel", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CreateTunnel", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }
@@ -3395,14 +3391,14 @@ func (d *captureDecorator) CloseTunnel(ctx context.Context, in *sliverpb.Tunnel,
 	if call == nil {
 		return d.inner.CloseTunnel(ctx, in, opts...)
 	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CloseTunnel", "request", in))
+	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/CloseTunnel", "request", payload, in))
 	resp, err := d.inner.CloseTunnel(ctx, in, opts...)
 	if err != nil {
 		call.End(err)
 		return resp, err
 	}
 	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CloseTunnel", "response", resp))
+	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/CloseTunnel", "response", respPayload, resp))
 	call.End(nil)
 	return resp, nil
 }

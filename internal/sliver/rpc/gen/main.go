@@ -167,10 +167,10 @@ func render(methods []rpcMethod) ([]byte, error) {
 	buf.WriteString("func endCallOnContextDone(call *capture.Call, ctx context.Context) {\n")
 	buf.WriteString("\tif call == nil {\n\t\treturn\n\t}\n")
 	buf.WriteString("\tgo func() {\n\t\t<-ctx.Done()\n\t\tcall.End(status.Error(codes.Canceled, \"stream context done\"))\n\t}()\n}\n\n")
-	buf.WriteString("func (d *captureDecorator) preview(ctx context.Context, method, direction string, msg proto.Message) string {\n")
+	// The caller already marshalled the message, so take that payload rather
+	// than serialising the same message a second time on every RPC.
+	buf.WriteString("func (d *captureDecorator) preview(ctx context.Context, method, direction string, payload []byte, msg proto.Message) string {\n")
 	buf.WriteString("\tif msg == nil {\n\t\treturn \"\"\n\t}\n")
-	buf.WriteString("\tpayload, err := proto.Marshal(msg)\n")
-	buf.WriteString("\tif err != nil {\n\t\treturn \"\"\n\t}\n")
 	buf.WriteString("\tann := d.rec.Annotate(ctx, method, direction, payload)\n")
 	buf.WriteString("\tif direction == \"response\" {\n\t\treturn ann.ResponsePreview\n\t}\n")
 	buf.WriteString("\treturn ann.RequestPreview\n}\n\n")
@@ -214,11 +214,11 @@ func writeMethod(buf *bytes.Buffer, m rpcMethod) {
 	buf.WriteString("\tif call == nil {\n")
 	fmt.Fprintf(buf, "\t\treturn d.inner.%s(ctx, in, opts...)\n", m.name)
 	buf.WriteString("\t}\n")
-	fmt.Fprintf(buf, "\tcall.Message(store.DirectionRequest, payload, d.preview(ctx, %q, \"request\", in))\n", fullMethod)
+	fmt.Fprintf(buf, "\tcall.Message(store.DirectionRequest, payload, d.preview(ctx, %q, \"request\", payload, in))\n", fullMethod)
 	fmt.Fprintf(buf, "\tresp, err := d.inner.%s(ctx, in, opts...)\n", m.name)
 	buf.WriteString("\tif err != nil {\n\t\tcall.End(err)\n\t\treturn resp, err\n\t}\n")
 	buf.WriteString("\trespPayload, _ := proto.Marshal(resp)\n")
-	fmt.Fprintf(buf, "\tcall.Message(store.DirectionResponse, respPayload, d.preview(ctx, %q, \"response\", resp))\n", fullMethod)
+	fmt.Fprintf(buf, "\tcall.Message(store.DirectionResponse, respPayload, d.preview(ctx, %q, \"response\", respPayload, resp))\n", fullMethod)
 	buf.WriteString("\tcall.End(nil)\n\treturn resp, nil\n}\n\n")
 }
 
