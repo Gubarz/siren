@@ -3,8 +3,11 @@ package bootstrap
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
+
+	"github.com/gubarz/revils/store"
 
 	"siren/internal/automation"
 	"siren/internal/automation/actions"
@@ -34,19 +37,20 @@ type Dependencies struct {
 }
 
 type SharedStack struct {
-	DataDir    string
-	RPC        *rpc.Client
-	Console    *console.Service
-	Beacons    *beacons.Service
-	Automation *automation.Engine
-	CheckinPub *automationexec.CheckinPublisher
-	LootWriter *automationexec.LootWriter
-	Tags       *tags.Service
-	Comments   *comments.Service
-	Cases      *casefile.Service
-	Events     *events.Store
-	Bus        bus.Bus
-	Journal    *journal.Service
+	DataDir      string
+	RPC          *rpc.Client
+	Console      *console.Service
+	Beacons      *beacons.Service
+	Automation   *automation.Engine
+	CheckinPub   *automationexec.CheckinPublisher
+	LootWriter   *automationexec.LootWriter
+	Tags         *tags.Service
+	Comments     *comments.Service
+	Cases        *casefile.Service
+	Events       *events.Store
+	Bus          bus.Bus
+	Journal      *journal.Service
+	CaptureStore *store.Store
 }
 
 func resolveDataDir(deps Dependencies) string {
@@ -68,6 +72,19 @@ func resolveDataDir(deps Dependencies) string {
 func NewShared(deps Dependencies) *SharedStack {
 	deps.DataDir = resolveDataDir(deps)
 	busImpl := bus.New()
+	captureDir := filepath.Join(deps.DataDir, "capture")
+	if err := os.MkdirAll(captureDir, 0o700); err != nil {
+		slog.Error("capture dir create failed", "error", err)
+	}
+	captureStore, err := store.Open(store.Config{
+		DBPath:  filepath.Join(captureDir, "capture.sqlite"),
+		DataDir: deps.DataDir,
+		Source:  "embedded",
+	})
+	if err != nil {
+		slog.Error("capture store open failed", "error", err)
+		captureStore = nil
+	}
 	journalStore, err := localjournal.NewSQLiteStore(deps.DataDir)
 	if err != nil {
 		log.Printf("bootstrap: journal store unavailable, journal disabled: %v", err)
@@ -102,6 +119,7 @@ func NewShared(deps Dependencies) *SharedStack {
 		LootWriter: lootWriter,
 		Tags:       tagsSvc, Comments: commentsSvc, Cases: caseSvc,
 		Events: eventsStore, Bus: busImpl, Journal: journalSvc,
+		CaptureStore: captureStore,
 	}
 }
 

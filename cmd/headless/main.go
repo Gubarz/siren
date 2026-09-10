@@ -65,5 +65,10 @@ func main() {
 	if err := shared.Journal.Close(); err != nil {
 		log.Printf("headless: close journal: %v", err)
 	}
+	if shared.CaptureStore != nil {
+		if err := shared.CaptureStore.Close(); err != nil {
+			log.Printf("headless: close capture store: %v", err)
+		}
+	}
 	shared.RPC.Disconnect()
 }

@@ -132,6 +132,11 @@ func (a *App) ServiceShutdown() error {
 			log.Printf("shutdown: close journal: %v", err)
 		}
 	}
+	if a.CaptureStore != nil {
+		if err := a.CaptureStore.Close(); err != nil {
+			log.Printf("shutdown: close capture store: %v", err)
+		}
+	}
 	a.Events.Close()
 	if a.cancel != nil {
 		a.cancel()
