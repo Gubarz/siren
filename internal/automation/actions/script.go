@@ -35,7 +35,7 @@ func (script) Execute(rc *automation.RunContext) error {
 	ctx, cancel := context.WithTimeout(rc.Ctx, timeout)
 	defer cancel()
 
-	je := newJSExec(rc)
+	je := newJSExec(rc, ctx)
 	vm := sobek.New()
 	vm.SetMaxCallStackSize(2048)
 	vm.SetFieldNameMapper(sobek.TagFieldNameMapper("json", true))
@@ -73,15 +73,19 @@ func (script) Execute(rc *automation.RunContext) error {
 }
 
 type jsExec struct {
-	rc       *automation.RunContext
+	rc *automation.RunContext
+	// ctx carries the script action's deadline. The host functions a script can
+	// call must be bounded by that same deadline, because vm.Interrupt only
+	// takes effect at interpreter checkpoints and cannot preempt a Go call.
+	ctx      context.Context
 	output   strings.Builder
 	commands []string
 	trunc    bool
 	vm       *sobek.Runtime
 }
 
-func newJSExec(rc *automation.RunContext) *jsExec {
-	return &jsExec{rc: rc}
+func newJSExec(rc *automation.RunContext, ctx context.Context) *jsExec {
+	return &jsExec{rc: rc, ctx: ctx}
 }
 
 func (je *jsExec) setupVM(vm *sobek.Runtime) error {
@@ -139,7 +143,7 @@ func (je *jsExec) log(values ...interface{}) {
 }
 
 func (je *jsExec) run(command string) (string, error) {
-	if err := je.rc.Ctx.Err(); err != nil {
+	if err := je.ctx.Err(); err != nil {
 		return "", err
 	}
 	command = renderTemplate(command, je.rc.Target)
@@ -148,7 +152,7 @@ func (je *jsExec) run(command string) (string, error) {
 		return "", fmt.Errorf("command cannot be empty")
 	}
 	je.commands = append(je.commands, command)
-	result, err := je.rc.Deps.Executor.Execute(je.rc.Ctx, je.rc.Target.ID, je.rc.Target.Kind, command)
+	result, err := je.rc.Deps.Executor.Execute(je.ctx, je.rc.Target.ID, je.rc.Target.Kind, command)
 	if !je.trunc {
 		appendCmdOutput(&je.output, command, result, err)
 		if je.output.Len() >= maxJSOutputSize {
@@ -166,8 +170,8 @@ func (je *jsExec) sleep(milliseconds int64) error {
 	timer := time.NewTimer(time.Duration(milliseconds) * time.Millisecond)
 	defer timer.Stop()
 	select {
-	case <-je.rc.Ctx.Done():
-		return je.rc.Ctx.Err()
+	case <-je.ctx.Done():
+		return je.ctx.Err()
 	case <-timer.C:
 		return nil
 	}

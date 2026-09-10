@@ -16,8 +16,21 @@ import (
 
 const (
 	scriptHTTPDefaultTimeout = 10 * time.Second
+	scriptHTTPMaxTimeout     = 5 * time.Minute
 	scriptHTTPMaxResponse    = 1 * 1024 * 1024
 )
+
+// clampHTTPTimeout bounds a caller-supplied timeoutMs. The value is scaled into
+// a time.Duration, so a large one overflows into a nonsense deadline.
+func clampHTTPTimeout(ms int64) time.Duration {
+	if min := int64(1); ms < min {
+		ms = min
+	}
+	if maxMs := int64(scriptHTTPMaxTimeout / time.Millisecond); ms > maxMs {
+		ms = maxMs
+	}
+	return time.Duration(ms) * time.Millisecond
+}
 
 func (je *jsExec) extendAPI(vm *sobek.Runtime, sliver sobek.Value) error {
 	obj := sliver.ToObject(vm)
@@ -51,9 +64,9 @@ func (je *jsExec) scriptHTTP(call sobek.FunctionCall) sobek.Value {
 	}
 	method := optString(opts, "method", http.MethodGet)
 	body := optString(opts, "body", "")
-	timeoutMs := optInt(opts, "timeoutMs", int64(scriptHTTPDefaultTimeout/time.Millisecond))
+	timeout := clampHTTPTimeout(optInt(opts, "timeoutMs", int64(scriptHTTPDefaultTimeout/time.Millisecond)))
 
-	ctx, cancel := context.WithTimeout(je.rc.Ctx, time.Duration(timeoutMs)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(je.ctx, timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, method, url, strings.NewReader(body))
 	if err != nil {
@@ -93,7 +106,7 @@ func (je *jsExec) scriptLootAdd(call sobek.FunctionCall) sobek.Value {
 	if err != nil {
 		panic(vm.NewGoError(fmt.Errorf("sliver.loot.add: base64: %w", err)))
 	}
-	if err := je.rc.Deps.Loot.Add(je.rc.Ctx, name, lootType, data); err != nil {
+	if err := je.rc.Deps.Loot.Add(je.ctx, name, lootType, data); err != nil {
 		panic(vm.NewGoError(err))
 	}
 	return sobek.Undefined()
@@ -104,7 +117,7 @@ func (je *jsExec) scriptLootList(call sobek.FunctionCall) sobek.Value {
 	if je.rc.Deps.Loot == nil {
 		panic(vm.NewGoError(fmt.Errorf("sliver.loot.list: loot unavailable")))
 	}
-	items, err := je.rc.Deps.Loot.List(je.rc.Ctx)
+	items, err := je.rc.Deps.Loot.List(je.ctx)
 	if err != nil {
 		panic(vm.NewGoError(err))
 	}
@@ -120,7 +133,7 @@ func (je *jsExec) scriptCaseAdd(call sobek.FunctionCall) sobek.Value {
 	itemType := call.Argument(1).String()
 	payload := call.Argument(2).String()
 	note := fmt.Sprintf("### Script note — %s\n\n- Type: `%s`\n\n```\n%s\n```\n", je.rc.Rule.Name, itemType, payload)
-	if err := je.rc.Deps.Cases.AppendNote(je.rc.Ctx, caseRef, note); err != nil {
+	if err := je.rc.Deps.Cases.AppendNote(je.ctx, caseRef, note); err != nil {
 		panic(vm.NewGoError(err))
 	}
 	return sobek.Undefined()
