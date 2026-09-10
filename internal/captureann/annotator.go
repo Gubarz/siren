@@ -1,6 +1,30 @@
 // Package captureann implements revils' capture.Annotator for Siren. It
 // resolves the RPC method descriptor from the registered Sliver protos and
 // extracts common target fields generically, so no per-method table exists.
+//
+// # What is stored in the clear
+//
+// A capture record has two parts. The request and response protobufs go to
+// revils as the sealed payload, encrypted at rest with AES-256-GCM under a
+// 32-byte key revils generates at <dataDir>/capture/capture.sqlite.key. The
+// preview is the only part of a record written in plaintext.
+//
+// This annotator therefore puts nothing from the payload into the preview beyond
+// what is needed to correlate a call: method, byte count, session id and beacon
+// id. MakeToken carries a password, ExecuteAssembly carries the assembly and its
+// arguments, SSH carries a private key. None of that belongs in a plaintext
+// column, and TestPreviewCarriesNoPayloadContent fails if it ever appears.
+//
+// # Why the sealed payload is not redacted
+//
+// Redacting the payload was considered and rejected. Recording what was actually
+// sent is the purpose of the store, a per-method field allowlist would quietly
+// gut it, and the exposure redaction would address is handled by encryption
+// instead. The key sits beside the database, so sealing protects a database
+// obtained without its key rather than a whole data directory: anyone who can
+// read the directory can read both. revils covers the at-rest property with its
+// own tests, TestFrameBytesAtRestAreNotPlaintext and TestStreamSidecarNotPlaintext
+// among them.
 package captureann
 
 import (
