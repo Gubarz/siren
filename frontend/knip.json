@@ -2,29 +2,10 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignore": [
     "bindings/**",
-    "src/lib/components/ui/*.svelte",
-    "src/lib/components/patterns/*.svelte",
-    "src/lib/components/system/*.svelte",
-    "src/lib/stores/resources/*.js",
-    "src/lib/stores/perAgent/*.js",
-    "src/lib/stores/ui/*.js",
-    "src/lib/stores/lib/*.js",
-    "src/lib/stores/connection.js",
-    "src/lib/stores/config.js",
-    "src/lib/stores/currentSession.js"
+    "src/lib/components/ui/Group.svelte",
+    "src/lib/components/ui/Tooltip.svelte"
   ],
-
   "ignoreDependencies": [
-    "@lucide/svelte",
-    "@tailwindcss/vite",
-    "@tanstack/svelte-virtual",
-    "eslint-plugin-boundaries",
-    "eslint-plugin-tailwindcss",
-    "flowbite",
-    "flowbite-svelte",
-    "flowbite-svelte-icons",
-    "fuse.js",
-    "tailwindcss",
-    "vitest"
+    "flowbite-svelte-icons"
   ]
 }
