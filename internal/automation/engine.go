@@ -32,7 +32,8 @@ type Engine struct {
 	actionsMu  sync.RWMutex
 	actions    map[string]Action
 	armedMu    sync.Mutex
-	armed      map[string]context.CancelFunc
+	armed      map[string]*armedRule
+	armGen     uint64
 
 	mu           sync.RWMutex
 	rules        []AutomationRule
@@ -56,7 +57,7 @@ func New(deps Dependencies) *Engine {
 		loot:         deps.Loot,
 		triggers:     map[string]Trigger{},
 		actions:      map[string]Action{},
-		armed:        map[string]context.CancelFunc{},
+		armed:        map[string]*armedRule{},
 		running:      map[string]bool{},
 		activeByRule: map[string]int{},
 		lastRun:      map[string]time.Time{},
