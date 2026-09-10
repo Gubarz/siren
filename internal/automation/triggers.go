@@ -44,6 +44,14 @@ func (e *Engine) TriggerSchemas() map[string][]FieldSpec {
 	return collectSchemas(e.triggers)
 }
 
+// armedRule is one live trigger subscription. gen tells a re-armed rule apart
+// from the subscription it replaced, so the superseded goroutine cannot tear
+// down its replacement.
+type armedRule struct {
+	cancel context.CancelFunc
+	gen    uint64
+}
+
 func (e *Engine) armRule(rule AutomationRule) {
 	if e.ctx == nil {
 		return
@@ -55,11 +63,13 @@ func (e *Engine) armRule(rule AutomationRule) {
 	e.disarmRule(rule.ID)
 	ctx, cancel := context.WithCancel(e.ctx)
 	e.armedMu.Lock()
-	e.armed[rule.ID] = cancel
+	e.armGen++
+	gen := e.armGen
+	e.armed[rule.ID] = &armedRule{cancel: cancel, gen: gen}
 	e.armedMu.Unlock()
 	cfg := triggerConfig(rule)
 	go func() {
-		defer e.disarmRule(rule.ID)
+		defer e.disarmGeneration(rule.ID, gen)
 		_ = trigger.Arm(ctx, cfg, func(fe FireEvent) {
 			defer func() {
 				if r := recover(); r != nil {
@@ -71,22 +81,42 @@ func (e *Engine) armRule(rule AutomationRule) {
 	}()
 }
 
+// disarmRule cancels whatever subscription the rule currently holds. Use it for
+// an explicit disarm; the arm goroutine uses disarmGeneration instead.
 func (e *Engine) disarmRule(ruleID string) {
 	e.armedMu.Lock()
-	cancel, ok := e.armed[ruleID]
+	entry, ok := e.armed[ruleID]
 	delete(e.armed, ruleID)
 	e.armedMu.Unlock()
-	if ok && cancel != nil {
-		cancel()
+	if ok && entry.cancel != nil {
+		entry.cancel()
+	}
+}
+
+// disarmGeneration clears ruleID only while it still holds gen. Keying this on
+// the rule ID alone let a superseded goroutine's deferred cleanup cancel the
+// subscription that replaced it, which left the rule enabled but never firing.
+func (e *Engine) disarmGeneration(ruleID string, gen uint64) {
+	e.armedMu.Lock()
+	entry, ok := e.armed[ruleID]
+	current := ok && entry.gen == gen
+	if current {
+		delete(e.armed, ruleID)
+	}
+	e.armedMu.Unlock()
+	if current && entry.cancel != nil {
+		entry.cancel()
 	}
 }
 
 func (e *Engine) disarmAll() {
 	e.armedMu.Lock()
 	cancels := make([]context.CancelFunc, 0, len(e.armed))
-	for id, cancel := range e.armed {
+	for id, entry := range e.armed {
 		delete(e.armed, id)
-		cancels = append(cancels, cancel)
+		if entry.cancel != nil {
+			cancels = append(cancels, entry.cancel)
+		}
 	}
 	e.armedMu.Unlock()
 	for _, cancel := range cancels {
