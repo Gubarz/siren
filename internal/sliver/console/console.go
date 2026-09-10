@@ -132,7 +132,7 @@ func (s *Service) init() error {
 		if devNull, err := os.Open(os.DevNull); err == nil {
 			os.Stdin = devNull
 		}
-		con := console.NewConsole(false)
+		con := newSliverConsole()
 		serverCmds := command.ServerCommands(con, nil)
 		sliverCmds := command.SliverCommands(con)
 
