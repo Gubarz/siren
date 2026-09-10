@@ -253,7 +253,7 @@ func (s *Service) pumpSubproc(job *subprocJob) {
 }
 
 func (s *Service) handleRoutedConsoleJobCommand(job *subprocJob, line string) {
-	if s.routedCommand == nil {
+	if s.routedCommand == nil || job.sessionID == "" || !isRoutedConsoleCommand(line) {
 		return
 	}
 	result := s.routedCommand(job.sessionID, line)
