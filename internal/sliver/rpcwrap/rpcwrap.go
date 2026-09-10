@@ -18,6 +18,24 @@ import (
 	"siren/internal/sliver/rpc"
 )
 
+// defaultTimeout bounds an RPC whose caller supplied no deadline.
+//
+// It is deliberately generous: the same helper carries long operations such as
+// implant regeneration and builder builds, and cutting those off would be worse
+// than the hang it prevents. What it stops is a half-open connection leaving a
+// Wails binding blocked for good. Callers that know their operation runs longer,
+// or want a tighter bound, should use CallContext.
+const defaultTimeout = 10 * time.Minute
+
+// bounded returns ctx with the default deadline when it does not already have
+// one, so a caller-supplied deadline is never overridden.
+func bounded(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, defaultTimeout)
+}
+
 // Call invokes a unary Sliver RPC method on the connected client. It returns
 // ErrNotConnected, without invoking method, when the client is disconnected.
 func Call[Req, Resp any](
@@ -40,6 +58,8 @@ func CallContext[Req, Resp any](
 	if !client.Connected() {
 		return zero, rpc.ErrNotConnected
 	}
+	ctx, cancel := bounded(ctx)
+	defer cancel()
 	return method(client.RPC(), ctx, req)
 }
 
@@ -59,7 +79,9 @@ func CallRequired[Req, Resp any](
 	if strings.TrimSpace(value) == "" {
 		return zero, fmt.Errorf("%s is required", label)
 	}
-	return method(client.RPC(), context.Background(), req)
+	ctx, cancel := bounded(context.Background())
+	defer cancel()
+	return method(client.RPC(), ctx, req)
 }
 
 // TargetResponse is a Sliver response that can be awaited and decoded back
@@ -82,7 +104,9 @@ func CallTarget[Req proto.Message, Resp any](
 		return zero, rpc.ErrNotConnected
 	}
 	SetRequest(req, &commonpb.Request{SessionID: sessionID})
-	return method(client.RPC(), context.Background(), req)
+	ctx, cancel := bounded(context.Background())
+	defer cancel()
+	return method(client.RPC(), ctx, req)
 }
 
 // TargetCall resolves sessionID to a Sliver request envelope, stamps req
