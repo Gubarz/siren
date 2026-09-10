@@ -46,6 +46,30 @@ func TestAnnotateExtractsSessionFromRequestField(t *testing.T) {
 	}
 }
 
+func TestAnnotateFallsBackToCurrentExecution(t *testing.T) {
+	ann := New("operator-a")
+	req := &sliverpb.LsReq{
+		Path:    "/tmp",
+		Request: &commonpb.Request{SessionID: "sess-77"},
+	}
+	payload, err := proto.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	restore := execctx.SetCurrent(execctx.Snapshot{
+		RunID: "run-9", StageID: "commands#1",
+		TargetID: "sess-77", TargetKind: "session", Hostname: "host-9",
+	})
+	defer restore()
+	got := ann.Annotate(context.Background(), "/rpcpb.SliverRPC/Ls", "request", payload)
+	if got.RunID != "run-9" || got.StageID != "commands#1" {
+		t.Fatalf("run/stage = %q/%q", got.RunID, got.StageID)
+	}
+	if got.SessionID != "sess-77" {
+		t.Fatalf("session = %q", got.SessionID)
+	}
+}
+
 func TestAnnotateUnknownPayloadIsSafe(t *testing.T) {
 	ann := New("op")
 	got := ann.Annotate(context.Background(), "/not/a/method", "request", []byte("garbage"))

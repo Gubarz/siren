@@ -23,3 +23,22 @@ func TestTargetRoundtrip(t *testing.T) {
 		t.Fatalf("got %q/%q/%q", id, kind, host)
 	}
 }
+
+func TestSetCurrentRestoresPrevious(t *testing.T) {
+	if got := Current(); got != (Snapshot{}) {
+		t.Fatalf("initial current = %+v", got)
+	}
+	restore := SetCurrent(Snapshot{
+		RunID: "run-1", StageID: "commands#0",
+		TargetID: "sess-1", TargetKind: "session", Hostname: "host-a",
+	})
+	got := Current()
+	if got.RunID != "run-1" || got.StageID != "commands#0" || got.TargetID != "sess-1" ||
+		got.TargetKind != "session" || got.Hostname != "host-a" {
+		t.Fatalf("current = %+v", got)
+	}
+	restore()
+	if got := Current(); got != (Snapshot{}) {
+		t.Fatalf("after restore = %+v", got)
+	}
+}

@@ -32,6 +32,9 @@ func (e *Executor) SetStore(st *store.Store) {
 }
 
 func (e *Executor) Execute(ctx context.Context, targetID string, targetKind string, command string) (string, error) {
+	// The beacon-await path publishes task results from this context; hostname
+	// is unknown here, so target attribution stays id/kind only.
+	ctx = execctx.WithTarget(ctx, targetID, targetKind, "")
 	result, taskID, err := e.console.RunAutomationLineContext(ctx, targetID, command)
 	if err == nil && targetKind == "beacon" {
 		result, _, err = e.beacons.AwaitBeaconTask(ctx, targetID, result, taskID)

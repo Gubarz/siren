@@ -27,6 +27,15 @@ func New(operator string) *Annotator {
 
 func (a *Annotator) Annotate(ctx context.Context, method, direction string, payload []byte) capture.Annotation {
 	runID, stageID := execctx.Run(ctx)
+	if runID == "" || stageID == "" {
+		current := execctx.Current()
+		if runID == "" {
+			runID = current.RunID
+		}
+		if stageID == "" {
+			stageID = current.StageID
+		}
+	}
 	ann := capture.Annotation{Operator: a.operator, RunID: runID, StageID: stageID}
 	desc := methodInput(method, direction)
 	if desc == nil || len(payload) == 0 {

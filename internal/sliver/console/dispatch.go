@@ -40,7 +40,8 @@ func (s *Service) RunLineContext(ctx context.Context, sessionID, line string) (s
 	}
 
 	s.setActiveTarget(sessionID, sess, beacon)
-	ctx = withCommandOverlay(ctx, sessionID, targetKindOf(sess, beacon), hostnameOf(sess, beacon), line)
+	ctx, restore := withCommandOverlay(ctx, sessionID, targetKindOf(sess, beacon), hostnameOf(sess, beacon), line)
+	defer restore()
 	if output, handled, err := s.runDirectCommand(line, sess, beacon); handled {
 		return output, err
 	}
@@ -61,7 +62,8 @@ func (s *Service) RunAutomationLineContext(ctx context.Context, sessionID, line 
 	}
 
 	s.setActiveTarget(sessionID, sess, beacon)
-	ctx = withCommandOverlay(ctx, sessionID, targetKindOf(sess, beacon), hostnameOf(sess, beacon), line)
+	ctx, restore := withCommandOverlay(ctx, sessionID, targetKindOf(sess, beacon), hostnameOf(sess, beacon), line)
+	defer restore()
 	output, err := s.execCapture(ctx, line)
 	if err != nil {
 		return output, "", err
