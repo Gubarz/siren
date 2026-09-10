@@ -26,6 +26,15 @@ type rpcMethod struct {
 	streaming  bool
 }
 
+// skipCapture lists poll RPCs that pass straight through: recording them
+// drowns the store in identical request/response pairs.
+var skipCapture = map[string]bool{
+	"GetSessions":          true,
+	"GetBeacons":           true,
+	"GetBeaconTasks":       true,
+	"GetBeaconTaskContent": true,
+}
+
 func main() {
 	out := flag.String("out", "capture_decorator.go", "output file")
 	flag.Parse()
@@ -172,6 +181,10 @@ func render(methods []rpcMethod) ([]byte, error) {
 }
 
 func writeMethod(buf *bytes.Buffer, m rpcMethod) {
+	if skipCapture[m.name] {
+		writePassThrough(buf, m)
+		return
+	}
 	fullMethod := "/rpcpb.SliverRPC/" + m.name
 	if m.streaming {
 		fmt.Fprintf(buf, "func (d *captureDecorator) %s(ctx context.Context", m.name)
@@ -207,4 +220,23 @@ func writeMethod(buf *bytes.Buffer, m rpcMethod) {
 	buf.WriteString("\trespPayload, _ := proto.Marshal(resp)\n")
 	fmt.Fprintf(buf, "\tcall.Message(store.DirectionResponse, respPayload, d.preview(ctx, %q, \"response\", resp))\n", fullMethod)
 	buf.WriteString("\tcall.End(nil)\n\treturn resp, nil\n}\n\n")
+}
+
+func writePassThrough(buf *bytes.Buffer, m rpcMethod) {
+	if m.streaming {
+		fmt.Fprintf(buf, "func (d *captureDecorator) %s(ctx context.Context", m.name)
+		if m.paramType != "" {
+			fmt.Fprintf(buf, ", in *%s", m.paramType)
+		}
+		fmt.Fprintf(buf, ", opts ...grpc.CallOption) (%s, error) {\n", m.resultType)
+		fmt.Fprintf(buf, "\treturn d.inner.%s(ctx", m.name)
+		if m.paramType != "" {
+			buf.WriteString(", in")
+		}
+		buf.WriteString(", opts...)\n}\n\n")
+		return
+	}
+	fmt.Fprintf(buf, "func (d *captureDecorator) %s(ctx context.Context, in *%s, opts ...grpc.CallOption) (*%s, error) {\n",
+		m.name, m.paramType, m.resultType)
+	fmt.Fprintf(buf, "\treturn d.inner.%s(ctx, in, opts...)\n}\n\n", m.name)
 }

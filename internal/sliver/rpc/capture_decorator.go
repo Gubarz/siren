@@ -153,21 +153,7 @@ func (d *captureDecorator) Rename(ctx context.Context, in *clientpb.RenameReq, o
 }
 
 func (d *captureDecorator) GetSessions(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Sessions, error) {
-	payload, _ := proto.Marshal(in)
-	call := d.rec.Begin(ctx, "/rpcpb.SliverRPC/GetSessions", payload)
-	if call == nil {
-		return d.inner.GetSessions(ctx, in, opts...)
-	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetSessions", "request", in))
-	resp, err := d.inner.GetSessions(ctx, in, opts...)
-	if err != nil {
-		call.End(err)
-		return resp, err
-	}
-	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetSessions", "response", resp))
-	call.End(nil)
-	return resp, nil
+	return d.inner.GetSessions(ctx, in, opts...)
 }
 
 func (d *captureDecorator) MonitorStart(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*commonpb.Response, error) {
@@ -477,21 +463,7 @@ func (d *captureDecorator) StartHTTPListener(ctx context.Context, in *clientpb.H
 }
 
 func (d *captureDecorator) GetBeacons(ctx context.Context, in *commonpb.Empty, opts ...grpc.CallOption) (*clientpb.Beacons, error) {
-	payload, _ := proto.Marshal(in)
-	call := d.rec.Begin(ctx, "/rpcpb.SliverRPC/GetBeacons", payload)
-	if call == nil {
-		return d.inner.GetBeacons(ctx, in, opts...)
-	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeacons", "request", in))
-	resp, err := d.inner.GetBeacons(ctx, in, opts...)
-	if err != nil {
-		call.End(err)
-		return resp, err
-	}
-	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeacons", "response", resp))
-	call.End(nil)
-	return resp, nil
+	return d.inner.GetBeacons(ctx, in, opts...)
 }
 
 func (d *captureDecorator) GetBeacon(ctx context.Context, in *clientpb.Beacon, opts ...grpc.CallOption) (*clientpb.Beacon, error) {
@@ -531,39 +503,11 @@ func (d *captureDecorator) RmBeacon(ctx context.Context, in *clientpb.Beacon, op
 }
 
 func (d *captureDecorator) GetBeaconTasks(ctx context.Context, in *clientpb.Beacon, opts ...grpc.CallOption) (*clientpb.BeaconTasks, error) {
-	payload, _ := proto.Marshal(in)
-	call := d.rec.Begin(ctx, "/rpcpb.SliverRPC/GetBeaconTasks", payload)
-	if call == nil {
-		return d.inner.GetBeaconTasks(ctx, in, opts...)
-	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeaconTasks", "request", in))
-	resp, err := d.inner.GetBeaconTasks(ctx, in, opts...)
-	if err != nil {
-		call.End(err)
-		return resp, err
-	}
-	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeaconTasks", "response", resp))
-	call.End(nil)
-	return resp, nil
+	return d.inner.GetBeaconTasks(ctx, in, opts...)
 }
 
 func (d *captureDecorator) GetBeaconTaskContent(ctx context.Context, in *clientpb.BeaconTask, opts ...grpc.CallOption) (*clientpb.BeaconTask, error) {
-	payload, _ := proto.Marshal(in)
-	call := d.rec.Begin(ctx, "/rpcpb.SliverRPC/GetBeaconTaskContent", payload)
-	if call == nil {
-		return d.inner.GetBeaconTaskContent(ctx, in, opts...)
-	}
-	call.Message(store.DirectionRequest, payload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeaconTaskContent", "request", in))
-	resp, err := d.inner.GetBeaconTaskContent(ctx, in, opts...)
-	if err != nil {
-		call.End(err)
-		return resp, err
-	}
-	respPayload, _ := proto.Marshal(resp)
-	call.Message(store.DirectionResponse, respPayload, d.preview(ctx, "/rpcpb.SliverRPC/GetBeaconTaskContent", "response", resp))
-	call.End(nil)
-	return resp, nil
+	return d.inner.GetBeaconTaskContent(ctx, in, opts...)
 }
 
 func (d *captureDecorator) CancelBeaconTask(ctx context.Context, in *clientpb.BeaconTask, opts ...grpc.CallOption) (*clientpb.BeaconTask, error) {
