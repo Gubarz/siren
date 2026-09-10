@@ -112,6 +112,44 @@ func TestListSessionTasks(t *testing.T) {
 	}
 }
 
+func TestListSessionTasksAggregatesStageEvidence(t *testing.T) {
+	st := openTaskStore(t)
+	seedTask(t, st)
+	if _, err := st.Write(store.Record{
+		Kind: store.KindEvidence, Status: store.StatusFailed,
+		RunID: "run-5", StageID: "stage-1", Method: "automation.execute",
+	}); err != nil {
+		t.Fatalf("evidence: %v", err)
+	}
+
+	rows, err := listSessionTasks(st, "sess-9", 10)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 || rows[0].Evidence != store.StatusFailed {
+		t.Fatalf("rows: %+v", rows)
+	}
+}
+
+func TestListSessionTasksDefaultsToAttempted(t *testing.T) {
+	st := openTaskStore(t)
+	if _, err := st.Write(store.Record{
+		Kind: store.KindCall, Direction: store.DirectionRequest,
+		Status: store.StatusAttempted, SessionID: "sess-9",
+		Method: "/rpcpb.SliverRPC/Ls", ChainRef: "chain-1",
+	}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	rows, err := listSessionTasks(st, "sess-9", 10)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 1 || rows[0].Status != store.StatusAttempted {
+		t.Fatalf("rows: %+v", rows)
+	}
+}
+
 func TestListSessionTasksNewestFirst(t *testing.T) {
 	st := openTaskStore(t)
 	older := seedTask(t, st)

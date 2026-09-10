@@ -54,7 +54,7 @@ func listSessionTasks(st *store.Store, sessionID string, limit int) ([]SessionTa
 	out := make([]SessionTaskView, 0, len(envelopes))
 	for _, env := range envelopes {
 		view := SessionTaskView{
-			ID: env.ID, TS: env.TS, Method: env.Method,
+			ID: env.ID, TS: env.TS, Method: env.Method, Status: env.Status,
 			RunID: env.RunID, StageID: env.StageID, ChainRef: env.ChainRef,
 		}
 		if err := applyCompletion(st, &view); err != nil {
@@ -97,17 +97,25 @@ func applyCompletion(st *store.Store, view *SessionTaskView) error {
 	return nil
 }
 
+// evidenceStatus aggregates the evidence rows for one run+stage: a single
+// failed row fails the stage, otherwise a verified row verifies it.
 func evidenceStatus(st *store.Store, runID, stageID string) (string, error) {
 	evidence, err := st.Query(store.Filter{
-		Kind: store.KindEvidence, RunID: runID, StageID: stageID, Limit: 1,
+		Kind: store.KindEvidence, RunID: runID, StageID: stageID, Limit: 50,
 	})
 	if err != nil {
 		return "", err
 	}
-	if len(evidence) == 0 {
-		return "", nil
+	status := ""
+	for _, row := range evidence {
+		if row.Status == store.StatusFailed {
+			return store.StatusFailed, nil
+		}
+		if row.Status == store.StatusVerified {
+			status = store.StatusVerified
+		}
 	}
-	return evidence[0].Status, nil
+	return status, nil
 }
 
 // getTaskCallPayloads returns the request/response messages of one call in

@@ -12,6 +12,8 @@ import (
 	"github.com/gubarz/revils/capture"
 	"github.com/gubarz/revils/store"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -30,7 +32,7 @@ func endCallOnContextDone(call *capture.Call, ctx context.Context) {
 	}
 	go func() {
 		<-ctx.Done()
-		call.End(ctx.Err())
+		call.End(status.Error(codes.Canceled, "stream context done"))
 	}()
 }
 
