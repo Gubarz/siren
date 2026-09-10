@@ -47,7 +47,7 @@ func (f *fakeAwaitRPC) GetBeaconTaskContent(
 }
 
 func awaitTestService(b *recordingBus, fake *fakeAwaitRPC) *Service {
-	return &Service{rpc: &rpc.Client{RPC: fake}, console: &console.Service{}, bus: b}
+	return &Service{rpc: rpc.NewForTest(fake), console: &console.Service{}, bus: b}
 }
 
 func TestAwaitBeaconTaskResolveFailurePublishesNothing(t *testing.T) {

@@ -53,7 +53,7 @@ func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
 
 	// The subprocess needs the operator config to reconnect. We pass the
 	// serialized ClientConfig via a $TMPDIR file, deleted after read.
-	cfgPath, err := writeConfigForSubproc(s.rpc.Config)
+	cfgPath, err := writeConfigForSubproc(s.rpc.Config())
 	if err != nil {
 		return "", false, err
 	}

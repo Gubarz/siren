@@ -34,7 +34,7 @@ func (s *Service) ViewRemoteFile(sessionID, remotePath string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
 	defer cancel()
 
-	resp, err := s.rpc.RPC.Download(ctx, req)
+	resp, err := s.rpc.RPC().Download(ctx, req)
 	if err != nil {
 		return "", err
 	}

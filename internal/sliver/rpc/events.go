@@ -20,7 +20,7 @@ func (c *Client) StartEventStream(ctx context.Context, onEvent func(*clientpb.Ev
 	go func() {
 		defer streamCancel()
 
-		stream, err := c.RPC.Events(streamCtx, &commonpb.Empty{})
+		stream, err := c.RPC().Events(streamCtx, &commonpb.Empty{})
 		if err != nil {
 			if streamCtx.Err() != nil {
 				return

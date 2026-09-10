@@ -50,7 +50,7 @@ func (s *Service) RegisterExtensionFromPath(sessionID, name, localPath, targetOS
 	if name == "" {
 		name = filepath.Base(localPath)
 	}
-	return c.RPC.RegisterExtension(context.Background(), &sliverpb.RegisterExtensionReq{
+	return c.RPC().RegisterExtension(context.Background(), &sliverpb.RegisterExtensionReq{
 		Name:    name,
 		Data:    data,
 		OS:      targetOS,
@@ -102,7 +102,7 @@ func (s *Service) RegisterWasmExtensionFromPath(sessionID, name, localPath strin
 	if name == "" {
 		name = filepath.Base(localPath)
 	}
-	return c.RPC.RegisterWasmExtension(context.Background(), &sliverpb.RegisterWasmExtensionReq{
+	return c.RPC().RegisterWasmExtension(context.Background(), &sliverpb.RegisterWasmExtensionReq{
 		Name:    name,
 		WasmGz:  wasmGz,
 		Request: &commonpb.Request{SessionID: sessionID},

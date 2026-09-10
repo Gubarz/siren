@@ -40,7 +40,7 @@ func (s *Service) GetProcessList(sessionID string, fullInfo bool) (*sliverpb.Ps,
 		FullInfo: fullInfo,
 		Request:  request,
 	}
-	resp, err := s.rpc.RPC.Ps(ctx, req)
+	resp, err := s.rpc.RPC().Ps(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (s *Service) KillProcess(sessionID string, pid int32) error {
 		Force:   true,
 	}
 
-	resp, err := s.rpc.RPC.Terminate(ctx, req)
+	resp, err := s.rpc.RPC().Terminate(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (s *Service) TakeScreenshot(sessionID string) (string, error) {
 		Request: request,
 	}
 
-	resp, err := s.rpc.RPC.Screenshot(ctx, req)
+	resp, err := s.rpc.RPC().Screenshot(ctx, req)
 	if err != nil {
 		return "", err
 	}

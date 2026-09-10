@@ -39,13 +39,13 @@ func (s *Service) StartListener(protocol, host string, port uint32, domains stri
 
 	switch strings.ToLower(protocol) {
 	case "mtls":
-		_, err := c.RPC.StartMTLSListener(ctx, &clientpb.MTLSListenerReq{Host: host, Port: port})
+		_, err := c.RPC().StartMTLSListener(ctx, &clientpb.MTLSListenerReq{Host: host, Port: port})
 		return err
 	case "http":
-		_, err := c.RPC.StartHTTPListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: false})
+		_, err := c.RPC().StartHTTPListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: false})
 		return err
 	case "https":
-		_, err := c.RPC.StartHTTPSListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: true})
+		_, err := c.RPC().StartHTTPSListener(ctx, &clientpb.HTTPListenerReq{Host: host, Port: port, Secure: true})
 		return err
 	case "dns":
 		var doms []string
@@ -54,7 +54,7 @@ func (s *Service) StartListener(protocol, host string, port uint32, domains stri
 				doms = append(doms, d)
 			}
 		}
-		_, err := c.RPC.StartDNSListener(ctx, &clientpb.DNSListenerReq{Domains: doms, Host: host, Port: port})
+		_, err := c.RPC().StartDNSListener(ctx, &clientpb.DNSListenerReq{Domains: doms, Host: host, Port: port})
 		return err
 	default:
 		return fmt.Errorf("unknown listener protocol: %s", protocol)

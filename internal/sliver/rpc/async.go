@@ -60,7 +60,7 @@ func (c *Client) AwaitAsyncResponse(
 	defer ticker.Stop()
 
 	for {
-		task, err := c.RPC.GetBeaconTaskContent(ctx, &clientpb.BeaconTask{ID: meta.TaskID})
+		task, err := c.RPC().GetBeaconTaskContent(ctx, &clientpb.BeaconTask{ID: meta.TaskID})
 		if err != nil {
 			return err
 		}

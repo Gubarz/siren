@@ -45,7 +45,7 @@ func main() {
 		log.Fatalf("connect: %v", err)
 	}
 
-	cfg := shared.RPC.Config
+	cfg := shared.RPC.Config()
 	if cfg != nil {
 		shared.Automation.SetServer(cfg.LHost, uint32(cfg.LPort))
 		shared.Tags.SetServer(cfg.LHost, uint32(cfg.LPort))

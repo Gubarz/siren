@@ -90,17 +90,17 @@ func (r liveHostRPC) Connected() bool {
 }
 
 func (r liveHostRPC) Hosts(ctx context.Context, req *commonpb.Empty) (*clientpb.AllHosts, error) {
-	return r.client.RPC.Hosts(ctx, req)
+	return r.client.RPC().Hosts(ctx, req)
 }
 
 func (r liveHostRPC) Host(ctx context.Context, req *clientpb.Host) (*clientpb.Host, error) {
-	return r.client.RPC.Host(ctx, req)
+	return r.client.RPC().Host(ctx, req)
 }
 
 func (r liveHostRPC) HostRm(ctx context.Context, req *clientpb.Host) (*commonpb.Empty, error) {
-	return r.client.RPC.HostRm(ctx, req)
+	return r.client.RPC().HostRm(ctx, req)
 }
 
 func (r liveHostRPC) HostIOCRm(ctx context.Context, req *clientpb.IOC) (*commonpb.Empty, error) {
-	return r.client.RPC.HostIOCRm(ctx, req)
+	return r.client.RPC().HostIOCRm(ctx, req)
 }

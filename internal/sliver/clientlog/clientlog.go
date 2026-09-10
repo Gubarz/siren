@@ -49,7 +49,7 @@ func (s *Service) Start(ctx context.Context) error {
 		return rpc.ErrNotConnected
 	}
 	pumpCtx, cancel := context.WithCancel(ctx)
-	stream, err := s.rpc.RPC.ClientLog(pumpCtx)
+	stream, err := s.rpc.RPC().ClientLog(pumpCtx)
 	if err != nil {
 		cancel()
 		return err

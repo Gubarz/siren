@@ -62,7 +62,7 @@ func (s *Service) pingLatency() (int64, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
 	defer cancel()
 	start := time.Now()
-	_, err := s.rpc.RPC.GetVersion(ctx, &commonpb.Empty{})
+	_, err := s.rpc.RPC().GetVersion(ctx, &commonpb.Empty{})
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
 		return elapsed, err.Error()
@@ -73,13 +73,13 @@ func (s *Service) pingLatency() (int64, string) {
 func (s *Service) fillAgentCounts(out *Snapshot) {
 	ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
 	defer cancel()
-	if sessions, err := s.rpc.RPC.GetSessions(ctx, &commonpb.Empty{}); err == nil {
+	if sessions, err := s.rpc.RPC().GetSessions(ctx, &commonpb.Empty{}); err == nil {
 		out.SessionCount = len(sessions.Sessions)
 	}
-	if beacons, err := s.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{}); err == nil {
+	if beacons, err := s.rpc.RPC().GetBeacons(ctx, &commonpb.Empty{}); err == nil {
 		out.BeaconCount = len(beacons.Beacons)
 	}
-	if jobs, err := s.rpc.RPC.GetJobs(ctx, &commonpb.Empty{}); err == nil {
+	if jobs, err := s.rpc.RPC().GetJobs(ctx, &commonpb.Empty{}); err == nil {
 		out.JobCount = len(jobs.Active)
 	}
 }

@@ -30,7 +30,7 @@ func (s *Service) GetBeacon(beaconID string) (*clientpb.Beacon, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), lifecycleTimeout)
 	defer cancel()
-	return s.rpc.RPC.GetBeacon(ctx, &clientpb.Beacon{ID: beaconID})
+	return s.rpc.RPC().GetBeacon(ctx, &clientpb.Beacon{ID: beaconID})
 }
 
 // OpenSessionRequest is the GUI-facing shape of sliverpb.OpenSession —
@@ -52,7 +52,7 @@ func (s *Service) OpenSession(req OpenSessionRequest) (*sliverpb.OpenSession, er
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), lifecycleTimeout)
 	defer cancel()
-	return s.rpc.RPC.OpenSession(ctx, &sliverpb.OpenSession{
+	return s.rpc.RPC().OpenSession(ctx, &sliverpb.OpenSession{
 		C2S:   req.C2URLs,
 		Delay: req.Delay,
 		Request: &commonpb.Request{
@@ -92,7 +92,7 @@ func (s *Service) CloseSession(beaconID, tunnelID string) error {
 			Timeout:   int64(lifecycleTimeout / time.Second),
 		},
 	}
-	_, err := s.rpc.RPC.CloseSession(ctx, req)
+	_, err := s.rpc.RPC().CloseSession(ctx, req)
 	return err
 }
 
@@ -108,7 +108,7 @@ func (s *Service) UpdateBeaconIntegrity(beaconID, integrity string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), lifecycleTimeout)
 	defer cancel()
-	_, err := s.rpc.RPC.UpdateBeaconIntegrityInformation(ctx, &clientpb.BeaconIntegrity{
+	_, err := s.rpc.RPC().UpdateBeaconIntegrityInformation(ctx, &clientpb.BeaconIntegrity{
 		BeaconID:  beaconID,
 		Integrity: integrity,
 	})

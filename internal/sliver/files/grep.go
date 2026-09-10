@@ -27,7 +27,7 @@ func (s *Service) GrepFiles(sessionID, pattern, path string, recursive bool, bef
 	ctx, cancel := context.WithTimeout(context.Background(), grepTimeout)
 	defer cancel()
 
-	grep, err := s.rpc.RPC.Grep(ctx, &sliverpb.GrepReq{
+	grep, err := s.rpc.RPC().Grep(ctx, &sliverpb.GrepReq{
 		Request:       request,
 		SearchPattern: pattern,
 		Path:          path,

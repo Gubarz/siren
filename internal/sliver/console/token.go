@@ -19,7 +19,7 @@ func (s *Service) GetTokenPrivs(sessionID string) (*sliverpb.GetPrivs, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	privs, err := s.rpc.RPC.GetPrivs(ctx, &sliverpb.GetPrivsReq{
+	privs, err := s.rpc.RPC().GetPrivs(ctx, &sliverpb.GetPrivsReq{
 		Request: targetRequestFromConsole(sess, beacon),
 	})
 	if err != nil {
@@ -39,7 +39,7 @@ func (s *Service) RevToSelfToken(sessionID string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	revert, err := s.rpc.RPC.RevToSelf(ctx, &sliverpb.RevToSelfReq{
+	revert, err := s.rpc.RPC().RevToSelf(ctx, &sliverpb.RevToSelfReq{
 		Request: targetRequestFromConsole(sess, beacon),
 	})
 	if err != nil {

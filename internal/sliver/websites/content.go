@@ -51,7 +51,7 @@ func (s *Service) submitContent(
 	}
 	ctx, cancel := ctxWithTimeout()
 	defer cancel()
-	_, err = method(c.RPC, ctx, &clientpb.WebsiteAddContent{
+	_, err = method(c.RPC(), ctx, &clientpb.WebsiteAddContent{
 		Name:     req.Name,
 		Contents: map[string]*clientpb.WebContent{req.Path: entry},
 	})
@@ -73,7 +73,7 @@ func (s *Service) RemoveContent(name string, paths []string) error {
 	}
 	ctx, cancel := ctxWithTimeout()
 	defer cancel()
-	_, err = c.RPC.WebsiteRemoveContent(ctx, &clientpb.WebsiteRemoveContent{
+	_, err = c.RPC().WebsiteRemoveContent(ctx, &clientpb.WebsiteRemoveContent{
 		Name:  name,
 		Paths: paths,
 	})

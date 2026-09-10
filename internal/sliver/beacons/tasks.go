@@ -65,7 +65,7 @@ func (s *Service) GetBeaconTaskOutput(taskID string) (*TaskOutput, error) {
 		return nil, fmt.Errorf("task ID is required")
 	}
 
-	task, err := c.RPC.GetBeaconTaskContent(
+	task, err := c.RPC().GetBeaconTaskContent(
 		context.Background(),
 		&clientpb.BeaconTask{ID: taskID},
 	)
@@ -228,7 +228,7 @@ func (s *Service) resolveBeaconTaskID(ctx context.Context, beaconID, prefix stri
 	defer ticker.Stop()
 
 	for {
-		tasks, err := s.rpc.RPC.GetBeaconTasks(ctx, &clientpb.Beacon{ID: beaconID})
+		tasks, err := s.rpc.RPC().GetBeaconTasks(ctx, &clientpb.Beacon{ID: beaconID})
 		if err != nil {
 			return "", err
 		}
@@ -251,7 +251,7 @@ func (s *Service) waitForBeaconTask(ctx context.Context, taskID string) (*client
 	defer ticker.Stop()
 
 	for {
-		task, err := s.rpc.RPC.GetBeaconTaskContent(ctx, &clientpb.BeaconTask{ID: taskID})
+		task, err := s.rpc.RPC().GetBeaconTaskContent(ctx, &clientpb.BeaconTask{ID: taskID})
 		if err != nil {
 			return nil, err
 		}
@@ -282,11 +282,11 @@ func (s *Service) cancelPendingBeaconTask(taskID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	task, err := s.rpc.RPC.GetBeaconTaskContent(ctx, &clientpb.BeaconTask{ID: taskID})
+	task, err := s.rpc.RPC().GetBeaconTaskContent(ctx, &clientpb.BeaconTask{ID: taskID})
 	if err != nil || strings.ToLower(task.State) != "pending" {
 		return
 	}
-	_, _ = s.rpc.RPC.CancelBeaconTask(ctx, &clientpb.BeaconTask{ID: taskID})
+	_, _ = s.rpc.RPC().CancelBeaconTask(ctx, &clientpb.BeaconTask{ID: taskID})
 }
 
 func shouldCancelPendingBeaconTask(err error) bool {

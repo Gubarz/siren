@@ -24,7 +24,7 @@ func (s *Service) cleanUpTunnelOnError(tunnelID uint64, sessionID string, contex
 // tearing the tunnel down if the shell request fails. Returns the resolved
 // shell path (the requested one, or whatever the target picked).
 func (s *Service) openShellTunnel(sessionID, path string, enablePTY bool, rows, cols uint32) (*core.TunnelIO, string, uint32, error) {
-	rpcTunnel, err := s.rpc.RPC.CreateTunnel(context.Background(), &sliverpb.Tunnel{
+	rpcTunnel, err := s.rpc.RPC().CreateTunnel(context.Background(), &sliverpb.Tunnel{
 		SessionID: sessionID,
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *Service) openShellTunnel(sessionID, path string, enablePTY bool, rows, 
 	}
 	tunnel := core.GetTunnels().Start(rpcTunnel.TunnelID, rpcTunnel.SessionID)
 
-	response, err := s.rpc.RPC.Shell(context.Background(), &sliverpb.ShellReq{
+	response, err := s.rpc.RPC().Shell(context.Background(), &sliverpb.ShellReq{
 		Request: &commonpb.Request{
 			SessionID: sessionID,
 			Timeout:   int64(59 * time.Second),
@@ -121,7 +121,7 @@ func (s *Service) finishShell(id string, tunnel *core.TunnelIO, readErr error) {
 
 func (s *Service) closeTunnel(tunnelID uint64, sessionID string) error {
 	core.GetTunnels().Close(tunnelID)
-	_, err := s.rpc.RPC.CloseTunnel(context.Background(), &sliverpb.Tunnel{
+	_, err := s.rpc.RPC().CloseTunnel(context.Background(), &sliverpb.Tunnel{
 		TunnelID:  tunnelID,
 		SessionID: sessionID,
 	})

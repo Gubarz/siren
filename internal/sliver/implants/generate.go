@@ -102,7 +102,7 @@ func (s *Service) GenerateAdvanced(req GenerateRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	resp, err := s.rpc.RPC.Generate(context.Background(), &clientpb.GenerateReq{
+	resp, err := s.rpc.RPC().Generate(context.Background(), &clientpb.GenerateReq{
 		Name:   req.Name,
 		Config: cfg,
 	})
@@ -127,7 +127,7 @@ func (s *Service) SaveProfileAdvanced(req GenerateRequest) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.rpc.RPC.SaveImplantProfile(context.Background(), &clientpb.ImplantProfile{
+	_, err = s.rpc.RPC().SaveImplantProfile(context.Background(), &clientpb.ImplantProfile{
 		Name:   req.Name,
 		Config: cfg,
 	})
@@ -145,7 +145,7 @@ func (s *Service) GenerateFromProfile(profileConfigID string, name string, forma
 		Format:           clientpb.OutputFormat(format),
 	}
 
-	resp, err := s.rpc.RPC.Generate(context.Background(), &clientpb.GenerateReq{
+	resp, err := s.rpc.RPC().Generate(context.Background(), &clientpb.GenerateReq{
 		Name:   name,
 		Config: cfg,
 	})

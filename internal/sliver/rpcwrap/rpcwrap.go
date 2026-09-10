@@ -40,7 +40,7 @@ func CallContext[Req, Resp any](
 	if !client.Connected() {
 		return zero, rpc.ErrNotConnected
 	}
-	return method(client.RPC, ctx, req)
+	return method(client.RPC(), ctx, req)
 }
 
 // CallRequired is Call after checking that value is not blank. The
@@ -59,7 +59,7 @@ func CallRequired[Req, Resp any](
 	if strings.TrimSpace(value) == "" {
 		return zero, fmt.Errorf("%s is required", label)
 	}
-	return method(client.RPC, context.Background(), req)
+	return method(client.RPC(), context.Background(), req)
 }
 
 // TargetResponse is a Sliver response that can be awaited and decoded back
@@ -82,7 +82,7 @@ func CallTarget[Req proto.Message, Resp any](
 		return zero, rpc.ErrNotConnected
 	}
 	SetRequest(req, &commonpb.Request{SessionID: sessionID})
-	return method(client.RPC, context.Background(), req)
+	return method(client.RPC(), context.Background(), req)
 }
 
 // TargetCall resolves sessionID to a Sliver request envelope, stamps req
@@ -107,7 +107,7 @@ func TargetCall[Req proto.Message, Resp TargetResponse](
 	SetRequest(req, request)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	resp, err := method(c.RPC, ctx, req)
+	resp, err := method(c.RPC(), ctx, req)
 	if err != nil {
 		return zero, err
 	}

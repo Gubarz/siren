@@ -77,7 +77,7 @@ func (s *Service) WriteValue(sessionID, hive, path, key, valueType, value string
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
-	resp, err := c.RPC.RegistryWrite(ctx, req)
+	resp, err := c.RPC().RegistryWrite(ctx, req)
 	if err != nil {
 		return err
 	}

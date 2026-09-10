@@ -117,7 +117,7 @@ func (s *Service) uploadRequest(sessionID, remotePath, fileName string, encodedD
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
 	defer cancel()
 
-	resp, err := s.rpc.RPC.Upload(ctx, req)
+	resp, err := s.rpc.RPC().Upload(ctx, req)
 	if err != nil {
 		return err
 	}

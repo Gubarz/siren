@@ -40,7 +40,7 @@ func (w *LootWriter) Add(ctx context.Context, name, lootType string, data []byte
 		_, err := w.service.Add(ctx, name, ft, data)
 		return err
 	}
-	_, err := w.rpc.RPC.LootAdd(ctx, &clientpb.Loot{
+	_, err := w.rpc.RPC().LootAdd(ctx, &clientpb.Loot{
 		Name:     name,
 		FileType: ft,
 		File:     &commonpb.File{Data: data},
@@ -52,7 +52,7 @@ func (w *LootWriter) List(ctx context.Context) ([]automation.LootItem, error) {
 	if !w.rpc.Connected() {
 		return nil, fmt.Errorf("not connected")
 	}
-	all, err := w.rpc.RPC.LootAll(ctx, &commonpb.Empty{})
+	all, err := w.rpc.RPC().LootAll(ctx, &commonpb.Empty{})
 	if err != nil {
 		return nil, err
 	}

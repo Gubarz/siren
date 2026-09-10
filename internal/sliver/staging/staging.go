@@ -72,22 +72,22 @@ func (r liveStagingRPC) StageImplantBuild(
 	ctx context.Context,
 	req *clientpb.ImplantStageReq,
 ) (*commonpb.Empty, error) {
-	return r.client.RPC.StageImplantBuild(ctx, req)
+	return r.client.RPC().StageImplantBuild(ctx, req)
 }
 
 func (r liveStagingRPC) ImplantBuilds(ctx context.Context, req *commonpb.Empty) (*clientpb.ImplantBuilds, error) {
-	return r.client.RPC.ImplantBuilds(ctx, req)
+	return r.client.RPC().ImplantBuilds(ctx, req)
 }
 
 func (r liveStagingRPC) GenerateStage(ctx context.Context, req *clientpb.GenerateStageReq) (*clientpb.Generate, error) {
-	return r.client.RPC.GenerateStage(ctx, req)
+	return r.client.RPC().GenerateStage(ctx, req)
 }
 
 func (r liveStagingRPC) StartTCPStagerListener(
 	ctx context.Context,
 	req *clientpb.StagerListenerReq,
 ) (*clientpb.StagerListener, error) {
-	return r.client.RPC.StartTCPStagerListener(ctx, req)
+	return r.client.RPC().StartTCPStagerListener(ctx, req)
 }
 
 func (s *Service) SetUI(ui *wailsadapter.Bridge) {

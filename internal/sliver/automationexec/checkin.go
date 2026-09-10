@@ -57,7 +57,7 @@ func (p *CheckinPublisher) poll(ctx context.Context) {
 	if !p.rpc.Connected() {
 		return
 	}
-	resp, err := p.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{})
+	resp, err := p.rpc.RPC().GetBeacons(ctx, &commonpb.Empty{})
 	if err != nil {
 		return
 	}

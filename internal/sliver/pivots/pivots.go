@@ -83,7 +83,7 @@ func (s *Service) sessionPivotSnapshots(sessionID string) []PivotListenerSnapsho
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	listeners, err := s.rpc.RPC.PivotSessionListeners(
+	listeners, err := s.rpc.RPC().PivotSessionListeners(
 		ctx,
 		&sliverpb.PivotListenersReq{
 			Request: &commonpb.Request{SessionID: sessionID},
