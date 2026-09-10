@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	goruntime "runtime"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
+	"siren/internal/localstate/downloadhistory"
 	"siren/internal/sliver/rpc"
 )
 
@@ -100,19 +102,27 @@ func (s *Service) addDownloadHistory(sessionID, remotePath, localPath string, is
 	if s.history == nil {
 		return ""
 	}
-	return s.history.AddRecord(DownloadRecord{
+	id, err := s.history.Add(downloadhistory.Record{
 		SessionID:   sessionID,
 		RemotePath:  remotePath,
 		LocalPath:   localPath,
 		IsDirectory: isDir,
-		Timestamp:   nowString(),
 		Status:      "in_progress",
 	})
+	if err != nil {
+		// The transfer itself is unaffected, so this is recorded and the
+		// download carries on.
+		log.Printf("download history: could not record %s: %v", remotePath, err)
+	}
+	return id
 }
 
 func (s *Service) finalizeDownloadHistory(recordID, status string, size int64, errStr string) {
-	if s.history != nil && recordID != "" {
-		s.history.UpdateRecord(recordID, status, size, errStr)
+	if s.history == nil || recordID == "" {
+		return
+	}
+	if err := s.history.Update(recordID, status, size, errStr); err != nil {
+		log.Printf("download history: could not finalise %s: %v", recordID, err)
 	}
 }
 
