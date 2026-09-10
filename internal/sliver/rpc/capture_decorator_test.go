@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gubarz/revils/capture"
 	"github.com/gubarz/revils/store"
@@ -15,6 +16,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"siren/internal/captureann"
 )
@@ -65,6 +67,55 @@ func TestCaptureDecoratorRecordsUnaryCall(t *testing.T) {
 	}
 	if n, _ := st.Count(store.Filter{Kind: store.KindCall, Direction: store.DirectionComplete, ChainRef: env[0].ChainRef}); n != 1 {
 		t.Fatalf("completions = %d, want 1", n)
+	}
+}
+
+func TestEndCallOnContextDoneRecordsCanceled(t *testing.T) {
+	key := make([]byte, 32)
+	st, err := store.Open(store.Config{DBPath: filepath.Join(t.TempDir(), "cancel.sqlite"), Key: key})
+	if err != nil {
+		t.Fatalf("store: %v", err)
+	}
+	defer st.Close()
+
+	rec := capture.NewRecorder(st, captureann.New("op"))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	call := rec.Begin(ctx, "/rpcpb.SliverRPC/Events", nil)
+	if call == nil {
+		t.Fatal("begin returned nil")
+	}
+	env, err := st.Query(store.Filter{
+		Kind: store.KindCall, Direction: store.DirectionRequest, Limit: 10,
+	})
+	if err != nil || len(env) != 1 {
+		t.Fatalf("envelope: %v %+v", err, env)
+	}
+	chainRef := env[0].ChainRef
+
+	endCallOnContextDone(call, ctx)
+	cancel()
+
+	deadline := time.Now().Add(5 * time.Second)
+	var comps []store.RecordRow
+	for time.Now().Before(deadline) {
+		comps, err = st.Query(store.Filter{
+			Kind: store.KindCall, Direction: store.DirectionComplete,
+			ChainRef: chainRef, Limit: 10,
+		})
+		if err != nil {
+			t.Fatalf("query: %v", err)
+		}
+		if len(comps) > 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if len(comps) != 1 {
+		t.Fatalf("completions = %d, want 1", len(comps))
+	}
+	if comps[0].Status != codes.Canceled.String() {
+		t.Fatalf("status = %q, want %q", comps[0].Status, codes.Canceled.String())
 	}
 }
 

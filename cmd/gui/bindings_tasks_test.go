@@ -114,13 +114,13 @@ func TestListSessionTasks(t *testing.T) {
 
 func TestListSessionTasksAggregatesStageEvidence(t *testing.T) {
 	st := openTaskStore(t)
-	seedTask(t, st)
 	if _, err := st.Write(store.Record{
 		Kind: store.KindEvidence, Status: store.StatusFailed,
 		RunID: "run-5", StageID: "stage-1", Method: "automation.execute",
 	}); err != nil {
 		t.Fatalf("evidence: %v", err)
 	}
+	seedTask(t, st)
 
 	rows, err := listSessionTasks(st, "sess-9", 10)
 	if err != nil {
