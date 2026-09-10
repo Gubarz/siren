@@ -18,7 +18,7 @@ type Engine struct {
 	targets  TargetProvider
 	tags     AgentTagStore
 	bus      bus.Bus
-	journal  JournalQuerier
+	records  RecordQuerier
 	http     HTTPDoer
 	cases    CaseAppender
 	loot     LootWriter
@@ -50,7 +50,7 @@ func New(deps Dependencies) *Engine {
 		targets:      deps.Targets,
 		tags:         deps.Tags,
 		bus:          deps.Bus,
-		journal:      deps.Journal,
+		records:      deps.Records,
 		http:         deps.HTTP,
 		cases:        deps.Cases,
 		loot:         deps.Loot,

@@ -62,8 +62,10 @@ func main() {
 	log.Printf("headless: connected to %s:%d as %s", cfg.LHost, cfg.LPort, cfg.Operator)
 	<-ctx.Done()
 	log.Println("headless: shutting down")
-	if err := shared.Journal.Close(); err != nil {
-		log.Printf("headless: close journal: %v", err)
+	if shared.CaptureStore != nil {
+		if err := shared.CaptureStore.Close(); err != nil {
+			log.Printf("headless: close capture store: %v", err)
+		}
 	}
 	shared.RPC.Disconnect()
 }

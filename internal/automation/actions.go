@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gubarz/revils/store"
+
 	"siren/internal/bus"
-	"siren/internal/journal"
 )
 
 type ActionSpec struct {
@@ -24,8 +25,8 @@ type ActionResult struct {
 }
 
 type (
-	JournalQuerier interface {
-		Query(ctx context.Context, f journal.Filter) ([]journal.Entry, int, error)
+	RecordQuerier interface {
+		Query(f store.Filter) ([]store.RecordRow, error)
 	}
 	HTTPDoer interface {
 		Do(req *http.Request) (*http.Response, error)
@@ -48,7 +49,7 @@ type ActionDeps struct {
 	Tags      AgentTagStore
 	Emitter   Emitter
 	Bus       bus.Bus
-	Journal   JournalQuerier
+	Records   RecordQuerier
 	HTTP      HTTPDoer
 	Cases     CaseAppender
 	Loot      LootWriter
@@ -61,6 +62,7 @@ type RunContext struct {
 	Trigger     string
 	Target      Target
 	RunID       string
+	StageID     string
 	Action      ActionSpec
 	Log         func(...any)
 	Commands    *[]string
@@ -160,7 +162,7 @@ func (e *Engine) actionDeps() ActionDeps {
 		Tags:      e.tags,
 		Emitter:   e.emitter,
 		Bus:       e.bus,
-		Journal:   e.journal,
+		Records:   e.records,
 		HTTP:      e.httpClient(),
 		Cases:     e.cases,
 		Loot:      e.loot,

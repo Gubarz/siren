@@ -4,33 +4,21 @@ import (
 	"context"
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
-	"github.com/google/uuid"
 
-	"siren/internal/journal"
+	"siren/internal/execctx"
 )
 
-func withCommandOverlay(ctx context.Context, targetID, targetKind, hostname, line string) context.Context {
-	overlay, _ := journal.OverlayFrom(ctx)
-	if overlay.ActorKind == "" {
-		overlay.ActorKind = "operator"
-	}
-	if overlay.Panel == "" {
-		overlay.Panel = "console"
-	}
-	if overlay.CommandLine == "" {
-		overlay.CommandLine = line
-	}
-	if overlay.CorrelationID == "" {
-		overlay.CorrelationID = uuid.NewString()
-	}
-	overlay.TargetID = targetID
-	if overlay.TargetKind == "" {
-		overlay.TargetKind = targetKind
-	}
-	if overlay.Hostname == "" {
-		overlay.Hostname = hostname
-	}
-	return journal.WithContext(ctx, overlay)
+// withCommandOverlay installs target and run identity for one command
+// execution. The returned restore must run when the command returns; command
+// execution is serialized under the console mutex, so one current slot is
+// enough.
+func withCommandOverlay(ctx context.Context, targetID, targetKind, hostname, _ string) (context.Context, func()) {
+	runID, stageID := execctx.Run(ctx)
+	restore := execctx.SetCurrent(execctx.Snapshot{
+		RunID: runID, StageID: stageID,
+		TargetID: targetID, TargetKind: targetKind, Hostname: hostname,
+	})
+	return execctx.WithTarget(ctx, targetID, targetKind, hostname), restore
 }
 
 func targetKindOf(sess *clientpb.Session, beacon *clientpb.Beacon) string {

@@ -4,10 +4,10 @@
 package bus
 
 // Event namespaces: sliver.* (raw server events), gui.* (GUI-synthesized),
-// journal.*, automation.*. Integrations pick their own prefix.
+// beacon.* (agent task results), automation.*. Integrations pick their own prefix.
 type Event struct {
 	Type         string
-	Source       string // "grpc-stream" | "journal" | "gui" | "automation" | integration name
+	Source       string // "grpc-stream" | "gui" | "automation" | integration name
 	ConnectionID string // "host:port" of the originating server
 	Time         int64  // UnixMilli; stamped by Publish when zero
 	Payload      any

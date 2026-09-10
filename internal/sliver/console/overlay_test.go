@@ -4,33 +4,41 @@ import (
 	"context"
 	"testing"
 
-	"siren/internal/journal"
+	"siren/internal/execctx"
 )
 
-func TestWithCommandOverlayDefaultsOperator(t *testing.T) {
-	ctx := withCommandOverlay(context.Background(), "t1", "session", "host-1", "ps")
-	o, ok := journal.OverlayFrom(ctx)
-	if !ok {
-		t.Fatal("no overlay")
-	}
-	if o.ActorKind != "operator" || o.Panel != "console" || o.CommandLine != "ps" {
-		t.Fatalf("overlay: %+v", o)
-	}
-	if o.TargetID != "t1" || o.TargetKind != "session" || o.CorrelationID == "" {
-		t.Fatalf("overlay: %+v", o)
+func TestWithCommandOverlaySetsTarget(t *testing.T) {
+	ctx, restore := withCommandOverlay(context.Background(), "t1", "session", "host-1", "ps")
+	defer restore()
+	id, kind, hostname := execctx.Target(ctx)
+	if id != "t1" || kind != "session" || hostname != "host-1" {
+		t.Fatalf("target: %q %q %q", id, kind, hostname)
 	}
 }
 
-func TestWithCommandOverlayPreservesAutomationActor(t *testing.T) {
-	parent := journal.WithContext(context.Background(), journal.Overlay{
-		ActorKind: "automation", RuleID: "r1", CorrelationID: "run-1",
-	})
-	ctx := withCommandOverlay(parent, "t2", "beacon", "host-2", "ls")
-	o, _ := journal.OverlayFrom(ctx)
-	if o.ActorKind != "automation" || o.RuleID != "r1" || o.CorrelationID != "run-1" {
-		t.Fatalf("automation overlay clobbered: %+v", o)
+func TestWithCommandOverlayPreservesRunContext(t *testing.T) {
+	parent := execctx.WithRun(context.Background(), "run-1", "commands#0")
+	ctx, restore := withCommandOverlay(parent, "t2", "beacon", "host-2", "ls")
+	defer restore()
+	if runID, stageID := execctx.Run(ctx); runID != "run-1" || stageID != "commands#0" {
+		t.Fatalf("run context clobbered: %q %q", runID, stageID)
 	}
-	if o.CommandLine != "ls" || o.TargetID != "t2" {
-		t.Fatalf("command fields missing: %+v", o)
+	id, kind, hostname := execctx.Target(ctx)
+	if id != "t2" || kind != "beacon" || hostname != "host-2" {
+		t.Fatalf("target: %q %q %q", id, kind, hostname)
+	}
+}
+
+func TestWithCommandOverlaySetsCurrentAndRestores(t *testing.T) {
+	parent := execctx.WithRun(context.Background(), "run-1", "commands#0")
+	_, restore := withCommandOverlay(parent, "t3", "beacon", "host-3", "ls")
+	current := execctx.Current()
+	if current.RunID != "run-1" || current.StageID != "commands#0" ||
+		current.TargetID != "t3" || current.TargetKind != "beacon" || current.Hostname != "host-3" {
+		t.Fatalf("current: %+v", current)
+	}
+	restore()
+	if got := execctx.Current(); got != (execctx.Snapshot{}) {
+		t.Fatalf("after restore: %+v", got)
 	}
 }

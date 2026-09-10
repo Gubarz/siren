@@ -8,6 +8,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/google/uuid v1.6.0
 	github.com/grafana/sobek v0.0.0-20260612080906-524cb275218c
+	github.com/gubarz/revils v0.8.10
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.18.4
 	github.com/reeflective/console v0.1.25

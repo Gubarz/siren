@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,15 +11,16 @@ import (
 	"time"
 
 	"github.com/grafana/sobek"
+	"github.com/gubarz/revils/store"
 
 	"siren/internal/bus"
-	"siren/internal/journal"
 )
 
 const (
 	scriptHTTPDefaultTimeout = 10 * time.Second
 	scriptHTTPMaxResponse    = 1 * 1024 * 1024
-	scriptJournalMaxEntries  = 200
+	scriptRecordsMaxEntries  = 200
+	scriptRecordsFetchLimit  = 500
 )
 
 func (je *jsExec) extendAPI(vm *sobek.Runtime, sliver sobek.Value) error {
@@ -35,7 +37,7 @@ func (je *jsExec) extendAPI(vm *sobek.Runtime, sliver sobek.Value) error {
 	if err := obj.Set("events", map[string]any{"emit": je.scriptEventsEmit}); err != nil {
 		return err
 	}
-	return obj.Set("journal", map[string]any{"query": je.scriptJournalQuery})
+	return obj.Set("journal", map[string]any{"query": je.scriptRecordsQuery})
 }
 
 func (je *jsExec) scriptHTTP(call sobek.FunctionCall) sobek.Value {
@@ -151,29 +153,60 @@ func (je *jsExec) scriptEventsEmit(call sobek.FunctionCall) sobek.Value {
 	return sobek.Undefined()
 }
 
-func (je *jsExec) scriptJournalQuery(call sobek.FunctionCall) sobek.Value {
+type recordFilter struct {
+	Verb     string
+	TargetID string
+	Status   string
+	Since    int64
+	Until    int64
+	Limit    int
+}
+
+// recordEntry's JSON keys are a stable contract for existing scripts.
+type recordEntry struct {
+	ID            int64  `json:"id"`
+	Time          int64  `json:"time"`
+	ConnectionID  string `json:"connectionID"`
+	ActorKind     string `json:"actorKind"`
+	RuleID        string `json:"ruleID"`
+	RuleName      string `json:"ruleName"`
+	Verb          string `json:"verb"`
+	CommandLine   string `json:"commandLine"`
+	TargetID      string `json:"targetID"`
+	TargetKind    string `json:"targetKind"`
+	Hostname      string `json:"hostname"`
+	Panel         string `json:"panel"`
+	Status        string `json:"status"`
+	Err           string `json:"err"`
+	DurationMs    int64  `json:"durationMs"`
+	CorrelationID string `json:"correlationID"`
+}
+
+func (je *jsExec) scriptRecordsQuery(call sobek.FunctionCall) sobek.Value {
 	vm := je.vm
-	if je.rc.Deps.Journal == nil {
-		panic(vm.NewGoError(fmt.Errorf("sliver.journal.query: journal unavailable")))
+	if je.rc.Deps.Records == nil {
+		panic(vm.NewGoError(fmt.Errorf("sliver.journal.query: record store unavailable")))
 	}
-	filter := journal.Filter{Limit: scriptJournalMaxEntries}
+	filter := recordFilter{Limit: scriptRecordsMaxEntries}
 	if len(call.Arguments) > 0 && !sobek.IsUndefined(call.Argument(0)) && !sobek.IsNull(call.Argument(0)) {
-		applyJournalFilter(call.Argument(0).ToObject(vm), &filter)
+		applyRecordFilter(call.Argument(0).ToObject(vm), &filter)
 	}
-	entries, total, err := je.rc.Deps.Journal.Query(je.rc.Ctx, filter)
+	rows, err := je.rc.Deps.Records.Query(store.Filter{
+		Kind:      store.KindCall,
+		Direction: store.DirectionComplete,
+		Limit:     scriptRecordsFetchLimit,
+	})
 	if err != nil {
 		panic(vm.NewGoError(err))
 	}
-	if len(entries) > scriptJournalMaxEntries {
-		entries = entries[:scriptJournalMaxEntries]
-	}
+	entries, total := mapRecordRows(rows, filter)
 	result := vm.NewObject()
 	_ = result.Set("entries", entries)
 	_ = result.Set("total", total)
 	return result
 }
 
-func applyJournalFilter(obj *sobek.Object, f *journal.Filter) {
+func applyRecordFilter(obj *sobek.Object, f *recordFilter) {
 	if v := obj.Get("verb"); v != nil && !sobek.IsUndefined(v) {
 		if s := v.String(); s != "" {
 			f.Verb = s
@@ -184,11 +217,110 @@ func applyJournalFilter(obj *sobek.Object, f *journal.Filter) {
 			f.TargetID = s
 		}
 	}
-	if v := obj.Get("actorKind"); v != nil && !sobek.IsUndefined(v) {
+	if v := obj.Get("status"); v != nil && !sobek.IsUndefined(v) {
 		if s := v.String(); s != "" {
-			f.ActorKind = s
+			f.Status = s
 		}
 	}
+	if v := obj.Get("since"); v != nil && !sobek.IsUndefined(v) {
+		f.Since = v.ToInteger()
+	}
+	if v := obj.Get("until"); v != nil && !sobek.IsUndefined(v) {
+		f.Until = v.ToInteger()
+	}
+	if v := obj.Get("limit"); v != nil && !sobek.IsUndefined(v) {
+		f.Limit = int(v.ToInteger())
+	}
+}
+
+// mapRecordRows maps completion rows to the historical entry shape. Method
+// suffix, target, time, and status filters run here because the store filter
+// cannot express suffix, session-or-beacon matching, or status normalization.
+// Known limitation: since/until and verb/target filters apply after the
+// 500-row fetch, and actorKind is unsupported.
+func mapRecordRows(rows []store.RecordRow, f recordFilter) ([]recordEntry, int) {
+	if f.Status != "" {
+		f.Status = normalizeRecordStatus(f.Status)
+	}
+	entries := make([]recordEntry, 0, len(rows))
+	for _, row := range rows {
+		verb := shortRecordMethod(row.Method)
+		if f.Verb != "" && verb != f.Verb {
+			continue
+		}
+		if f.TargetID != "" && row.SessionID != f.TargetID && row.BeaconID != f.TargetID {
+			continue
+		}
+		status := normalizeRecordStatus(row.Status)
+		if f.Status != "" && status != f.Status {
+			continue
+		}
+		if f.Since != 0 && row.TS < f.Since {
+			continue
+		}
+		if f.Until != 0 && row.TS > f.Until {
+			continue
+		}
+		targetID, targetKind := row.SessionID, ""
+		if targetID != "" {
+			targetKind = "session"
+		} else if row.BeaconID != "" {
+			targetID, targetKind = row.BeaconID, "beacon"
+		}
+		entries = append(entries, recordEntry{
+			ID:            row.ID,
+			Time:          row.TS,
+			Verb:          verb,
+			TargetID:      targetID,
+			TargetKind:    targetKind,
+			Status:        status,
+			Err:           completionError(row.JSON),
+			CorrelationID: row.RunID,
+		})
+	}
+	total := len(entries)
+	limit := f.Limit
+	if limit <= 0 || limit > scriptRecordsMaxEntries {
+		limit = scriptRecordsMaxEntries
+	}
+	if len(entries) > limit {
+		entries = entries[:limit]
+	}
+	return entries, total
+}
+
+func shortRecordMethod(method string) string {
+	if i := strings.LastIndexByte(method, '/'); i >= 0 {
+		return method[i+1:]
+	}
+	return method
+}
+
+// normalizeRecordStatus collapses the vocabulary mismatch between envelope
+// rows ("attempted") and completion rows (gRPC code strings such as "OK" or
+// "Canceled") into the three script-facing statuses.
+func normalizeRecordStatus(status string) string {
+	switch status {
+	case "OK", "ok":
+		return "ok"
+	case "", "attempted":
+		return "attempted"
+	default:
+		return "error"
+	}
+}
+
+func completionError(preview string) string {
+	if preview == "" {
+		return ""
+	}
+	var body struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(preview), &body); err != nil {
+		return ""
+	}
+	return body.Error
 }
 
 func optString(opts *sobek.Object, key, fallback string) string {

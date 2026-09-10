@@ -15,7 +15,9 @@ import (
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 
-	"siren/internal/journal"
+	automationevents "siren/internal/automation/events"
+	"siren/internal/bus"
+	"siren/internal/execctx"
 	"siren/internal/sliver/console"
 	"siren/internal/sliver/rpc"
 )
@@ -25,15 +27,15 @@ const beaconTaskPollInterval = time.Second
 type Service struct {
 	rpc     *rpc.Client
 	console *console.Service
-	journal *journal.Service
+	bus     bus.Bus
 }
 
 func New(rpc *rpc.Client, con *console.Service) *Service {
 	return &Service{rpc: rpc, console: con}
 }
 
-func (s *Service) SetJournal(j *journal.Service) {
-	s.journal = j
+func (s *Service) SetBus(b bus.Bus) {
+	s.bus = b
 }
 
 func (s *Service) GetBeaconTasks(beaconID string) (*clientpb.BeaconTasks, error) {
@@ -206,7 +208,7 @@ func (s *Service) AwaitBeaconTask(
 			s.cancelPendingBeaconTask(taskID)
 		}
 		err = fmt.Errorf("beacon task %s: %w", shortTaskID(taskID), err)
-		s.journalBeaconTaskResult(ctx, beaconID, err)
+		s.publishBeaconTaskResult(ctx, beaconID, err)
 		return commandOutput, true, err
 	}
 
@@ -216,16 +218,16 @@ func (s *Service) AwaitBeaconTask(
 			state = "unknown"
 		}
 		err := fmt.Errorf("beacon task %s %s", shortTaskID(task.ID), state)
-		s.journalBeaconTaskResult(ctx, beaconID, err)
+		s.publishBeaconTaskResult(ctx, beaconID, err)
 		return commandOutput, true, err
 	}
 
 	rendered, err := s.renderBeaconTask(task)
 	if err != nil {
-		s.journalBeaconTaskResult(ctx, beaconID, err)
+		s.publishBeaconTaskResult(ctx, beaconID, err)
 		return commandOutput, true, err
 	}
-	s.journalBeaconTaskResult(ctx, beaconID, nil)
+	s.publishBeaconTaskResult(ctx, beaconID, nil)
 	return rendered, true, nil
 }
 
@@ -306,24 +308,27 @@ func shortTaskID(taskID string) string {
 	return taskID
 }
 
-func (s *Service) journalBeaconTaskResult(ctx context.Context, beaconID string, taskErr error) {
-	if s.journal == nil {
+func (s *Service) publishBeaconTaskResult(ctx context.Context, beaconID string, taskErr error) {
+	if s.bus == nil {
 		return
 	}
-	e := journal.Entry{
-		Verb:       "BeaconTaskResult",
-		TargetID:   beaconID,
-		TargetKind: "beacon",
-		Status:     "ok",
-	}
+	_, _, hostname := execctx.Target(ctx)
+	status := "ok"
+	errText := ""
 	if taskErr != nil {
-		e.Status = "error"
-		e.Err = taskErr.Error()
+		status = "error"
+		errText = taskErr.Error()
 	}
-	if overlay, ok := journal.OverlayFrom(ctx); ok {
-		e.ApplyOverlay(overlay)
-	} else {
-		e.ApplyOverlay(journal.Overlay{})
-	}
-	s.journal.Record(e)
+	s.bus.Publish(bus.Event{
+		Type:   "beacon.task-result",
+		Source: "gui",
+		Payload: automationevents.TaskResult{
+			Verb:       "BeaconTaskResult",
+			TargetID:   beaconID,
+			TargetKind: "beacon",
+			Hostname:   hostname,
+			Status:     status,
+			Error:      errText,
+		},
+	})
 }
