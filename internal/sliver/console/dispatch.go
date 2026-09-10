@@ -167,6 +167,8 @@ func NonInteractiveCommandReason(path string) string {
 		return "Server switching requires an interactive terminal selector."
 	case "ai":
 		return "The AI conversation interface requires an interactive terminal."
+	case "exit":
+		return "Use the window close button or Disconnect; exit would terminate the GUI."
 	default:
 		return ""
 	}
