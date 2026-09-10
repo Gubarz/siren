@@ -75,15 +75,12 @@
 
   async function exportOne(profile) {
     try {
-      const raw = await ExportClientConfig(profile.name)
-      const blob = new Blob([raw], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const safe = profile.name.replace(/[^\w.@-]+/g, '_')
-      a.download = `${safe}.cfg`
-      document.body.appendChild(a); a.click(); a.remove()
-      URL.revokeObjectURL(url)
+      // The backend writes the file itself; the profile's private key never
+      // reaches this window.
+      const path = await ExportClientConfig(profile.name)
+      if (path) {
+        toast.push({ variant: 'success', message: `Profile written to ${path}` })
+      }
     } catch (e) {
       toast.push({ variant: 'error', message: `Export failed: ${errorMessage(e)}` })
     }
