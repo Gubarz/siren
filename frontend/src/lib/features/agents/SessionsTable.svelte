@@ -184,6 +184,7 @@
       ...agent,
       _rowKey: agent.ID,
       _isDevice: false,
+      _lost: agent._lost === true,
       _privileged: isHighPrivilege(agent.Username),
       _note: notes[agent.ID] || '',
       _tags: tagsByAgent[agent.ID] || [],
@@ -220,12 +221,14 @@
 </script>
 
 <DataTable data={normalizedData} {columns} keyField="_rowKey" {filterable} selectable="multi" selected={combinedSelected}
-  rowClass={(item) => item._privileged ? 'text-danger-500 [&_td]:!text-danger-500' : ''}
+  rowClass={(item) => item._lost
+    ? 'text-fg-muted'
+    : (item._privileged ? 'text-danger-500 [&_td]:!text-danger-500' : '')}
   rowStyle={agentRowStyle}
   onRowClick={(item, e) => item._isDevice
     ? ondiscoveryselect?.({ key: item._rowKey, additive: additiveSelection(e) })
     : onselect?.({ id: item.ID, additive: additiveSelection(e) })}
-  onRowDblClick={(item) => !item._isDevice && oninteract?.(item.ID)}
+  onRowDblClick={(item) => !item._isDevice && !item._lost && oninteract?.(item.ID)}
   onRowContextMenu={(item, e) => item._isDevice
     ? ondiscoverycontextmenu?.({ event: e, device: item._device })
     : oncontextmenu?.({ event: e, session: item })}>
@@ -234,7 +237,7 @@
       {#if item._isDevice}
         <StatusDot variant="discovered" label="Discovered device" />
       {:else}
-        <StatusDot variant={isAgentOnline(item, now.value) ? 'online' : 'offline'} />
+        <StatusDot variant={item._lost ? 'lost' : (isAgentOnline(item, now.value) ? 'online' : 'offline')} />
       {/if}
     {:else if col.key === '_type'}
       <Badge variant={item._type}>{item._type.toUpperCase()}</Badge>
@@ -246,7 +249,9 @@
       {/if}
     {:else if col.key === '_lastCheckin'}
       <span class="font-mono">
-        {#if !item._isDevice && item._type === 'session' && isAgentOnline(item, now.value)}
+        {#if item._lost}
+          —
+        {:else if !item._isDevice && item._type === 'session' && isAgentOnline(item, now.value)}
           Active
         {:else}
           {formatRelativeTime(item._lastCheckin, now.value)}

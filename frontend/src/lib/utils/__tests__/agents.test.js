@@ -7,6 +7,7 @@ import {
   agentKind,
   osIcon,
   collectAgents,
+  liveAgentIDSet,
 } from '../agents.js'
 
 describe('shortAgentID', () => {
@@ -120,6 +121,18 @@ describe('osIcon', () => {
     expect(osIcon('ios')).toBe('smartphone')
     expect(osIcon('unknown')).toBe('cpu')
     expect(osIcon('')).toBe('cpu')
+  })
+})
+
+describe('liveAgentIDSet', () => {
+  it('collects session and beacon IDs from live lists only', () => {
+    const ids = liveAgentIDSet([{ ID: 's-1' }], [{ ID: 'b-1' }])
+    expect([...ids].sort()).toEqual(['b-1', 's-1'])
+    expect(ids.has('lost-1')).toBe(false)
+  })
+
+  it('tolerates null/undefined lists', () => {
+    expect(liveAgentIDSet(null, undefined).size).toBe(0)
   })
 })
 

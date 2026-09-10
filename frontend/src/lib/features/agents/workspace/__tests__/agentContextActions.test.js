@@ -288,3 +288,161 @@ describe('danger actions — selection aware', () => {
     expect(labels).toContain('Kill Agent')
   })
 })
+
+describe('lost session actions — reduced menu', () => {
+  const lostAgent = {
+    ID: 'lost-1', id: 'lost-1', Name: 'ghost', _kind: 'session', _lost: true,
+    OS: 'windows', Hostname: 'GONE-PC',
+  }
+  const liveAgent = {
+    ID: 'live-1', Name: 'alive', _kind: 'session', OS: 'windows', Hostname: 'LIVE-PC',
+  }
+
+  function lostCtx(overrides = {}) {
+    return {
+      agent: lostAgent,
+      isBeacon: false,
+      isWindows: true,
+      hasInteractiveSession: false,
+      catalog: [],
+      targetIDs: ['lost-1'],
+      targetAgents: [lostAgent],
+      agentTabs: { openTab: vi.fn() },
+      automationRules: [],
+      contextMenuHandlers: {
+        openTags: vi.fn(),
+        openComments: vi.fn(),
+        copyID: vi.fn(),
+        onremovelost: vi.fn(),
+        killAgent: vi.fn(),
+        killAgents: vi.fn(),
+      },
+      ...overrides,
+    }
+  }
+
+  it('returns only history actions for a lost-only selection', () => {
+    const sections = buildAgentContextSections(lostCtx())
+    const labels = flattenItems(sections).map((i) => i.label)
+
+    expect(labels).toContain('Tasks')
+    expect(labels).toContain('Copy ID')
+    expect(labels).toContain('Tags / Color…')
+    expect(labels).toContain('Comments / Notes…')
+    expect(labels).toContain('Remove')
+    expect(labels).not.toContain('Console')
+    expect(labels).not.toContain('New Shell')
+    expect(labels).not.toContain('Kill Agent')
+    expect(labels).not.toContain('Discovery')
+  })
+
+  it('wires the tasks tab and the persisted-record callbacks', () => {
+    const ctx = lostCtx()
+    const sections = buildAgentContextSections(ctx)
+
+    sectionItems(sections, 'Tasks').on()
+    expect(ctx.agentTabs.openTab).toHaveBeenCalledWith('lost-1', 'sessionTasks')
+
+    sectionItems(sections, 'Copy ID').on()
+    expect(ctx.contextMenuHandlers.copyID).toHaveBeenCalledWith([lostAgent])
+
+    sectionItems(sections, 'Tags / Color…').on()
+    expect(ctx.contextMenuHandlers.openTags).toHaveBeenCalledWith('agent', 'lost-1', 'ghost')
+
+    sectionItems(sections, 'Comments / Notes…').on()
+    expect(ctx.contextMenuHandlers.openComments).toHaveBeenCalledWith('agent', 'lost-1', 'ghost')
+
+    sectionItems(sections, 'Remove').on()
+    expect(ctx.contextMenuHandlers.onremovelost).toHaveBeenCalledWith([lostAgent])
+  })
+
+  it('disables Remove when no onremovelost handler is provided', () => {
+    const ctx = lostCtx()
+    delete ctx.contextMenuHandlers.onremovelost
+    const sections = buildAgentContextSections(ctx)
+    expect(sectionItems(sections, 'Remove').disabled).toBe(true)
+  })
+
+  it('gives a lost beacon record the reduced menu and beacon tasks tab', () => {
+    const lostBeacon = {
+      ID: 'lost-b1', id: 'lost-b1', Name: 'ghost-beacon', _kind: 'beacon', _lost: true,
+      OS: 'windows', Hostname: 'GONE-PC',
+    }
+    const ctx = lostCtx({
+      agent: lostBeacon,
+      isBeacon: true,
+      targetIDs: ['lost-b1'],
+      targetAgents: [lostBeacon],
+    })
+    const sections = buildAgentContextSections(ctx)
+    const labels = flattenItems(sections).map((i) => i.label)
+
+    expect(labels).toContain('Tasks')
+    expect(labels).toContain('Remove')
+    expect(labels).not.toContain('Console')
+    expect(labels).not.toContain('Kill Agent')
+    expect(labels).not.toContain('Open Interactive Session')
+    expect(labels).not.toContain('Beacon Detail…')
+
+    sectionItems(sections, 'Tasks').on()
+    expect(ctx.agentTabs.openTab).toHaveBeenCalledWith('lost-b1', 'tasks')
+  })
+
+  it('keeps live actions for a mixed selection and targets only live agents', () => {
+    const ctx = lostCtx({
+      agent: liveAgent,
+      catalog: [{ category: 'Sliver', commands: [{ name: 'whoami', description: 'who am i' }] }],
+      targetIDs: ['live-1', 'lost-1', 'ghost-9'],
+      targetAgents: [liveAgent, lostAgent],
+    })
+    ctx.contextMenuHandlers.findAttackPaths = (agents) =>
+      agents.forEach((a) => ctx.agentTabs.openTab(a.ID, 'bloodhound'))
+    ctx.contextMenuHandlers.executeAgentCommand = vi.fn()
+    const sections = buildAgentContextSections(ctx)
+    const labels = flattenItems(sections).map((i) => i.label)
+
+    expect(labels).toContain('Console')
+    expect(labels).toContain('New Shell')
+    expect(labels).toContain('Kill Agent')
+    expect(labels).not.toContain('Remove')
+
+    sectionItems(sections, 'Find attack paths').on()
+    expect(ctx.agentTabs.openTab).toHaveBeenCalledWith('live-1', 'bloodhound')
+    expect(ctx.agentTabs.openTab).not.toHaveBeenCalledWith('lost-1', 'bloodhound')
+
+    sectionItems(sections, 'whoami').on()
+    expect(ctx.contextMenuHandlers.executeAgentCommand).toHaveBeenCalledWith(
+      { name: 'whoami', description: 'who am i' },
+      ['live-1'],
+    )
+  })
+
+  it('drops unresolvable ids from command targets for a live-only selection', () => {
+    const ctx = lostCtx({
+      agent: liveAgent,
+      catalog: [{ category: 'Sliver', commands: [{ name: 'whoami' }] }],
+      targetIDs: ['live-1', 'ghost-9'],
+      targetAgents: [liveAgent],
+    })
+    ctx.contextMenuHandlers.executeAgentCommand = vi.fn()
+    const sections = buildAgentContextSections(ctx)
+
+    sectionItems(sections, 'whoami').on()
+    expect(ctx.contextMenuHandlers.executeAgentCommand).toHaveBeenCalledWith(
+      { name: 'whoami' },
+      ['live-1'],
+    )
+  })
+
+  it('anchors mixed actions on a live agent when the right-clicked row is lost', () => {
+    const ctx = lostCtx({
+      targetIDs: ['lost-1', 'live-1'],
+      targetAgents: [lostAgent, liveAgent],
+    })
+    const sections = buildAgentContextSections(ctx)
+
+    sectionItems(sections, 'Kill Agent').on()
+    expect(ctx.contextMenuHandlers.killAgent).toHaveBeenCalledWith(liveAgent)
+    expect(ctx.contextMenuHandlers.killAgent).not.toHaveBeenCalledWith(lostAgent)
+  })
+})
