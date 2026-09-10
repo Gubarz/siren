@@ -166,6 +166,9 @@ func (a *App) startEventStream() {
 		connID = fmt.Sprintf("%s:%d", a.RPC.Config().LHost, a.RPC.Config().LPort)
 	}
 	a.RPC.StartEventStream(a.ctx, func(ev *clientpb.Event) {
+		if ev.EventType == "stream-closed" {
+			a.resetConsoleAfterStreamClose()
+		}
 		a.Bus.Publish(bus.Event{
 			Type:         "sliver." + ev.EventType,
 			Source:       "grpc-stream",
@@ -173,6 +176,27 @@ func (a *App) startEventStream() {
 			Payload:      sliverEventPayload(ev),
 		})
 	})
+}
+
+// resetConsoleAfterStreamClose tears down the in-process console when the event
+// stream dies on its own, and reports whether it did.
+//
+// Sliver's console watches the gRPC connection it was handed and calls os.Exit
+// once that connection reports the idle state, which is where a dead stream
+// leads: with no active RPC the channel idles out. Closing the console's
+// connection cancels the context that watcher selects on, so the GUI shows a
+// lost connection instead of disappearing. The stream only reports itself
+// closed when the failure was not one of ours; an intentional stop returns
+// silently.
+func (a *App) resetConsoleAfterStreamClose() bool {
+	if a.Console == nil {
+		return false
+	}
+	if !a.Console.TryResetConsole() {
+		log.Printf("console: busy when the event stream closed; the connection watcher is still armed")
+		return false
+	}
+	return true
 }
 
 // sliverEventPayload flattens a sliver event into a protobuf-free DTO map.
