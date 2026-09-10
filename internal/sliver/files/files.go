@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
+	"siren/internal/localstate/downloadhistory"
 	"siren/internal/sliver/rpc"
 	"siren/internal/sliver/rpcwrap"
 	"siren/internal/wailsadapter"
@@ -16,19 +17,25 @@ import (
 
 const defaultRPCTimeout = 5 * time.Minute
 
+// DownloadRecord is a download history entry, aliased so the store can live in
+// localstate without changing what the Wails bindings return.
+type DownloadRecord = downloadhistory.Record
+
 type Service struct {
 	rpc.Emitter
 	rpc     *rpc.Client
 	ui      *wailsadapter.Bridge
-	history *HistoryStore
+	history *downloadhistory.Store
 	dl      func(ctx context.Context, in *sliverpb.DownloadReq) (*sliverpb.Download, error)
 }
 
-func New(rpcClient *rpc.Client) *Service {
+// New builds the service. dataDir is where the download history is persisted,
+// alongside the other local stores.
+func New(rpcClient *rpc.Client, dataDir string) *Service {
 	return &Service{
 		rpc:     rpcClient,
 		Emitter: rpc.NewEmitter(rpcClient),
-		history: NewHistoryStore(),
+		history: downloadhistory.New(dataDir),
 	}
 }
 
@@ -36,29 +43,25 @@ func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 	s.ui = ui
 }
 
-func (s *Service) SetHistoryStore(h *HistoryStore) {
-	s.history = h
-}
-
 func (s *Service) GetDownloadHistory(sessionID, remotePath string) ([]DownloadRecord, error) {
 	if s.history == nil {
 		return []DownloadRecord{}, nil
 	}
-	return s.history.GetHistory(sessionID, remotePath), nil
+	return s.history.Get(sessionID, remotePath)
 }
 
 func (s *Service) GetAllDownloadHistory() ([]DownloadRecord, error) {
 	if s.history == nil {
 		return []DownloadRecord{}, nil
 	}
-	return s.history.GetAllHistory(), nil
+	return s.history.All()
 }
 
 func (s *Service) ClearDownloadHistory(sessionID, remotePath string) error {
-	if s.history != nil {
-		s.history.ClearHistory(sessionID, remotePath)
+	if s.history == nil {
+		return nil
 	}
-	return nil
+	return s.history.Clear(sessionID, remotePath)
 }
 
 type PathResponse interface {

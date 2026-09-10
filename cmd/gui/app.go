@@ -106,7 +106,7 @@ func NewApp(wailsApp *application.App, window *application.WebviewWindow) *App {
 		Armory:       armory.New(shared.Console),
 		Implants:     implants.New(shared.RPC),
 		Listeners:    listeners.New(shared.RPC),
-		Files:        files.New(shared.RPC),
+		Files:        files.New(shared.RPC, shared.DataDir),
 		Procs:        procs.New(shared.RPC),
 		Registry:     registry.New(shared.RPC),
 		Shells:       shells.New(shared.RPC, shared.Console),

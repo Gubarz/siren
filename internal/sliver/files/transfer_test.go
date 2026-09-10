@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
+	"siren/internal/localstate/downloadhistory"
 	"siren/internal/sliver/rpc"
 )
 
@@ -64,7 +65,7 @@ func TestDownloadChunked_SingleChunk(t *testing.T) {
 	payload := []byte("hello world")
 	s := &Service{
 		rpc:     sessionClient("sess-1"),
-		history: NewHistoryStore(""),
+		history: downloadhistory.New(t.TempDir()),
 		dl: func(ctx context.Context, req *sliverpb.DownloadReq) (*sliverpb.Download, error) {
 			return &sliverpb.Download{
 				Data: gzipBytes(payload), Start: req.Start, Stop: int64(len(payload)),
@@ -96,7 +97,7 @@ func TestDownloadChunked_Multi(t *testing.T) {
 	}
 	s := &Service{
 		rpc:     sessionClient("sess-1"),
-		history: NewHistoryStore(""),
+		history: downloadhistory.New(t.TempDir()),
 		dl: func(ctx context.Context, req *sliverpb.DownloadReq) (*sliverpb.Download, error) {
 			idx := int(req.Start / defaultChunkSize)
 			if idx >= len(chunks) {
@@ -129,7 +130,7 @@ func TestDownloadChunked_Error(t *testing.T) {
 	payload := make([]byte, defaultChunkSize+100)
 	s := &Service{
 		rpc:     sessionClient("sess-1"),
-		history: NewHistoryStore(""),
+		history: downloadhistory.New(t.TempDir()),
 		dl: func(ctx context.Context, req *sliverpb.DownloadReq) (*sliverpb.Download, error) {
 			if req.Start == 0 {
 				return &sliverpb.Download{
@@ -169,7 +170,7 @@ func TestDownloadChunked_Beacon(t *testing.T) {
 	}
 	s := &Service{
 		rpc:     beaconClient("beacon-1", handler),
-		history: NewHistoryStore(""),
+		history: downloadhistory.New(t.TempDir()),
 		dl: func(ctx context.Context, req *sliverpb.DownloadReq) (*sliverpb.Download, error) {
 			if req.Request.GetBeaconID() == "beacon-1" && req.Request.GetAsync() {
 				sawBeaconRequest = true
