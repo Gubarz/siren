@@ -25,7 +25,6 @@ func (c *Client) StartEventStream(ctx context.Context, onEvent func(*clientpb.Ev
 			if streamCtx.Err() != nil {
 				return
 			}
-			c.connected.Store(false)
 			log.Printf("failed to open event stream: %v", err)
 			if onEvent != nil {
 				onEvent(&clientpb.Event{EventType: "stream-closed"})
@@ -39,7 +38,6 @@ func (c *Client) StartEventStream(ctx context.Context, onEvent func(*clientpb.Ev
 				if streamCtx.Err() != nil {
 					return
 				}
-				c.connected.Store(false)
 				if onEvent != nil {
 					onEvent(&clientpb.Event{EventType: "stream-closed"})
 				}

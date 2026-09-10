@@ -51,6 +51,5 @@ func (c *Client) Conn() *grpc.ClientConn {
 func NewForTest(rpcClient rpcpb.SliverRPCClient) *Client {
 	c := NewClient()
 	c.state.Store(&connState{rpc: rpcClient})
-	c.connected.Store(true)
 	return c
 }

@@ -25,14 +25,18 @@ type ServerInfo struct {
 // can prefill listener bind hosts / C2 URLs / etc with something useful instead
 // of forcing the operator to look it up.
 func (a *App) GetServerInfo() ServerInfo {
-	if a.RPC == nil || a.RPC.Config() == nil {
+	if a.RPC == nil {
+		return ServerInfo{}
+	}
+	config := a.RPC.Config()
+	if config == nil {
 		return ServerInfo{}
 	}
 	return ServerInfo{
-		Host:     a.RPC.Config().LHost,
-		Port:     a.RPC.Config().LPort,
-		Operator: a.RPC.Config().Operator,
-		CA:       a.RPC.Config().CACertificate,
+		Host:     config.LHost,
+		Port:     config.LPort,
+		Operator: config.Operator,
+		CA:       config.CACertificate,
 	}
 }
 
