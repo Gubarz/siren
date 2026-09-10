@@ -12,6 +12,7 @@ import (
 	sliverTasks "github.com/bishopfox/sliver/client/command/tasks"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"google.golang.org/protobuf/proto"
 
@@ -20,6 +21,7 @@ import (
 	"siren/internal/execctx"
 	"siren/internal/sliver/console"
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 const beaconTaskPollInterval = time.Second
@@ -39,16 +41,7 @@ func (s *Service) SetBus(b bus.Bus) {
 }
 
 func (s *Service) GetBeaconTasks(beaconID string) (*clientpb.BeaconTasks, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	if strings.TrimSpace(beaconID) == "" {
-		return nil, fmt.Errorf("beacon ID is required")
-	}
-	return s.rpc.RPC.GetBeaconTasks(
-		context.Background(),
-		&clientpb.Beacon{ID: beaconID},
-	)
+	return rpcwrap.CallRequired(s.rpc, rpcpb.SliverRPCClient.GetBeaconTasks, &clientpb.Beacon{ID: beaconID}, beaconID, "beacon ID")
 }
 
 type TaskOutput struct {
@@ -64,14 +57,15 @@ type TaskOutput struct {
 }
 
 func (s *Service) GetBeaconTaskOutput(taskID string) (*TaskOutput, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return nil, err
 	}
 	if strings.TrimSpace(taskID) == "" {
 		return nil, fmt.Errorf("task ID is required")
 	}
 
-	task, err := s.rpc.RPC.GetBeaconTaskContent(
+	task, err := c.RPC.GetBeaconTaskContent(
 		context.Background(),
 		&clientpb.BeaconTask{ID: taskID},
 	)
@@ -98,14 +92,18 @@ func (s *Service) taskOutputCases() []taskOutputCase {
 		{"psreq", typed(func(r *sliverpb.Ps) *TaskOutput {
 			return &TaskOutput{Type: "processes", Processes: r.Processes}
 		})},
-		{"netstatreq", s.decodeNetstatTask},
+		{"netstatreq", s.withRendered(typed(func(r *sliverpb.Netstat) *TaskOutput {
+			return &TaskOutput{Type: "netstat", NetstatEntries: r.Entries}
+		}))},
 		{"ls", typed(func(r *sliverpb.Ls) *TaskOutput {
 			return &TaskOutput{Type: "filelist", Files: r.Files, Path: r.Path}
 		})},
 		{"services", typed(func(r *sliverpb.Services) *TaskOutput {
 			return &TaskOutput{Type: "services", Services: r.Details}
 		})},
-		{"envreq", s.decodeEnvTask},
+		{"envreq", s.withRendered(typed(func(r *sliverpb.EnvInfo) *TaskOutput {
+			return &TaskOutput{Type: "env", EnvVars: r.Variables}
+		}))},
 	}
 }
 
@@ -141,24 +139,20 @@ func typed[M any, PM interface {
 	}
 }
 
-func (s *Service) decodeNetstatTask(task *clientpb.BeaconTask) (*TaskOutput, error) {
-	var resp sliverpb.Netstat
-	if err := proto.Unmarshal(task.Response, &resp); err != nil {
-		return nil, err
+// withRendered attaches the rendered task text alongside the typed payload
+// so the inline task view still has something to show.
+func (s *Service) withRendered(
+	decode func(*clientpb.BeaconTask) (*TaskOutput, error),
+) func(*clientpb.BeaconTask) (*TaskOutput, error) {
+	return func(task *clientpb.BeaconTask) (*TaskOutput, error) {
+		out, err := decode(task)
+		if err != nil {
+			return nil, err
+		}
+		rendered, _ := s.renderBeaconTask(task)
+		out.TextOutput = rendered
+		return out, nil
 	}
-	rendered, _ := s.renderBeaconTask(task)
-	return &TaskOutput{Type: "netstat", NetstatEntries: resp.Entries, TextOutput: rendered}, nil
-}
-
-// decodeEnvTask, like decodeNetstatTask, attaches the rendered text alongside
-// the typed payload so the inline task view still has something to show.
-func (s *Service) decodeEnvTask(task *clientpb.BeaconTask) (*TaskOutput, error) {
-	var resp sliverpb.EnvInfo
-	if err := proto.Unmarshal(task.Response, &resp); err != nil {
-		return nil, err
-	}
-	rendered, _ := s.renderBeaconTask(task)
-	return &TaskOutput{Type: "env", EnvVars: resp.Variables, TextOutput: rendered}, nil
 }
 
 func (s *Service) taskTextFallback(task *clientpb.BeaconTask, cause error) (*TaskOutput, error) {
@@ -168,16 +162,7 @@ func (s *Service) taskTextFallback(task *clientpb.BeaconTask, cause error) (*Tas
 }
 
 func (s *Service) CancelBeaconTask(taskID string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	if strings.TrimSpace(taskID) == "" {
-		return fmt.Errorf("task ID is required")
-	}
-	_, err := s.rpc.RPC.CancelBeaconTask(
-		context.Background(),
-		&clientpb.BeaconTask{ID: taskID},
-	)
+	_, err := rpcwrap.CallRequired(s.rpc, rpcpb.SliverRPCClient.CancelBeaconTask, &clientpb.BeaconTask{ID: taskID}, taskID, "task ID")
 	return err
 }
 
@@ -192,23 +177,8 @@ func (s *Service) AwaitBeaconTask(
 		return commandOutput, false, nil
 	}
 
-	prefix := matches[1]
-	var err error
-	if taskID == "" {
-		taskID, err = s.resolveBeaconTaskID(ctx, beaconID, prefix)
-	}
+	task, err := s.awaitTask(ctx, beaconID, matches[1], taskID)
 	if err != nil {
-		return commandOutput, true, err
-	}
-	s.console.RemoveBeaconTaskCallback(taskID)
-
-	task, err := s.waitForBeaconTask(ctx, taskID)
-	if err != nil {
-		if shouldCancelPendingBeaconTask(err) {
-			s.cancelPendingBeaconTask(taskID)
-		}
-		err = fmt.Errorf("beacon task %s: %w", shortTaskID(taskID), err)
-		s.publishBeaconTaskResult(ctx, beaconID, err)
 		return commandOutput, true, err
 	}
 
@@ -229,6 +199,28 @@ func (s *Service) AwaitBeaconTask(
 	}
 	s.publishBeaconTaskResult(ctx, beaconID, nil)
 	return rendered, true, nil
+}
+
+func (s *Service) awaitTask(ctx context.Context, beaconID, prefix, taskID string) (*clientpb.BeaconTask, error) {
+	var err error
+	if taskID == "" {
+		taskID, err = s.resolveBeaconTaskID(ctx, beaconID, prefix)
+	}
+	if err != nil {
+		return nil, err
+	}
+	s.console.RemoveBeaconTaskCallback(taskID)
+
+	task, err := s.waitForBeaconTask(ctx, taskID)
+	if err != nil {
+		if shouldCancelPendingBeaconTask(err) {
+			s.cancelPendingBeaconTask(taskID)
+		}
+		err = fmt.Errorf("beacon task %s: %w", shortTaskID(taskID), err)
+		s.publishBeaconTaskResult(ctx, beaconID, err)
+		return nil, err
+	}
+	return task, nil
 }
 
 func (s *Service) resolveBeaconTaskID(ctx context.Context, beaconID, prefix string) (string, error) {

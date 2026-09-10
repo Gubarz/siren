@@ -15,8 +15,8 @@ type fakeTrigger struct {
 	fireFn   func(FireEvent)
 }
 
-func (f *fakeTrigger) Type() string                  { return f.typ }
-func (f *fakeTrigger) ConfigSchema() []FieldSpec     { return f.schema }
+func (f *fakeTrigger) Type() string              { return f.typ }
+func (f *fakeTrigger) ConfigSchema() []FieldSpec { return f.schema }
 func (f *fakeTrigger) Arm(ctx context.Context, cfg map[string]any, fire func(FireEvent)) error {
 	f.fireFn = fire
 	f.lastCfg = cfg
@@ -45,16 +45,18 @@ type fakeTargets struct {
 	list []Target
 }
 
-func (t *fakeTargets) Connected() bool                                   { return t.conn }
-func (t *fakeTargets) GetSessions(context.Context) ([]Target, error)     { return t.list, nil }
-func (t *fakeTargets) GetBeacons(context.Context) ([]Target, error)      { return nil, nil }
-func (t *fakeTargets) FindTarget(context.Context, string) (Target, error) { return Target{}, context.DeadlineExceeded }
+func (t *fakeTargets) Connected() bool                               { return t.conn }
+func (t *fakeTargets) GetSessions(context.Context) ([]Target, error) { return t.list, nil }
+func (t *fakeTargets) GetBeacons(context.Context) ([]Target, error)  { return nil, nil }
+func (t *fakeTargets) FindTarget(context.Context, string) (Target, error) {
+	return Target{}, context.DeadlineExceeded
+}
 
 type fakeAction struct{ typ string }
 
-func (f *fakeAction) Type() string                    { return f.typ }
-func (f *fakeAction) ConfigSchema() []FieldSpec       { return nil }
-func (f *fakeAction) Execute(*RunContext) error       { return nil }
+func (f *fakeAction) Type() string              { return f.typ }
+func (f *fakeAction) ConfigSchema() []FieldSpec { return nil }
+func (f *fakeAction) Execute(*RunContext) error { return nil }
 
 func newTestEngine(t *testing.T) *Engine {
 	t.Helper()

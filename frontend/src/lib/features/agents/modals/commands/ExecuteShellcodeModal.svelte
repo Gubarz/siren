@@ -1,5 +1,4 @@
 <script>
-  import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
@@ -7,16 +6,9 @@
   import SelectField from '../../../../components/forms/SelectField.svelte'
   import FilePickerField from '../../../../components/forms/FilePickerField.svelte'
   import PidPickerField from '../pickers/PidPickerField.svelte'
-  import CommandPreview from './CommandPreview.svelte'
-  import CommandModalFooter from './CommandModalFooter.svelte'
+  import CommandModalFrame from './CommandModalFrame.svelte'
 
-  let {
-    firstSessionID = '',
-    open = $bindable(false),
-    onexecute,
-    onclose,
-    initialValues = {},
-  } = $props()
+  let { firstSessionID = '', open = $bindable(false), onexecute, ...rest } = $props()
 
   let scPath = $state('')
   let injectionMode = $state('self')
@@ -28,10 +20,6 @@
   let shikataGaNai = $state(false)
   let iterations = $state(1)
   let timeout = $state('')
-
-  $effect.pre(() => {
-    resetForm(initialValues)
-  })
 
   function resetForm(values) {
     scPath = values['local path to shellcode'] || values['shellcode'] || ''
@@ -67,7 +55,38 @@
   }
 </script>
 
-<Modal bind:open title="Execute Shellcode" size="2xl" {onclose}>
+<CommandModalFrame
+  bind:open
+  title="Execute Shellcode"
+  size="2xl"
+  {cmdPreview}
+  commandPath="execute-shellcode"
+  currentValues={{
+    'local path to shellcode': scPath,
+    'pid': injectionMode === 'pid' ? pid : 0,
+    'process': injectionMode === 'process' ? processName : '',
+    'architecture': architecture,
+    'rwx-pages': rwxPages,
+    'interactive': interactive,
+    'shikata-ga-nai': shikataGaNai,
+    'iterations': iterations,
+  }}
+  onapply={(values) => {
+    if (values['local path to shellcode'] != null) scPath = values['local path to shellcode']
+    if (values['pid']) { pid = values['pid']; injectionMode = 'pid' }
+    else if (values['process']) { processName = values['process']; injectionMode = 'process' }
+    if (values['architecture'] != null) architecture = values['architecture']
+    if (values['rwx-pages'] != null) rwxPages = values['rwx-pages']
+    if (values['interactive'] != null) interactive = values['interactive']
+    if (values['shikata-ga-nai'] != null) shikataGaNai = values['shikata-ga-nai']
+    if (values['iterations'] != null) iterations = values['iterations']
+  }}
+  primaryLabel="Inject"
+  onprimary={execute}
+  primaryDisabled={!scPath}
+  onreset={resetForm}
+  {...rest}
+>
   <p class="text-fg-muted text-sm mb-4">Inject raw shellcode into a target process (or the current implant).</p>
 
   <div class="mb-4">
@@ -113,36 +132,4 @@
     {/if}
     <TextField bind:value={timeout} label="Timeout (seconds)" type="number" />
   </CollapsibleGroup>
-
-  <CommandPreview cmd={cmdPreview} />
-
-  {#snippet footer()}
-    <CommandModalFooter
-      commandPath="execute-shellcode"
-      currentValues={{
-        'local path to shellcode': scPath,
-        'pid': injectionMode === 'pid' ? pid : 0,
-        'process': injectionMode === 'process' ? processName : '',
-        'architecture': architecture,
-        'rwx-pages': rwxPages,
-        'interactive': interactive,
-        'shikata-ga-nai': shikataGaNai,
-        'iterations': iterations,
-      }}
-      onapply={(values) => {
-        if (values['local path to shellcode'] != null) scPath = values['local path to shellcode']
-        if (values['pid']) { pid = values['pid']; injectionMode = 'pid' }
-        else if (values['process']) { processName = values['process']; injectionMode = 'process' }
-        if (values['architecture'] != null) architecture = values['architecture']
-        if (values['rwx-pages'] != null) rwxPages = values['rwx-pages']
-        if (values['interactive'] != null) interactive = values['interactive']
-        if (values['shikata-ga-nai'] != null) shikataGaNai = values['shikata-ga-nai']
-        if (values['iterations'] != null) iterations = values['iterations']
-      }}
-      primaryLabel="Inject"
-      onprimary={execute}
-      primaryDisabled={!scPath}
-      oncancel={() => open = false}
-    />
-  {/snippet}
-</Modal>
+</CommandModalFrame>

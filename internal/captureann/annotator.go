@@ -10,10 +10,10 @@ import (
 	"github.com/gubarz/revils/capture"
 
 	"siren/internal/execctx"
+	"siren/internal/rpcdesc"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -37,7 +37,7 @@ func (a *Annotator) Annotate(ctx context.Context, method, direction string, payl
 		}
 	}
 	ann := capture.Annotation{Operator: a.operator, RunID: runID, StageID: stageID}
-	desc := methodInput(method, direction)
+	desc := rpcdesc.Message(method, direction)
 	if desc == nil || len(payload) == 0 {
 		return withPreview(ann, method, direction, len(payload), "", "")
 	}
@@ -87,36 +87,4 @@ func withPreview(ann capture.Annotation, method, direction string, size int, ses
 	return ann
 }
 
-func splitMethod(method string) (string, string) {
-	for i := len(method) - 1; i >= 0; i-- {
-		if method[i] == '/' {
-			return method[1:i], method[i+1:]
-		}
-	}
-	return "", ""
-}
-
 var _ capture.Annotator = (*Annotator)(nil)
-
-func methodInput(method, direction string) protoreflect.MessageDescriptor {
-	service, rpc := splitMethod(method)
-	if service == "" || rpc == "" {
-		return nil
-	}
-	d, err := protoregistry.GlobalFiles.FindDescriptorByName(protoreflect.FullName(service))
-	if err != nil {
-		return nil
-	}
-	sd, ok := d.(protoreflect.ServiceDescriptor)
-	if !ok {
-		return nil
-	}
-	md := sd.Methods().ByName(protoreflect.Name(rpc))
-	if md == nil {
-		return nil
-	}
-	if direction == "response" {
-		return md.Output()
-	}
-	return md.Input()
-}

@@ -46,15 +46,7 @@ func newFakeQueryServer(t *testing.T, f *fakeQueryServer) *httptest.Server {
 
 func connectedService(t *testing.T, srvURL string) *Service {
 	t.Helper()
-	overrideFactory(t, srvURL)
-	svc := New(t.TempDir(), nil)
-	if err := svc.SaveConfig(Config{ServerURL: srvURL, TokenID: "id", TokenKey: "key"}); err != nil {
-		t.Fatalf("SaveConfig: %v", err)
-	}
-	if err := svc.Connect(context.Background()); err != nil {
-		t.Fatalf("Connect: %v", err)
-	}
-	return svc
+	return connectedServiceWithBus(t, srvURL, nil)
 }
 
 func TestQueriesRequireConnection(t *testing.T) {
@@ -130,23 +122,8 @@ func TestEntityAttackPaths(t *testing.T) {
 func TestEntityAttackPathsTreats404AsEmpty(t *testing.T) {
 	// BloodHound CE returns HTTP 404 for cypher queries with zero rows;
 	// the service must translate that into an empty graph, not an error.
-	f := newRoutedServer(t, map[string]func(r *http.Request) string{
-		"/api/v2/graphs/cypher": func(r *http.Request) string { return `` },
-	})
-	_ = f
-	// The routed server helper always answers 200; build a raw 404 server.
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/v2/graphs/cypher" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte(`{"http_status":404,"errors":[{"context":"query","message":"resource not found"}]}`))
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
-	}))
-	t.Cleanup(srv.Close)
+	srv := newCypherStatusServer(t, http.StatusNotFound,
+		`{"http_status":404,"errors":[{"context":"query","message":"resource not found"}]}`)
 	svc := connectedService(t, srv.URL)
 
 	graph, err := svc.EntityAttackPaths(context.Background(), "S-1-5-21-1234", 5)
@@ -158,17 +135,8 @@ func TestEntityAttackPathsTreats404AsEmpty(t *testing.T) {
 	}
 
 	// A real non-404 failure still surfaces.
-	srvBad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.URL.Path == "/api/v2/graphs/cypher" {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte(`{"http_status":500,"errors":[{"context":"query","message":"boom"}]}`))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
-	}))
-	t.Cleanup(srvBad.Close)
+	srvBad := newCypherStatusServer(t, http.StatusInternalServerError,
+		`{"http_status":500,"errors":[{"context":"query","message":"boom"}]}`)
 	svcBad := connectedService(t, srvBad.URL)
 	if _, err := svcBad.EntityAttackPaths(context.Background(), "S-1-5-21-1234", 5); err == nil {
 		t.Fatal("non-404 cypher errors must propagate")
@@ -276,17 +244,8 @@ func TestEntityLocalAdminsRunsExpandedQuery(t *testing.T) {
 }
 
 func TestEntityRelationsTreat404AsEmpty(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.URL.Path == "/api/v2/graphs/cypher" {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte(`{"http_status":404,"errors":[{"context":"query","message":"resource not found"}]}`))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
-	}))
-	t.Cleanup(srv.Close)
+	srv := newCypherStatusServer(t, http.StatusNotFound,
+		`{"http_status":404,"errors":[{"context":"query","message":"resource not found"}]}`)
 	svc := connectedService(t, srv.URL)
 
 	graph, err := svc.EntitySessions(context.Background(), "S-1-5-21-1", "Computer")

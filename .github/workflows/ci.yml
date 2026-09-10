@@ -33,3 +33,64 @@ jobs:
 
       - name: go vet
         run: go vet ./internal/... ./scripts
+
+  lint:
+    name: Analyze gate
+    # Mirrors `make analyze-go`. The analyze tools are built from source with
+    # the job's Go toolchain: prebuilt releases linked against go1.26 cannot
+    # read go1.27 export data. Pins are the latest tagged releases that build
+    # with go1.27.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+
+      - name: Install webview headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+
+      - name: Install analyze tools
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
+          go install golang.org/x/tools/cmd/deadcode@v0.50.0
+          go install github.com/mibk/dupl@v1.1.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: go test
+        run: go test ./...
+
+      - name: go vet
+        run: go vet $(go list ./... | grep -v /node_modules/)
+
+      - name: Windows compile
+        run: GOOS=windows go build ./internal/sliver/console/
+
+      - name: staticcheck
+        run: staticcheck $(go list ./... | grep -v /node_modules/)
+
+      - name: deadcode
+        run: deadcode -test $(go list ./... | grep -v /node_modules/)
+
+      - name: dupl
+        run: |
+          dupl_out="$(dupl -t 50 $(git ls-files '*.go' | grep -v '_decorator\.go$'))"
+          echo "$dupl_out"
+          if echo "$dupl_out" | grep -q '\.go:'; then echo "dupl: clones found" >&2; exit 1; fi
+
+      - name: golangci-lint
+        run: golangci-lint run --timeout=5m ./...
+
+      - name: Go file length
+        run: ./scripts/check-go-file-length.sh
+
+      - name: Architecture rules
+        run: ./scripts/check-arch.sh
+
+      - name: Import boundaries
+        run: ./scripts/check-import-boundaries.sh

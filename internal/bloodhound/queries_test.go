@@ -157,27 +157,28 @@ func TestLocalAdminsCypherRejectsInvalidObjectIDs(t *testing.T) {
 }
 
 func TestSessionsCypherDirectionFollowsEntityKind(t *testing.T) {
-	host, err := SessionsCypher("S-1-5-21-111", "Computer")
-	if err != nil {
-		t.Fatalf("SessionsCypher: %v", err)
+	cases := []struct {
+		kind   string
+		wants  []string
+		reject []string
+	}{
+		{
+			kind:   "Computer",
+			wants:  []string{"(u)-[:HasSession]->(c)", "c.objectid", "LIMIT 100"},
+			reject: []string{"u.objectid"},
+		},
+		{
+			kind:   "User",
+			wants:  []string{"u.objectid"},
+			reject: []string{"c.objectid"},
+		},
 	}
-	for _, want := range []string{"(u)-[:HasSession]->(c)", "c.objectid", "LIMIT 100"} {
-		if !strings.Contains(host, want) {
-			t.Errorf("computer query missing %q in %q", want, host)
+	for _, tc := range cases {
+		q, err := SessionsCypher("S-1-5-21-111", tc.kind)
+		if err != nil {
+			t.Fatalf("SessionsCypher(%s): %v", tc.kind, err)
 		}
-	}
-	if strings.Contains(host, "u.objectid") {
-		t.Errorf("computer query must not match the source principal: %q", host)
-	}
-	user, err := SessionsCypher("S-1-5-21-111", "User")
-	if err != nil {
-		t.Fatalf("SessionsCypher: %v", err)
-	}
-	if !strings.Contains(user, "u.objectid") {
-		t.Errorf("user query should match source principal: %q", user)
-	}
-	if strings.Contains(user, "c.objectid") {
-		t.Errorf("user query must not match the target host: %q", user)
+		assertQueryShape(t, q, tc.wants, tc.reject)
 	}
 }
 
@@ -186,24 +187,15 @@ func TestLocalAdminsCypherExpandsGroups(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LocalAdminsCypher: %v", err)
 	}
-	for _, want := range []string{"(u)-[:MemberOf*0..5]->(g)-[:AdminTo]->(c)", "c.objectid", "LIMIT 100"} {
-		if !strings.Contains(q, want) {
-			t.Errorf("admin query missing %q in %q", want, q)
-		}
-	}
-	if strings.Contains(q, "u.objectid") {
-		t.Errorf("admin query must not match the source principal: %q", q)
-	}
+	assertQueryShape(t, q,
+		[]string{"(u)-[:MemberOf*0..5]->(g)-[:AdminTo]->(c)", "c.objectid", "LIMIT 100"},
+		[]string{"u.objectid"})
+
 	user, err := LocalAdminsCypher("S-1-5-21-111", "Group")
 	if err != nil {
 		t.Fatalf("LocalAdminsCypher: %v", err)
 	}
-	if !strings.Contains(user, "u.objectid") {
-		t.Errorf("group query should match source principal: %q", user)
-	}
-	if strings.Contains(user, "c.objectid") {
-		t.Errorf("group query must not match the target host: %q", user)
-	}
+	assertQueryShape(t, user, []string{"u.objectid"}, []string{"c.objectid"})
 }
 
 func TestCommunityCypher(t *testing.T) {

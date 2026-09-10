@@ -54,10 +54,10 @@ func New(rpc *rpc.Client) *Service {
 // service can be unit tested with a fake (mirrors internal/sliver/server).
 type stagingRPC interface {
 	Connected() bool
-	StageImplantBuild(context.Context, *clientpb.ImplantStageReq) (*commonpb.Empty, error)
-	ImplantBuilds(context.Context, *commonpb.Empty) (*clientpb.ImplantBuilds, error)
-	GenerateStage(context.Context, *clientpb.GenerateStageReq) (*clientpb.Generate, error)
-	StartTCPStagerListener(context.Context, *clientpb.StagerListenerReq) (*clientpb.StagerListener, error)
+	StageImplantBuild(ctx context.Context, req *clientpb.ImplantStageReq) (*commonpb.Empty, error)
+	ImplantBuilds(ctx context.Context, req *commonpb.Empty) (*clientpb.ImplantBuilds, error)
+	GenerateStage(ctx context.Context, req *clientpb.GenerateStageReq) (*clientpb.Generate, error)
+	StartTCPStagerListener(ctx context.Context, req *clientpb.StagerListenerReq) (*clientpb.StagerListener, error)
 }
 
 type liveStagingRPC struct {
@@ -96,6 +96,13 @@ func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 
 func (s *Service) Close() {}
 
+func (s *Service) client() (stagingRPC, error) {
+	if !s.rpc.Connected() {
+		return nil, rpc.ErrNotConnected
+	}
+	return s.rpc, nil
+}
+
 // isEmptyRecordErr reports whether err is the gRPC NotFound Sliver returns
 // for a malformed implant_builds table (e.g. orphaned build rows). Treat it
 // as an empty list rather than surfacing it to the UI.
@@ -116,14 +123,15 @@ func isEmptyRecordErr(err error) bool {
 // between the list and the re-submit will have their staging cleared —
 // accepted per design (no server-side changes).
 func (s *Service) UnstageImplantBuild(name string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := s.client()
+	if err != nil {
+		return err
 	}
 	target := strings.TrimSpace(name)
 	if target == "" {
 		return fmt.Errorf("build name is required")
 	}
-	builds, err := s.rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
+	builds, err := c.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if isEmptyRecordErr(err) {
 		builds = &clientpb.ImplantBuilds{}
 		err = nil
@@ -141,16 +149,17 @@ func (s *Service) UnstageImplantBuild(name string) error {
 		}
 	}
 	sort.Strings(remaining)
-	_, err = s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{Build: remaining})
+	_, err = c.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{Build: remaining})
 	return err
 }
 
 // UnstageAllImplantBuilds clears the Stage flag on every implant build.
 func (s *Service) UnstageAllImplantBuilds() error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := s.client()
+	if err != nil {
+		return err
 	}
-	_, err := s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{})
+	_, err = c.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{})
 	return err
 }
 
@@ -167,14 +176,15 @@ func (s *Service) GenerateStage(req GenerateStageRequest) (string, error) {
 // staged set (it clears Stage on every build first), so we merge the new
 // names with the currently staged builds before submitting.
 func (s *Service) StageImplantBuilds(builds []string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := s.client()
+	if err != nil {
+		return err
 	}
 	names := cleanNames(builds)
 	if len(names) == 0 {
 		return fmt.Errorf("at least one build is required")
 	}
-	current, err := s.rpc.ImplantBuilds(context.Background(), &commonpb.Empty{})
+	current, err := c.ImplantBuilds(context.Background(), &commonpb.Empty{})
 	if isEmptyRecordErr(err) {
 		current = &clientpb.ImplantBuilds{}
 		err = nil
@@ -196,19 +206,20 @@ func (s *Service) StageImplantBuilds(builds []string) error {
 		merged = append(merged, name)
 	}
 	sort.Strings(merged)
-	_, err = s.rpc.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{Build: merged})
+	_, err = c.StageImplantBuild(context.Background(), &clientpb.ImplantStageReq{Build: merged})
 	return err
 }
 
 func (s *Service) StartTCPStagerListener(req TCPListenerRequest) (*clientpb.StagerListener, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
+	c, err := s.client()
+	if err != nil {
+		return nil, err
 	}
 	data, profileName, err := s.stageData(req)
 	if err != nil {
 		return nil, err
 	}
-	return s.rpc.StartTCPStagerListener(context.Background(), &clientpb.StagerListenerReq{
+	return c.StartTCPStagerListener(context.Background(), &clientpb.StagerListenerReq{
 		Protocol:    clientpb.StageProtocol_TCP,
 		Host:        strings.TrimSpace(req.Host),
 		Port:        req.Port,
@@ -240,14 +251,15 @@ func (s *Service) stageData(req TCPListenerRequest) ([]byte, string, error) {
 }
 
 func (s *Service) generateStage(req GenerateStageRequest) (*clientpb.Generate, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
+	c, err := s.client()
+	if err != nil {
+		return nil, err
 	}
 	profile := strings.TrimSpace(req.Profile)
 	if profile == "" {
 		return nil, fmt.Errorf("profile is required")
 	}
-	return s.rpc.GenerateStage(context.Background(), &clientpb.GenerateStageReq{
+	return c.GenerateStage(context.Background(), &clientpb.GenerateStageReq{
 		Profile:       profile,
 		Name:          strings.TrimSpace(req.Name),
 		AESEncryptKey: req.AESEncryptKey,

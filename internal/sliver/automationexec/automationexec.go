@@ -95,29 +95,38 @@ func (p *TargetProvider) Connected() bool {
 }
 
 func (p *TargetProvider) GetSessions(ctx context.Context) ([]automation.Target, error) {
-	sessions, err := p.rpc.RPC.GetSessions(ctx, &commonpb.Empty{})
-	if err != nil {
-		return nil, err
-	}
-	p.rpc.PopulateSessions(sessions)
-	targets := make([]automation.Target, 0, len(sessions.Sessions))
-	for _, s := range sessions.Sessions {
-		targets = append(targets, targetFromSession(s))
-	}
-	return targets, nil
+	return p.loadTargets(ctx, false)
 }
 
 func (p *TargetProvider) GetBeacons(ctx context.Context) ([]automation.Target, error) {
-	beaconsResp, err := p.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{})
+	return p.loadTargets(ctx, true)
+}
+
+func (p *TargetProvider) loadTargets(ctx context.Context, beacons bool) ([]automation.Target, error) {
+	if beacons {
+		resp, err := p.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{})
+		if err != nil {
+			return nil, err
+		}
+		p.rpc.PopulateBeacons(resp)
+		return collectTargets(resp.Beacons, targetFromBeacon), nil
+	}
+	resp, err := p.rpc.RPC.GetSessions(ctx, &commonpb.Empty{})
 	if err != nil {
 		return nil, err
 	}
-	p.rpc.PopulateBeacons(beaconsResp)
-	targets := make([]automation.Target, 0, len(beaconsResp.Beacons))
-	for _, b := range beaconsResp.Beacons {
-		targets = append(targets, targetFromBeacon(b))
+	p.rpc.PopulateSessions(resp)
+	return collectTargets(resp.Sessions, targetFromSession), nil
+}
+
+// collectTargets preserves the non-nil empty slice callers expect when the
+// server reports no agents.
+func collectTargets[T any](items []T, convert func(T) automation.Target) []automation.Target {
+	targets := make([]automation.Target, 0, len(items))
+	for _, item := range items {
+		targets = append(targets, convert(item))
 	}
-	return targets, nil
+	return targets
 }
 
 func (p *TargetProvider) FindTarget(ctx context.Context, targetID string) (automation.Target, error) {

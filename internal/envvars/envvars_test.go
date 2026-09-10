@@ -16,41 +16,16 @@ func TestResolveDataDirDefaultsToSliverRoot(t *testing.T) {
 }
 
 func TestResolveDataDirUsesSliverClientRootDir(t *testing.T) {
-	expected := t.TempDir()
-	t.Setenv("SLIVER_CLIENT_ROOT_DIR", expected)
-	dir, err := ResolveDataDir(nil)
-	if err != nil {
-		t.Fatalf("ResolveDataDir returned error: %v", err)
-	}
-	if dir != expected {
-		t.Fatalf("ResolveDataDir: got %q, want %q", dir, expected)
-	}
+	assertResolveEnv(t, "SLIVER_CLIENT_ROOT_DIR", ResolveDataDir)
 }
 
 func TestResolveDataDirUsesGuiDataDirEnvVar(t *testing.T) {
-	expected := t.TempDir()
-	t.Setenv("SLIVER_GUI_DATA_DIR", expected)
-	dir, err := ResolveDataDir(nil)
-	if err != nil {
-		t.Fatalf("ResolveDataDir returned error: %v", err)
-	}
-	if dir != expected {
-		t.Fatalf("ResolveDataDir: got %q, want %q", dir, expected)
-	}
+	assertResolveEnv(t, "SLIVER_GUI_DATA_DIR", ResolveDataDir)
 }
 
 func TestResolveDataDirGuiOverrideWinsOverEnvVar(t *testing.T) {
-	envDir := t.TempDir()
-	guiDir := t.TempDir()
-	t.Setenv("SLIVER_GUI_DATA_DIR", envDir)
-	cfg := &GUIConfig{DataDirOverride: guiDir}
-	dir, err := ResolveDataDir(cfg)
-	if err != nil {
-		t.Fatalf("ResolveDataDir returned error: %v", err)
-	}
-	if dir != guiDir {
-		t.Fatalf("ResolveDataDir: got %q, want %q (GUI override should win)", dir, guiDir)
-	}
+	assertGuiOverrideWins(t, "SLIVER_GUI_DATA_DIR", ResolveDataDir,
+		func(cfg *GUIConfig, dir string) { cfg.DataDirOverride = dir })
 }
 
 func TestResolveDataDirInvalidPathReturnsError(t *testing.T) {
@@ -73,29 +48,12 @@ func TestResolveLogDirDefaultsToSliverLogs(t *testing.T) {
 }
 
 func TestResolveLogDirUsesEnvVar(t *testing.T) {
-	expected := t.TempDir()
-	t.Setenv("SLIVER_GUI_LOG_DIR", expected)
-	dir, err := ResolveLogDir(nil)
-	if err != nil {
-		t.Fatalf("ResolveLogDir returned error: %v", err)
-	}
-	if dir != expected {
-		t.Fatalf("ResolveLogDir: got %q, want %q", dir, expected)
-	}
+	assertResolveEnv(t, "SLIVER_GUI_LOG_DIR", ResolveLogDir)
 }
 
 func TestResolveLogDirGuiOverrideWins(t *testing.T) {
-	envDir := t.TempDir()
-	guiDir := t.TempDir()
-	t.Setenv("SLIVER_GUI_LOG_DIR", envDir)
-	cfg := &GUIConfig{LogDirOverride: guiDir}
-	dir, err := ResolveLogDir(cfg)
-	if err != nil {
-		t.Fatalf("ResolveLogDir returned error: %v", err)
-	}
-	if dir != guiDir {
-		t.Fatalf("ResolveLogDir: got %q, want %q", dir, guiDir)
-	}
+	assertGuiOverrideWins(t, "SLIVER_GUI_LOG_DIR", ResolveLogDir,
+		func(cfg *GUIConfig, dir string) { cfg.LogDirOverride = dir })
 }
 
 func TestGetEnvInfoCollectsActiveVars(t *testing.T) {
@@ -161,5 +119,36 @@ func TestBuildPassthroughEnvIncludesExtra(t *testing.T) {
 	}
 	if !gotTerm || !gotColorTerm {
 		t.Fatal("extra vars not included in passthrough env")
+	}
+}
+
+// assertResolveEnv points envVar at a temp dir and asserts resolve returns it.
+func assertResolveEnv(t *testing.T, envVar string, resolve func(*GUIConfig) (string, error)) {
+	t.Helper()
+	expected := t.TempDir()
+	t.Setenv(envVar, expected)
+	dir, err := resolve(nil)
+	if err != nil {
+		t.Fatalf("resolve with %s: %v", envVar, err)
+	}
+	if dir != expected {
+		t.Fatalf("resolve with %s: got %q, want %q", envVar, dir, expected)
+	}
+}
+
+// assertGuiOverrideWins asserts the GUI override beats the environment value.
+func assertGuiOverrideWins(t *testing.T, envVar string, resolve func(*GUIConfig) (string, error), set func(*GUIConfig, string)) {
+	t.Helper()
+	envDir := t.TempDir()
+	guiDir := t.TempDir()
+	t.Setenv(envVar, envDir)
+	cfg := &GUIConfig{}
+	set(cfg, guiDir)
+	dir, err := resolve(cfg)
+	if err != nil {
+		t.Fatalf("resolve with %s override: %v", envVar, err)
+	}
+	if dir != guiDir {
+		t.Fatalf("resolve with %s override: got %q, want %q", envVar, dir, guiDir)
 	}
 }

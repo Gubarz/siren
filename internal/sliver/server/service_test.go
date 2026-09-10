@@ -11,6 +11,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/testutil"
 )
 
 func TestGetOperatorsRequiresConnection(t *testing.T) {
@@ -19,12 +20,7 @@ func TestGetOperatorsRequiresConnection(t *testing.T) {
 
 	_, err := svc.GetOperators()
 
-	if !errors.Is(err, rpc.ErrNotConnected) {
-		t.Fatalf("GetOperators() error = %v, want %v", err, rpc.ErrNotConnected)
-	}
-	if fake.getOperatorsCalls != 0 {
-		t.Fatalf("GetOperators RPC called %d times while disconnected", fake.getOperatorsCalls)
-	}
+	testutil.RequireUncalled(t, err, rpc.ErrNotConnected, fake.getOperatorsCalls, "GetOperators")
 }
 
 func TestGetOperatorsReturnsRPCResponse(t *testing.T) {
@@ -52,7 +48,7 @@ func TestRestartJobsShapesRequestAndPropagatesError(t *testing.T) {
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("RestartJobs() error = %v, want %v", err, wantErr)
 	}
-	assertUint32Slice(t, fake.restartJobsReq.JobIDs, []uint32{1, 3, 5})
+	testutil.AssertSlice(t, fake.restartJobsReq.JobIDs, []uint32{1, 3, 5})
 }
 
 func TestTrafficEncoderMapRequiresConnection(t *testing.T) {
@@ -61,12 +57,7 @@ func TestTrafficEncoderMapRequiresConnection(t *testing.T) {
 
 	_, err := svc.TrafficEncoderMap()
 
-	if !errors.Is(err, rpc.ErrNotConnected) {
-		t.Fatalf("TrafficEncoderMap() error = %v, want %v", err, rpc.ErrNotConnected)
-	}
-	if fake.trafficEncoderMapCalls != 0 {
-		t.Fatalf("TrafficEncoderMap RPC called %d times while disconnected", fake.trafficEncoderMapCalls)
-	}
+	testutil.RequireUncalled(t, err, rpc.ErrNotConnected, fake.trafficEncoderMapCalls, "TrafficEncoderMap")
 }
 
 func TestAddTrafficEncoderReadsFileAndCallsRPC(t *testing.T) {
@@ -349,16 +340,4 @@ func (f *fakeServerRPC) GetHTTPC2ProfileByName(
 func (f *fakeServerRPC) SaveHTTPC2Profile(_ context.Context, req *clientpb.HTTPC2ConfigReq) (*commonpb.Empty, error) {
 	f.saveHTTPConfigReq = req
 	return &commonpb.Empty{}, f.saveHTTPConfigErr
-}
-
-func assertUint32Slice(t *testing.T, got, want []uint32) {
-	t.Helper()
-	if len(got) != len(want) {
-		t.Fatalf("len(%v) = %d, want %d", got, len(got), len(want))
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("slice[%d] = %d, want %d (full slice %v)", i, got[i], want[i], got)
-		}
-	}
 }

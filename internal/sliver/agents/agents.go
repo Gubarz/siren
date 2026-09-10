@@ -7,11 +7,13 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	knownagents "siren/internal/localstate/agents"
 	"siren/internal/sliver/console"
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type Service struct {
@@ -29,10 +31,7 @@ func (s *Service) SetKnownAgents(k *knownagents.Service) {
 }
 
 func (s *Service) Sessions() (*clientpb.Sessions, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	result, err := s.rpc.RPC.GetSessions(context.Background(), &commonpb.Empty{})
+	result, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.GetSessions, &commonpb.Empty{})
 	if err == nil {
 		s.rpc.PopulateSessions(result)
 		s.observe(sessionRecords(result))
@@ -41,10 +40,7 @@ func (s *Service) Sessions() (*clientpb.Sessions, error) {
 }
 
 func (s *Service) Beacons() (*clientpb.Beacons, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	result, err := s.rpc.RPC.GetBeacons(context.Background(), &commonpb.Empty{})
+	result, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.GetBeacons, &commonpb.Empty{})
 	if err == nil {
 		// Beacons are never persisted as known agents: the teamserver keeps
 		// beacon records and the UI renders DEAD beacons from live data, so
@@ -104,8 +100,9 @@ func sessionRecords(sessions *clientpb.Sessions) []knownagents.Record {
 }
 
 func (s *Service) Kill(id string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return err
 	}
 	sess, beacon, err := s.console.FindTarget(id)
 	if err != nil {
@@ -117,13 +114,14 @@ func (s *Service) Kill(id string) error {
 	} else {
 		req.BeaconID = beacon.ID
 	}
-	_, err = s.rpc.RPC.Kill(context.Background(), &sliverpb.KillReq{Request: req, Force: true})
+	_, err = c.RPC.Kill(context.Background(), &sliverpb.KillReq{Request: req, Force: true})
 	return err
 }
 
 func (s *Service) Rename(id, name string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return err
 	}
 	sess, beacon, err := s.console.FindTarget(id)
 	if err != nil {
@@ -135,24 +133,22 @@ func (s *Service) Rename(id, name string) error {
 	} else {
 		req.BeaconID = beacon.ID
 	}
-	_, err = s.rpc.RPC.Rename(context.Background(), req)
+	_, err = c.RPC.Rename(context.Background(), req)
 	return err
 }
 
 func (s *Service) RemoveBeacon(id string) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return err
 	}
 	if id == "" {
 		return fmt.Errorf("beacon ID is required")
 	}
-	_, err := s.rpc.RPC.RmBeacon(context.Background(), &clientpb.Beacon{ID: id})
+	_, err = c.RPC.RmBeacon(context.Background(), &clientpb.Beacon{ID: id})
 	return err
 }
 
 func (s *Service) Version() (*clientpb.Version, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.GetVersion(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.GetVersion, &commonpb.Empty{})
 }

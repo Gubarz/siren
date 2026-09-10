@@ -194,9 +194,22 @@ func (s *Service) Correlate(ctx context.Context, refs []AgentRef) (map[string]En
 	}
 
 	now := time.Now()
+	out, stale := s.cachedEnrichments(now, refs)
+	if len(stale) == 0 {
+		s.publish(EventEnrichment, out)
+		return out, nil
+	}
+	if err := s.resolveStale(ctx, stale, out); err != nil {
+		return nil, err
+	}
+	s.cacheEnrichments(now, stale, out)
+	s.publish(EventEnrichment, out)
+	return out, nil
+}
+
+func (s *Service) cachedEnrichments(now time.Time, refs []AgentRef) (map[string]Enrichment, []AgentRef) {
 	out := map[string]Enrichment{}
 	var stale []AgentRef
-
 	s.corr.mu.Lock()
 	for _, ref := range refs {
 		key := cacheKey(ref)
@@ -208,12 +221,10 @@ func (s *Service) Correlate(ctx context.Context, refs []AgentRef) (map[string]En
 	}
 	s.corr.refs = append([]AgentRef{}, refs...)
 	s.corr.mu.Unlock()
+	return out, stale
+}
 
-	if len(stale) == 0 {
-		s.publish(EventEnrichment, out)
-		return out, nil
-	}
-
+func (s *Service) resolveStale(ctx context.Context, stale []AgentRef, out map[string]Enrichment) error {
 	// Group stale agents by canonical (first) candidate.
 	groups := map[string][]AgentRef{}
 	var order []string
@@ -232,13 +243,13 @@ func (s *Service) Correlate(ctx context.Context, refs []AgentRef) (map[string]En
 
 	resolved := map[string]Enrichment{} // objectID → enrichment (path dedupe)
 	for _, primary := range order {
-		refs := groups[primary]
-		entity, ok, err := s.resolveCandidate(ctx, candidatesFor(refs[0]))
+		group := groups[primary]
+		entity, ok, err := s.resolveCandidate(ctx, candidatesFor(group[0]))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if !ok {
-			for _, ref := range refs {
+			for _, ref := range group {
 				out[ref.ID] = Enrichment{DistanceToTierZero: -1}
 			}
 			continue
@@ -248,20 +259,20 @@ func (s *Service) Correlate(ctx context.Context, refs []AgentRef) (map[string]En
 			enr = s.buildEnrichment(ctx, entity)
 			resolved[entity.ObjectID] = enr
 		}
-		for _, ref := range refs {
+		for _, ref := range group {
 			out[ref.ID] = enr
 		}
 	}
+	return nil
+}
 
-	// Cache per agent key.
+// Cache per agent key.
+func (s *Service) cacheEnrichments(now time.Time, stale []AgentRef, out map[string]Enrichment) {
 	s.corr.mu.Lock()
 	for _, ref := range stale {
 		s.corr.cache[cacheKey(ref)] = cacheEntry{enrichment: out[ref.ID], expires: now.Add(s.corr.ttl)}
 	}
 	s.corr.mu.Unlock()
-
-	s.publish(EventEnrichment, out)
-	return out, nil
 }
 
 func cacheKey(ref AgentRef) string {

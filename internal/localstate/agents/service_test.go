@@ -23,6 +23,36 @@ func newRecord(id string) Record {
 	}
 }
 
+func assertActiveRecord(t *testing.T, r Record, before, after int64) {
+	t.Helper()
+	if r.Status != "active" {
+		t.Fatalf("%s Status = %q, want active", r.ID, r.Status)
+	}
+	if r.FirstSeen < before || r.FirstSeen > after {
+		t.Fatalf("%s FirstSeen = %d, want within [%d, %d]", r.ID, r.FirstSeen, before, after)
+	}
+	if r.LastSeen != r.FirstSeen {
+		t.Fatalf("%s LastSeen = %d, want FirstSeen %d", r.ID, r.LastSeen, r.FirstSeen)
+	}
+	if r.LostAt != 0 {
+		t.Fatalf("%s LostAt = %d, want 0", r.ID, r.LostAt)
+	}
+	if r.Hostname != "host-a" || r.Username != "user-a" {
+		t.Fatalf("%s identity = %q/%q, want host-a/user-a", r.ID, r.Hostname, r.Username)
+	}
+}
+
+func assertMode(t *testing.T, path string, want os.FileMode, label string) {
+	t.Helper()
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("Stat(%s) error = %v", path, err)
+	}
+	if perm := info.Mode().Perm(); perm != want {
+		t.Fatalf("%s perm = %o, want %o", label, perm, want)
+	}
+}
+
 func TestObserveCreatesActiveRecords(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "nested")
 	s := New(dir)
@@ -38,38 +68,11 @@ func TestObserveCreatesActiveRecords(t *testing.T) {
 		t.Fatalf("List() len = %d, want 2", len(list))
 	}
 	for _, r := range list {
-		if r.Status != "active" {
-			t.Fatalf("%s Status = %q, want active", r.ID, r.Status)
-		}
-		if r.FirstSeen < before || r.FirstSeen > after {
-			t.Fatalf("%s FirstSeen = %d, want within [%d, %d]", r.ID, r.FirstSeen, before, after)
-		}
-		if r.LastSeen != r.FirstSeen {
-			t.Fatalf("%s LastSeen = %d, want FirstSeen %d", r.ID, r.LastSeen, r.FirstSeen)
-		}
-		if r.LostAt != 0 {
-			t.Fatalf("%s LostAt = %d, want 0", r.ID, r.LostAt)
-		}
-		if r.Hostname != "host-a" || r.Username != "user-a" {
-			t.Fatalf("%s identity = %q/%q, want host-a/user-a", r.ID, r.Hostname, r.Username)
-		}
+		assertActiveRecord(t, r, before, after)
 	}
 
-	path := filepath.Join(dir, "gui-agents.json")
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("Stat(%s) error = %v", path, err)
-	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
-		t.Fatalf("file perm = %o, want 600", perm)
-	}
-	dirInfo, err := os.Stat(dir)
-	if err != nil {
-		t.Fatalf("Stat(%s) error = %v", dir, err)
-	}
-	if perm := dirInfo.Mode().Perm(); perm != 0o700 {
-		t.Fatalf("dir perm = %o, want 700", perm)
-	}
+	assertMode(t, filepath.Join(dir, "gui-agents.json"), 0o600, "file")
+	assertMode(t, dir, 0o700, "dir")
 }
 
 func TestObserveUpdatesExistingAndKeepsLost(t *testing.T) {

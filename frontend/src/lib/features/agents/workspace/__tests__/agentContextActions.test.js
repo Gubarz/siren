@@ -1,28 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { buildAgentContextSections, buildAgentActionsSections, buildCommandCategories } from '../agentContextActions.js'
-
-function sectionItems(sections, label) {
-  for (const section of sections) {
-    for (const item of section.items ?? []) {
-      if (item.label === label) return item
-      for (const child of item.children ?? []) {
-        if (child.label === label) return child
-      }
-    }
-  }
-  return null
-}
-
-function flattenItems(sections) {
-  const items = []
-  for (const section of sections) {
-    for (const item of section.items ?? []) {
-      items.push(item)
-      for (const child of item.children ?? []) items.push(child)
-    }
-  }
-  return items
-}
+import { flattenItems, sectionItems } from './helpers/menuSections.js'
 
 function baseCtx(overrides = {}) {
   const agentTabs = { openTab: vi.fn() }

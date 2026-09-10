@@ -77,30 +77,17 @@ type Action interface {
 }
 
 func (e *Engine) RegisterAction(a Action) error {
-	e.actionsMu.Lock()
-	defer e.actionsMu.Unlock()
-	if _, exists := e.actions[a.Type()]; exists {
-		return fmt.Errorf("action already registered: %s", a.Type())
-	}
-	e.actions[a.Type()] = a
-	return nil
+	return registerIn(&e.actionsMu, e.actions, "action", a.Type(), a)
 }
 
 func (e *Engine) actionByType(typ string) (Action, bool) {
-	e.actionsMu.RLock()
-	defer e.actionsMu.RUnlock()
-	a, ok := e.actions[typ]
-	return a, ok
+	return lookupIn(&e.actionsMu, e.actions, typ)
 }
 
 func (e *Engine) ActionSchemas() map[string][]FieldSpec {
 	e.actionsMu.RLock()
 	defer e.actionsMu.RUnlock()
-	out := make(map[string][]FieldSpec, len(e.actions))
-	for typ, a := range e.actions {
-		out[typ] = a.ConfigSchema()
-	}
-	return out
+	return collectSchemas(e.actions)
 }
 
 func migrateRule(rule *AutomationRule) {

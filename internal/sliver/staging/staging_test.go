@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/testutil"
 )
 
 func TestUnstageImplantBuildRequiresConnection(t *testing.T) {
@@ -46,7 +47,7 @@ func TestUnstageImplantBuildKeepsOtherStagedBuilds(t *testing.T) {
 	if fake.stageReq == nil {
 		t.Fatal("StageImplantBuild was not called")
 	}
-	assertStrings(t, fake.stageReq.Build, []string{"beta"})
+	testutil.AssertSlice(t, fake.stageReq.Build, []string{"beta"})
 }
 
 func TestUnstageImplantBuildErrorsWhenNotStaged(t *testing.T) {
@@ -160,7 +161,7 @@ func TestStageImplantBuildsKeepsExistingStagedBuilds(t *testing.T) {
 	if fake.stageReq == nil {
 		t.Fatal("StageImplantBuild was not called")
 	}
-	assertStrings(t, fake.stageReq.Build, []string{"alpha", "beta"})
+	testutil.AssertSlice(t, fake.stageReq.Build, []string{"alpha", "beta"})
 }
 
 func TestStageImplantBuildsWorksWithEmptyBuildTable(t *testing.T) {
@@ -178,7 +179,7 @@ func TestStageImplantBuildsWorksWithEmptyBuildTable(t *testing.T) {
 	if fake.stageReq == nil {
 		t.Fatal("StageImplantBuild was not called")
 	}
-	assertStrings(t, fake.stageReq.Build, []string{"alpha"})
+	testutil.AssertSlice(t, fake.stageReq.Build, []string{"alpha"})
 }
 
 func TestUnstageImplantBuildPropagatesRPCError(t *testing.T) {
@@ -223,7 +224,7 @@ func TestUnstageImplantBuildSortsRemainingBuilds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UnstageImplantBuild() returned error: %v", err)
 	}
-	assertStrings(t, fake.stageReq.Build, []string{"beta", "zeta"})
+	testutil.AssertSlice(t, fake.stageReq.Build, []string{"beta", "zeta"})
 }
 
 func TestUnstageImplantBuildPropagatesStageError(t *testing.T) {
@@ -281,16 +282,4 @@ func (f *fakeStagingRPC) StartTCPStagerListener(
 	_ *clientpb.StagerListenerReq,
 ) (*clientpb.StagerListener, error) {
 	return nil, nil
-}
-
-func assertStrings(t *testing.T, got, want []string) {
-	t.Helper()
-	if len(got) != len(want) {
-		t.Fatalf("len(%v) = %d, want %d", got, len(got), len(want))
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("slice[%d] = %q, want %q (full slice %v)", i, got[i], want[i], got)
-		}
-	}
 }

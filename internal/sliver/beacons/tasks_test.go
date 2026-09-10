@@ -26,7 +26,8 @@ func TestShouldCancelPendingBeaconTask(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := shouldCancelPendingBeaconTask(tc.err); got != tc.want {
+			got := shouldCancelPendingBeaconTask(tc.err)
+			if got != tc.want {
 				t.Fatalf("shouldCancelPendingBeaconTask(%v) = %v, want %v", tc.err, got, tc.want)
 			}
 		})

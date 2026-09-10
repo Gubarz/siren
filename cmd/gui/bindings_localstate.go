@@ -22,12 +22,17 @@ func (a *App) SetEntityTags(entityType, entityID string, tagList []string) error
 	if err := a.Tags.SetEntityTags(entityType, entityID, tagList); err != nil {
 		return err
 	}
-	key := entityType + ":" + entityID
-	a.bridge.Emit("entity-tags-updated", key)
-	if strings.EqualFold(strings.TrimSpace(entityType), "agent") {
-		a.bridge.Emit("agent-tags-updated", entityID)
-	}
+	a.emitEntityUpdate(entityType, entityID, "tags")
 	return nil
+}
+
+// emitEntityUpdate broadcasts an entity change and mirrors it to the legacy
+// agent-scoped event when the entity is an agent.
+func (a *App) emitEntityUpdate(entityType, entityID, kind string) {
+	a.bridge.Emit("entity-"+kind+"-updated", entityType+":"+entityID)
+	if strings.EqualFold(strings.TrimSpace(entityType), "agent") {
+		a.bridge.Emit("agent-"+kind+"-updated", entityID)
+	}
 }
 
 func (a *App) GetAllEntityTags() map[string][]string {
@@ -42,11 +47,7 @@ func (a *App) SetEntityColor(entityType, entityID string, color string) error {
 	if err := a.Tags.SetEntityColor(entityType, entityID, color); err != nil {
 		return err
 	}
-	key := entityType + ":" + entityID
-	a.bridge.Emit("entity-colors-updated", key)
-	if strings.EqualFold(strings.TrimSpace(entityType), "agent") {
-		a.bridge.Emit("agent-colors-updated", entityID)
-	}
+	a.emitEntityUpdate(entityType, entityID, "colors")
 	return nil
 }
 
@@ -62,8 +63,7 @@ func (a *App) SetAgentTags(agentID string, tagList []string) error {
 	if err := a.Tags.SetAgentTags(agentID, tagList); err != nil {
 		return err
 	}
-	a.bridge.Emit("entity-tags-updated", "agent:"+agentID)
-	a.bridge.Emit("agent-tags-updated", agentID)
+	a.emitEntityUpdate("agent", agentID, "tags")
 	return nil
 }
 
@@ -83,8 +83,7 @@ func (a *App) SetAgentColor(agentID string, color string) error {
 	if err := a.Tags.SetAgentColor(agentID, color); err != nil {
 		return err
 	}
-	a.bridge.Emit("entity-colors-updated", "agent:"+agentID)
-	a.bridge.Emit("agent-colors-updated", agentID)
+	a.emitEntityUpdate("agent", agentID, "colors")
 	return nil
 }
 
@@ -134,32 +133,33 @@ func (a *App) CreateCase(name, description string) (*casefile.Record, error) {
 }
 
 func (a *App) UpdateCase(id, name, description, notes string) error {
-	if err := a.Cases.Update(id, name, description, notes); err != nil {
-		return err
-	}
-	a.bridge.Emit("case-updated", id)
-	return nil
+	return a.runCaseMutation(id, func() error {
+		return a.Cases.Update(id, name, description, notes)
+	})
 }
 
 func (a *App) DeleteCase(id string) error {
-	if err := a.Cases.Delete(id); err != nil {
-		return err
-	}
-	a.bridge.Emit("case-updated", id)
-	return nil
+	return a.runCaseMutation(id, func() error {
+		return a.Cases.Delete(id)
+	})
 }
 
 // AddToCase / RemoveFromCase — collection ∈ {"agent","loot","cred","host","canary"}.
 func (a *App) AddToCase(caseID, collection, itemID string) error {
-	if err := a.Cases.Add(caseID, casefile.Collection(collection), itemID); err != nil {
-		return err
-	}
-	a.bridge.Emit("case-updated", caseID)
-	return nil
+	return a.runCaseMutation(caseID, func() error {
+		return a.Cases.Add(caseID, casefile.Collection(collection), itemID)
+	})
 }
 
 func (a *App) RemoveFromCase(caseID, collection, itemID string) error {
-	if err := a.Cases.Remove(caseID, casefile.Collection(collection), itemID); err != nil {
+	return a.runCaseMutation(caseID, func() error {
+		return a.Cases.Remove(caseID, casefile.Collection(collection), itemID)
+	})
+}
+
+// runCaseMutation emits case-updated only after the mutation succeeds.
+func (a *App) runCaseMutation(caseID string, mutate func() error) error {
+	if err := mutate(); err != nil {
 		return err
 	}
 	a.bridge.Emit("case-updated", caseID)

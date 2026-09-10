@@ -5,19 +5,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-)
 
-func waitFor(t *testing.T, what string, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatalf("timed out waiting for %s", what)
-}
+	"siren/internal/testutil"
+)
 
 func TestPublishFansOutToAllSubscribers(t *testing.T) {
 	b := New()
@@ -27,7 +17,7 @@ func TestPublishFansOutToAllSubscribers(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		b.Publish(Event{Type: "sliver.session-opened"})
 	}
-	waitFor(t, "both subscribers", func() bool { return a.Load() == 5 && c.Load() == 5 })
+	testutil.WaitFor(t, "both subscribers", func() bool { return a.Load() == 5 && c.Load() == 5 })
 }
 
 func TestTypeFilteringAndWildcard(t *testing.T) {
@@ -41,7 +31,7 @@ func TestTypeFilteringAndWildcard(t *testing.T) {
 	})
 	b.Publish(Event{Type: "sliver.session-opened"})
 	b.Publish(Event{Type: "gui.file-downloaded"})
-	waitFor(t, "filtered delivery", func() bool { mu.Lock(); defer mu.Unlock(); return len(got) == 1 })
+	testutil.WaitFor(t, "filtered delivery", func() bool { mu.Lock(); defer mu.Unlock(); return len(got) == 1 })
 	mu.Lock()
 	defer mu.Unlock()
 	if got[0] != "gui.file-downloaded" {
@@ -54,7 +44,7 @@ func TestUnsubscribeStopsDelivery(t *testing.T) {
 	var n atomic.Int64
 	unsub := b.Subscribe(nil, func(Event) { n.Add(1) })
 	b.Publish(Event{Type: "x"})
-	waitFor(t, "first delivery", func() bool { return n.Load() == 1 })
+	testutil.WaitFor(t, "first delivery", func() bool { return n.Load() == 1 })
 	unsub()
 	b.Publish(Event{Type: "x"})
 	time.Sleep(50 * time.Millisecond)
@@ -76,7 +66,7 @@ func TestDropOldestWhenSubscriberLags(t *testing.T) {
 		b.Publish(Event{Type: "x", Payload: i})
 	}
 	close(gate)
-	waitFor(t, "drain", func() bool { return received.Load() >= subscriberCapacity })
+	testutil.WaitFor(t, "drain", func() bool { return received.Load() >= subscriberCapacity })
 	// White-box: read the dropped counter off the concrete subscription.
 	impl := b.(*bus)
 	impl.mu.RLock()
@@ -99,7 +89,7 @@ func TestSubscriberPanicIsIsolated(t *testing.T) {
 	b.Subscribe(nil, func(Event) { panic("boom") })
 	b.Subscribe(nil, func(Event) { good.Add(1) })
 	b.Publish(Event{Type: "x"})
-	waitFor(t, "good subscriber survives", func() bool { return good.Load() == 1 })
+	testutil.WaitFor(t, "good subscriber survives", func() bool { return good.Load() == 1 })
 }
 
 func TestPublishFillsZeroTime(t *testing.T) {

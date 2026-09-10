@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"siren/internal/localstate/jsonstore"
+	"siren/internal/localstate/mapslice"
 )
 
 const persistPrefix = "gui-entity-comments"
@@ -91,13 +92,7 @@ func (s *Service) GetComments(entityType, entityID string) []Comment {
 func (s *Service) GetAllComments() map[string][]Comment {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make(map[string][]Comment, len(s.comments))
-	for k, list := range s.comments {
-		copyList := make([]Comment, len(list))
-		copy(copyList, list)
-		out[k] = copyList
-	}
-	return out
+	return mapslice.Clone(s.comments)
 }
 
 func cleanUsername(author string) string {

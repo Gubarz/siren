@@ -188,37 +188,15 @@ func TestCollectionPipelineStripsLoopFlag(t *testing.T) {
 }
 
 func TestCollectionPipelineRunFailure(t *testing.T) {
-	_, srv := newFakeIngestServer(t, `{"id":1,"status":0,"created_at":"2026-08-22T12:00:00Z"}`)
-	b := &recordingBus{}
-	_, cr, _, runner, _, _ := newTestRunner(t, srv.URL, b)
-	runner.err = errors.New("exit status 1")
-
-	id, err := cr.Start(context.Background(), "sess-1", "session", "windows", defaultOpts())
-	if err != nil {
-		t.Fatalf("Start: %v", err)
-	}
-	waitForState(t, cr, id, StageFailed)
-	st, _ := cr.Status(id)
-	if st.Stage != StageFailed || !strings.Contains(st.Err, "exit status 1") {
-		t.Fatalf("state = %+v", st)
-	}
+	runPipelineFailure(t, "exit status 1", func(runner *fakeRunner, _ *fakeFetcher) {
+		runner.err = errors.New("exit status 1")
+	})
 }
 
 func TestCollectionPipelineDownloadFailure(t *testing.T) {
-	_, srv := newFakeIngestServer(t, `{"id":1,"status":0,"created_at":"2026-08-22T12:00:00Z"}`)
-	b := &recordingBus{}
-	_, cr, _, _, fetcher, _ := newTestRunner(t, srv.URL, b)
-	fetcher.downloadErr = errors.New("chunk failed")
-
-	id, err := cr.Start(context.Background(), "sess-1", "session", "windows", defaultOpts())
-	if err != nil {
-		t.Fatalf("Start: %v", err)
-	}
-	waitForState(t, cr, id, StageFailed)
-	st, _ := cr.Status(id)
-	if st.Stage != StageFailed || !strings.Contains(st.Err, "chunk failed") {
-		t.Fatalf("state = %+v", st)
-	}
+	runPipelineFailure(t, "chunk failed", func(_ *fakeRunner, fetcher *fakeFetcher) {
+		fetcher.downloadErr = errors.New("chunk failed")
+	})
 }
 
 func TestCollectionStartRejectsBeaconsAndNonWindows(t *testing.T) {

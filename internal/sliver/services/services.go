@@ -1,13 +1,13 @@
 package services
 
 import (
-	"context"
 	"time"
 
-	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type Service struct {
@@ -21,73 +21,23 @@ func New(rpc *rpc.Client) *Service {
 }
 
 func (s *Service) GetServices(sessionID string) (*sliverpb.Services, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-
-	req, err := s.rpc.TargetRequest(sessionID, requestTimeout)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	defer cancel()
-
-	resp, err := s.rpc.RPC.Services(ctx, &sliverpb.ServicesReq{
-		Request: req,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := s.rpc.AwaitAsyncResponse(ctx, resp, resp); err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return rpcwrap.TargetCall(s.rpc, sessionID, requestTimeout, rpcpb.SliverRPCClient.Services, &sliverpb.ServicesReq{})
 }
 
 func (s *Service) StartService(sessionID, name string) error {
-	return s.runServiceAction(sessionID, func(ctx context.Context, req *commonpb.Request) (*sliverpb.ServiceInfo, error) {
-		return s.rpc.RPC.StartServiceByName(ctx, &sliverpb.StartServiceByNameReq{
-			ServiceInfo: &sliverpb.ServiceInfoReq{ServiceName: name},
-			Request:     req,
-		})
+	return rpcwrap.TargetAction(s.rpc, sessionID, requestTimeout, rpcpb.SliverRPCClient.StartServiceByName, &sliverpb.StartServiceByNameReq{
+		ServiceInfo: &sliverpb.ServiceInfoReq{ServiceName: name},
 	})
 }
 
 func (s *Service) StopService(sessionID, name string) error {
-	return s.runServiceAction(sessionID, func(ctx context.Context, req *commonpb.Request) (*sliverpb.ServiceInfo, error) {
-		return s.rpc.RPC.StopService(ctx, &sliverpb.StopServiceReq{
-			ServiceInfo: &sliverpb.ServiceInfoReq{ServiceName: name},
-			Request:     req,
-		})
+	return rpcwrap.TargetAction(s.rpc, sessionID, requestTimeout, rpcpb.SliverRPCClient.StopService, &sliverpb.StopServiceReq{
+		ServiceInfo: &sliverpb.ServiceInfoReq{ServiceName: name},
 	})
 }
 
 func (s *Service) RemoveService(sessionID, name string) error {
-	return s.runServiceAction(sessionID, func(ctx context.Context, req *commonpb.Request) (*sliverpb.ServiceInfo, error) {
-		return s.rpc.RPC.RemoveService(ctx, &sliverpb.RemoveServiceReq{
-			ServiceInfo: &sliverpb.ServiceInfoReq{ServiceName: name},
-			Request:     req,
-		})
+	return rpcwrap.TargetAction(s.rpc, sessionID, requestTimeout, rpcpb.SliverRPCClient.RemoveService, &sliverpb.RemoveServiceReq{
+		ServiceInfo: &sliverpb.ServiceInfoReq{ServiceName: name},
 	})
-}
-
-func (s *Service) runServiceAction(
-	sessionID string,
-	action func(context.Context, *commonpb.Request) (*sliverpb.ServiceInfo, error),
-) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	req, err := s.rpc.TargetRequest(sessionID, requestTimeout)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	defer cancel()
-	resp, err := action(ctx, req)
-	if err != nil {
-		return err
-	}
-	return s.rpc.AwaitAsyncResponse(ctx, resp, resp)
 }

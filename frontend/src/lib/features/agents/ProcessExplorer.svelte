@@ -10,7 +10,7 @@
   import { entityColors } from "$stores/resources/entityColors.svelte.js";
   import { useResource } from "$stores/lib/createResource.svelte.js";
   import { useProcessList } from "$stores/perAgent/processList.svelte.js";
-  import { buildProcessTree, buildProcessContextSections } from "./processExplorerHelpers.js";
+  import { buildProcessTree, buildProcessContextSections, normalizeProcess } from "./processExplorerHelpers.js";
   import { entityColorStyle } from "../../utils/entityTags.js";
 
   let { sessionID = "", picker = false, onpick, staticData = null } = $props();
@@ -46,25 +46,7 @@
   let tableColumns = $derived(isFullView ? fullColumns : baseColumns);
 
   let normalizedProcesses = $derived(
-    staticData
-      ? (staticData || []).map((p) => ({
-          ...p,
-          PidStr: String(p.Pid ?? p.pid ?? 0),
-          PpidStr: String(p.Ppid ?? p.ppid ?? 0),
-          ExecutableStr: p.Executable ?? p.executable ?? "",
-          OwnerStr: p.Owner ?? p.owner ?? "",
-          ArchStr: p.Architecture ?? p.architecture ?? "",
-          SessionStr: String(p.SessionID ?? p.sessionID ?? ""),
-        }))
-      : (store.state.processes || []).map((p) => ({
-          ...p,
-          PidStr: String(p.Pid ?? p.pid ?? 0),
-          PpidStr: String(p.Ppid ?? p.ppid ?? 0),
-          ExecutableStr: p.Executable ?? p.executable ?? "",
-          OwnerStr: p.Owner ?? p.owner ?? "",
-          ArchStr: p.Architecture ?? p.architecture ?? "",
-          SessionStr: String(p.SessionID ?? p.sessionID ?? ""),
-        })),
+    (staticData || store.state.processes || []).map(normalizeProcess),
   );
 
   let displayProcesses = $derived(

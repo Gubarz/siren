@@ -8,27 +8,9 @@ import (
 )
 
 func TestHandleConsolePortfwdAddStartsTrackedProxy(t *testing.T) {
-	var gotSessionID, gotBindAddr, gotRemoteAddr string
-	start := func(sessionID, bindAddr, remoteAddr string) (uint64, error) {
-		gotSessionID = sessionID
-		gotBindAddr = bindAddr
-		gotRemoteAddr = remoteAddr
-		return 23, nil
-	}
-
-	output, err := handleConsolePortfwdAdd(start, "session-1", []string{
-		"--bind", "9000",
-		"--remote", "10.0.0.5:80",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if gotSessionID != "session-1" || gotBindAddr != "127.0.0.1:9000" || gotRemoteAddr != "10.0.0.5:80" {
-		t.Fatalf("start args = (%q, %q, %q)", gotSessionID, gotBindAddr, gotRemoteAddr)
-	}
-	if !strings.Contains(output, "127.0.0.1:9000 -> 10.0.0.5:80") {
-		t.Fatalf("output = %q, want bind and remote addresses", output)
-	}
+	assertConsoleProxyAdd(t, handleConsolePortfwdAdd, 23,
+		[]string{"--bind", "9000", "--remote", "10.0.0.5:80"},
+		"127.0.0.1:9000", "10.0.0.5:80", "127.0.0.1:9000 -> 10.0.0.5:80")
 }
 
 func TestHandleConsolePortfwdAddDoesNotRefreshAfterFailure(t *testing.T) {

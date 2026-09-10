@@ -33,15 +33,6 @@
     password = fields.password
     domain = fields.domain
   }
-
-  export function credentialFields(values = {}) {
-    return {
-      username: values['username'] || '',
-      password: values['password'] || '',
-      domain: values['domain'] || '',
-      timeout: values['timeout'] || '',
-    }
-  }
 </script>
 
 <CollapsibleGroup title="Credentials" defaultOpen>

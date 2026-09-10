@@ -1,12 +1,12 @@
 package monitor
 
 import (
-	"context"
-
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type Service struct {
@@ -20,37 +20,22 @@ func New(rpc *rpc.Client) *Service {
 func (s *Service) Close() {}
 
 func (s *Service) MonitorStart() (*commonpb.Response, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.MonitorStart(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.MonitorStart, &commonpb.Empty{})
 }
 
 func (s *Service) MonitorStop() error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.MonitorStop(context.Background(), &commonpb.Empty{})
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.MonitorStop, &commonpb.Empty{})
 	return err
 }
 
 func (s *Service) ListConfig() (*clientpb.MonitoringProviders, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.MonitorListConfig(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.MonitorListConfig, &commonpb.Empty{})
 }
 
 func (s *Service) AddConfig(provider *clientpb.MonitoringProvider) (*commonpb.Response, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.MonitorAddConfig(context.Background(), provider)
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.MonitorAddConfig, provider)
 }
 
 func (s *Service) DelConfig(provider *clientpb.MonitoringProvider) (*commonpb.Response, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.MonitorDelConfig(context.Background(), provider)
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.MonitorDelConfig, provider)
 }

@@ -10,8 +10,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
+
+	"siren/internal/rpcdesc"
 )
 
 // descriptorKinds maps a response message's full name to the view kind that
@@ -34,7 +35,7 @@ var descriptorKinds = map[protoreflect.FullName]string{
 func Decode(method, direction string, payload []byte) (jsonText, base64Out, kind string) {
 	base64Out = base64.StdEncoding.EncodeToString(payload)
 	kind = "json"
-	desc := messageDescriptor(method, direction)
+	desc := rpcdesc.Message(method, direction)
 	if desc == nil {
 		return "", base64Out, kind
 	}
@@ -82,36 +83,4 @@ func hasTextOutput(desc protoreflect.MessageDescriptor, msg *dynamicpb.Message) 
 		}
 	}
 	return false
-}
-
-func splitMethod(method string) (string, string) {
-	for i := len(method) - 1; i >= 0; i-- {
-		if method[i] == '/' {
-			return method[1:i], method[i+1:]
-		}
-	}
-	return "", ""
-}
-
-func messageDescriptor(method, direction string) protoreflect.MessageDescriptor {
-	service, rpc := splitMethod(method)
-	if service == "" || rpc == "" {
-		return nil
-	}
-	d, err := protoregistry.GlobalFiles.FindDescriptorByName(protoreflect.FullName(service))
-	if err != nil {
-		return nil
-	}
-	sd, ok := d.(protoreflect.ServiceDescriptor)
-	if !ok {
-		return nil
-	}
-	md := sd.Methods().ByName(protoreflect.Name(rpc))
-	if md == nil {
-		return nil
-	}
-	if direction == "response" {
-		return md.Output()
-	}
-	return md.Input()
 }

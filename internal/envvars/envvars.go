@@ -38,23 +38,31 @@ var PassthroughEnvVars = []string{
 }
 
 func ResolveDataDir(guiCfg *GUIConfig) (string, error) {
-	if guiCfg != nil && guiCfg.DataDirOverride != "" {
-		return MustDir(guiCfg.DataDirOverride)
+	override := ""
+	if guiCfg != nil {
+		override = guiCfg.DataDirOverride
 	}
-	if v := os.Getenv("SLIVER_GUI_DATA_DIR"); v != "" {
-		return MustDir(v)
-	}
-	return assets.GetRootAppDir(), nil
+	return resolveDir(override, "SLIVER_GUI_DATA_DIR", assets.GetRootAppDir)
 }
 
 func ResolveLogDir(guiCfg *GUIConfig) (string, error) {
-	if guiCfg != nil && guiCfg.LogDirOverride != "" {
-		return MustDir(guiCfg.LogDirOverride)
+	override := ""
+	if guiCfg != nil {
+		override = guiCfg.LogDirOverride
 	}
-	if v := os.Getenv("SLIVER_GUI_LOG_DIR"); v != "" {
+	return resolveDir(override, "SLIVER_GUI_LOG_DIR", assets.GetClientLogsDir)
+}
+
+// resolveDir applies the GUI override, then the env var, then the fallback.
+// Every returned directory exists.
+func resolveDir(override, envName string, fallback func() string) (string, error) {
+	if override != "" {
+		return MustDir(override)
+	}
+	if v := os.Getenv(envName); v != "" {
 		return MustDir(v)
 	}
-	return assets.GetClientLogsDir(), nil
+	return fallback(), nil
 }
 
 func MustDir(path string) (string, error) {

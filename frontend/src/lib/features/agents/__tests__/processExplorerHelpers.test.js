@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildProcessContextSections } from '../processExplorerHelpers.js'
+import { buildProcessContextSections, normalizeProcess } from '../processExplorerHelpers.js'
 
 function openSpy() {
   return vi.fn()
@@ -13,6 +13,37 @@ function findItem(sections, label) {
   }
   return null
 }
+
+describe('normalizeProcess', () => {
+  it('maps PascalCase live process fields onto column keys', () => {
+    expect(normalizeProcess({
+      Pid: 42,
+      Ppid: 1,
+      Executable: 'explorer.exe',
+      Owner: 'DOMAIN\\user',
+      Architecture: 'x64',
+      SessionID: 3,
+    })).toMatchObject({
+      PidStr: '42',
+      PpidStr: '1',
+      ExecutableStr: 'explorer.exe',
+      OwnerStr: 'DOMAIN\\user',
+      ArchStr: 'x64',
+      SessionStr: '3',
+    })
+  })
+
+  it('falls back to lowercase snapshot fields and defaults', () => {
+    expect(normalizeProcess({ pid: 7, executable: 'beacon.exe' })).toMatchObject({
+      PidStr: '7',
+      PpidStr: '0',
+      ExecutableStr: 'beacon.exe',
+      OwnerStr: '',
+      ArchStr: '',
+      SessionStr: '',
+    })
+  })
+})
 
 describe('buildProcessContextSections', () => {
   it('binds command modals to the agent session', () => {

@@ -72,16 +72,37 @@ func (a *App) ServiceShutdown() error {
 		// server has historically panicked when the client's gRPC connection drops
 		// mid-tunnel (socks/portfwd goroutines writing into a closed stream), so
 		// we close them cleanly through the RPC before killing the connection.
-		if a.Tunneling != nil {
-			a.Tunneling.Close()
-		}
-		if a.Shells != nil {
-			a.Shells.Close()
-		}
-		if a.Console != nil {
-			a.Console.CloseSubprocs()
+		a.closeLiveResources()
+	}
+	a.closeSubsystems()
+	if a.RPC != nil && !preserveLiveResources {
+		a.RPC.Disconnect()
+	}
+	if a.CaptureStore != nil {
+		if err := a.CaptureStore.Close(); err != nil {
+			log.Printf("shutdown: close capture store: %v", err)
 		}
 	}
+	a.Events.Close()
+	if a.cancel != nil {
+		a.cancel()
+	}
+	return nil
+}
+
+func (a *App) closeLiveResources() {
+	if a.Tunneling != nil {
+		a.Tunneling.Close()
+	}
+	if a.Shells != nil {
+		a.Shells.Close()
+	}
+	if a.Console != nil {
+		a.Console.CloseSubprocs()
+	}
+}
+
+func (a *App) closeSubsystems() {
 	if a.Crack != nil {
 		a.Crack.Close()
 	}
@@ -124,19 +145,6 @@ func (a *App) ServiceShutdown() error {
 	if a.ClientLog != nil {
 		a.ClientLog.Close()
 	}
-	if a.RPC != nil && !preserveLiveResources {
-		a.RPC.Disconnect()
-	}
-	if a.CaptureStore != nil {
-		if err := a.CaptureStore.Close(); err != nil {
-			log.Printf("shutdown: close capture store: %v", err)
-		}
-	}
-	a.Events.Close()
-	if a.cancel != nil {
-		a.cancel()
-	}
-	return nil
 }
 
 // shouldPreserveLiveResourcesOnShutdown reports whether the app is running

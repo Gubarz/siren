@@ -223,6 +223,20 @@
   });
 </script>
 
+{#snippet actionButtons(actions)}
+  {#each actions as action (action.label)}
+    <Button
+      size="sm"
+      color={action.disabled ? 'alternative' : 'primary'}
+      disabled={action.disabled}
+      title={action.reason || ''}
+      onclick={action.on}
+    >
+      {action.label}
+    </Button>
+  {/each}
+{/snippet}
+
 <div class="h-full overflow-auto p-6">
   <div class="max-w-7xl mx-auto flex flex-col gap-5">
     <div class="flex items-center gap-3 bg-panel border border-panel-border rounded-lg px-5 py-4">
@@ -275,32 +289,12 @@
           </dl>
         {/if}
         <div class="flex flex-wrap items-center gap-2 mb-3">
-          {#each entityActions as action (action.label)}
-            <Button
-              size="sm"
-              color={action.disabled ? 'alternative' : 'primary'}
-              disabled={action.disabled}
-              title={action.reason || ''}
-              onclick={action.on}
-            >
-              {action.label}
-            </Button>
-          {/each}
+          {@render actionButtons(entityActions)}
         </div>
         {#if clickedEdge}
           <div class="flex flex-wrap items-center gap-2 mb-3">
             <span class="text-xs text-fg-muted">Edge {clickedEdge.label}:</span>
-            {#each edgeActions as action (action.label)}
-              <Button
-                size="sm"
-                color={action.disabled ? 'alternative' : 'primary'}
-                disabled={action.disabled}
-                title={action.reason || ''}
-                onclick={action.on}
-              >
-                {action.label}
-              </Button>
-            {/each}
+            {@render actionButtons(edgeActions)}
           </div>
         {/if}
         <div>

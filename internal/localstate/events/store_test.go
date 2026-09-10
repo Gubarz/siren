@@ -7,31 +7,17 @@ import (
 )
 
 func TestQueryReturnsMatchingEventsInChronologicalOrder(t *testing.T) {
-	store := newTestStore(t)
-	store.Append(StoredEvent{Type: "one", Time: 1})
-	store.Append(StoredEvent{Type: "two", Time: 2})
-	store.Append(StoredEvent{Type: "three", Time: 3})
-
-	got := store.Query(2, 10)
-	want := []StoredEvent{
+	assertQuery(t, 2, 10, []StoredEvent{
 		{Type: "two", Time: 2, Seq: 2},
 		{Type: "three", Time: 3, Seq: 3},
-	}
-	assertEvents(t, got, want)
+	})
 }
 
 func TestQueryLimitKeepsMostRecentEvents(t *testing.T) {
-	store := newTestStore(t)
-	store.Append(StoredEvent{Type: "one", Time: 1})
-	store.Append(StoredEvent{Type: "two", Time: 2})
-	store.Append(StoredEvent{Type: "three", Time: 3})
-
-	got := store.Query(0, 2)
-	want := []StoredEvent{
+	assertQuery(t, 0, 2, []StoredEvent{
 		{Type: "two", Time: 2, Seq: 2},
 		{Type: "three", Time: 3, Seq: 3},
-	}
-	assertEvents(t, got, want)
+	})
 }
 
 func TestAppendEvictsOldestEventsPastStorageLimit(t *testing.T) {
@@ -118,6 +104,16 @@ func TestLoadAssignsSeqsToLegacyEvents(t *testing.T) {
 func newTestStore(t *testing.T) *Store {
 	t.Helper()
 	return &Store{path: filepath.Join(t.TempDir(), "events.json")}
+}
+
+// assertQuery seeds three events and asserts the windowed query result.
+func assertQuery(t *testing.T, from int64, limit int, want []StoredEvent) {
+	t.Helper()
+	store := newTestStore(t)
+	store.Append(StoredEvent{Type: "one", Time: 1})
+	store.Append(StoredEvent{Type: "two", Time: 2})
+	store.Append(StoredEvent{Type: "three", Time: 3})
+	assertEvents(t, store.Query(from, limit), want)
 }
 
 func assertEvents(t *testing.T, got, want []StoredEvent) {

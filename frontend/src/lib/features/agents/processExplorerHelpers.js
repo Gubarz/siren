@@ -2,6 +2,20 @@
 import { commentsModal } from '../../stores/ui/commentsModal.svelte.js'
 import { tagsModal } from '../../stores/ui/tagsModal.svelte.js'
 
+// normalizeProcess maps both the live Sliver process shape (PascalCase) and
+// the beacon-task snapshot shape (lowercase) onto the DataTable's column keys.
+export function normalizeProcess(p) {
+  return {
+    ...p,
+    PidStr: String(p.Pid ?? p.pid ?? 0),
+    PpidStr: String(p.Ppid ?? p.ppid ?? 0),
+    ExecutableStr: p.Executable ?? p.executable ?? '',
+    OwnerStr: p.Owner ?? p.owner ?? '',
+    ArchStr: p.Architecture ?? p.architecture ?? '',
+    SessionStr: String(p.SessionID ?? p.sessionID ?? ''),
+  }
+}
+
 // buildProcessTree flattens the process list into a depth-annotated array
 // so the DataTable can render tree indentation without a real tree widget.
 export function buildProcessTree(procs) {

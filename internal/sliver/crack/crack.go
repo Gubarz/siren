@@ -11,9 +11,11 @@ import (
 
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
+	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/klauspost/compress/zstd"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/sliver/rpcwrap"
 )
 
 type Service struct {
@@ -28,98 +30,63 @@ func (s *Service) Close() {
 }
 
 func (s *Service) Crackstations() (*clientpb.Crackstations, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.Crackstations(context.Background(), &commonpb.Empty{})
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.Crackstations, &commonpb.Empty{})
 }
 
 func (s *Service) SubmitJob(cmd *clientpb.CrackCommand) (*clientpb.CrackResponse, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.Crack(context.Background(), cmd)
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.Crack, cmd)
 }
 
 func (s *Service) TaskByID(task *clientpb.CrackTask) (*clientpb.CrackTask, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.CrackTaskByID(context.Background(), task)
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackTaskByID, task)
 }
 
 func (s *Service) TaskUpdate(task *clientpb.CrackTask) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CrackTaskUpdate(context.Background(), task)
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackTaskUpdate, task)
 	return err
 }
 
 func (s *Service) CrackstationBenchmark(bench *clientpb.CrackBenchmark) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CrackstationBenchmark(context.Background(), bench)
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackstationBenchmark, bench)
 	return err
 }
 
 func (s *Service) Trigger(ev *clientpb.Event) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CrackstationTrigger(context.Background(), ev)
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackstationTrigger, ev)
 	return err
 }
 
 func (s *Service) FilesList(filter *clientpb.CrackFile) (*clientpb.CrackFiles, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.CrackFilesList(context.Background(), filter)
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackFilesList, filter)
 }
 
 func (s *Service) FileCreate(file *clientpb.CrackFile) (*clientpb.CrackFile, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.CrackFileCreate(context.Background(), file)
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackFileCreate, file)
 }
 
 func (s *Service) FileChunkUpload(chunk *clientpb.CrackFileChunk) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CrackFileChunkUpload(context.Background(), chunk)
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackFileChunkUpload, chunk)
 	return err
 }
 
 func (s *Service) FileChunkDownload(chunk *clientpb.CrackFileChunk) (*clientpb.CrackFileChunk, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
-	}
-	return s.rpc.RPC.CrackFileChunkDownload(context.Background(), chunk)
+	return rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackFileChunkDownload, chunk)
 }
 
 func (s *Service) FileComplete(file *clientpb.CrackFile) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CrackFileComplete(context.Background(), file)
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackFileComplete, file)
 	return err
 }
 
 func (s *Service) FileDelete(file *clientpb.CrackFile) error {
-	if !s.rpc.Connected() {
-		return rpc.ErrNotConnected
-	}
-	_, err := s.rpc.RPC.CrackFileDelete(context.Background(), file)
+	_, err := rpcwrap.Call(s.rpc, rpcpb.SliverRPCClient.CrackFileDelete, file)
 	return err
 }
 
 func (s *Service) UploadFromPath(localPath string, fileType clientpb.CrackFileType) (*clientpb.CrackFile, error) {
-	if !s.rpc.Connected() {
-		return nil, rpc.ErrNotConnected
+	c, err := rpcwrap.Client(s.rpc)
+	if err != nil {
+		return nil, err
 	}
 	if !validCrackFileType(fileType) {
 		return nil, fmt.Errorf("invalid crack file type: %s", fileType)
@@ -133,7 +100,7 @@ func (s *Service) UploadFromPath(localPath string, fileType clientpb.CrackFileTy
 
 	ctx := context.Background()
 	name := filepath.Base(localPath)
-	created, err := s.rpc.RPC.CrackFileCreate(ctx, &clientpb.CrackFile{
+	created, err := c.RPC.CrackFileCreate(ctx, &clientpb.CrackFile{
 		Name:             name,
 		Type:             fileType,
 		UncompressedSize: stat.Size(),
@@ -152,7 +119,7 @@ func (s *Service) UploadFromPath(localPath string, fileType clientpb.CrackFileTy
 	if err := s.uploadCrackChunks(ctx, created.ID, created.ChunkSize, compressed); err != nil {
 		return nil, err
 	}
-	_, err = s.rpc.RPC.CrackFileComplete(ctx, &clientpb.CrackFile{
+	_, err = c.RPC.CrackFileComplete(ctx, &clientpb.CrackFile{
 		ID:       created.ID,
 		Sha2_256: sha256Sum,
 	})

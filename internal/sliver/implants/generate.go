@@ -30,8 +30,6 @@ func (s *Service) SetUI(ui *wailsadapter.Bridge) {
 	s.ui = ui
 }
 
-
-
 // GenerateRequest is the full option set exposed by the advanced generate
 // modal. Fields left at their zero value are omitted from the ImplantConfig
 // so the server picks its own default.

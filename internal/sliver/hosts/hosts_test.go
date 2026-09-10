@@ -9,6 +9,7 @@ import (
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 
 	"siren/internal/sliver/rpc"
+	"siren/internal/testutil"
 )
 
 func TestListRequiresConnection(t *testing.T) {
@@ -17,12 +18,7 @@ func TestListRequiresConnection(t *testing.T) {
 
 	_, err := svc.List()
 
-	if !errors.Is(err, rpc.ErrNotConnected) {
-		t.Fatalf("List() error = %v, want %v", err, rpc.ErrNotConnected)
-	}
-	if fake.hostsCalls != 0 {
-		t.Fatalf("Hosts called %d times while disconnected", fake.hostsCalls)
-	}
+	testutil.RequireUncalled(t, err, rpc.ErrNotConnected, fake.hostsCalls, "Hosts")
 }
 
 func TestListReturnsHostsFromRPC(t *testing.T) {

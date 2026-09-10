@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"siren/internal/bus"
+	"siren/internal/testutil"
 )
 
 type recordingBus struct {
@@ -33,18 +34,6 @@ func (b *recordingBus) ofType(t string) []bus.Event {
 		}
 	}
 	return out
-}
-
-func waitFor(t *testing.T, what string, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("timed out waiting for %s", what)
 }
 
 func connectedServiceWithBus(t *testing.T, srvURL string, b bus.Bus) *Service {
@@ -84,7 +73,7 @@ func TestSyncPublishesWhileConnected(t *testing.T) {
 	defer cancel()
 	go svc.StartSync(ctx, 20*time.Millisecond)
 
-	waitFor(t, "bloodhound.synced event", func() bool { return len(b.ofType("bloodhound.synced")) >= 1 })
+	testutil.WaitFor(t, "bloodhound.synced event", func() bool { return len(b.ofType("bloodhound.synced")) >= 1 })
 
 	ev := b.ofType("bloodhound.synced")[0]
 	payload, ok := ev.Payload.(SyncedDTO)
@@ -112,7 +101,7 @@ func TestStartSyncRunsImmediatelyWhenConnected(t *testing.T) {
 	defer cancel()
 	go svc.StartSync(ctx, time.Hour) // long interval; the first sync must not wait for it
 
-	waitFor(t, "immediate bloodhound.synced event", func() bool {
+	testutil.WaitFor(t, "immediate bloodhound.synced event", func() bool {
 		return len(b.ofType("bloodhound.synced")) >= 1
 	})
 }
