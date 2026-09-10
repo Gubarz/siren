@@ -153,7 +153,6 @@ func (je *jsExec) scriptEventsEmit(call sobek.FunctionCall) sobek.Value {
 	return sobek.Undefined()
 }
 
-// recordFilter is the JavaScript-facing query shape for sliver.journal.query.
 type recordFilter struct {
 	Verb     string
 	TargetID string
@@ -163,8 +162,7 @@ type recordFilter struct {
 	Limit    int
 }
 
-// recordEntry preserves the historical journal entry JSON keys so existing
-// scripts keep reading the same fields.
+// recordEntry's JSON keys are a stable contract for existing scripts.
 type recordEntry struct {
 	ID            int64  `json:"id"`
 	Time          int64  `json:"time"`

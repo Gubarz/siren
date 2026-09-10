@@ -54,27 +54,52 @@ func TestTaskFinishFiltersVerbAndTarget(t *testing.T) {
 		_ = tr.Arm(ctx, map[string]any{"verb": "Wanted", "targetID": "b2"}, func(fe automation.FireEvent) { fired <- fe })
 	}()
 
-	matching := bus.Event{Type: "beacon.task-result", Payload: automationevents.TaskResult{
-		Verb: "Wanted", TargetID: "b2", TargetKind: "beacon",
-	}}
+	matching := func(hostname string) bus.Event {
+		return bus.Event{Type: "beacon.task-result", Payload: automationevents.TaskResult{
+			Verb: "Wanted", TargetID: "b2", TargetKind: "beacon", Hostname: hostname,
+		}}
+	}
+	next := func() automationevents.TaskResult {
+		t.Helper()
+		select {
+		case fe := <-fired:
+			entry, ok := fe.Data["entry"].(automationevents.TaskResult)
+			if !ok {
+				t.Fatalf("data: %+v", fe.Data)
+			}
+			return entry
+		case <-time.After(2 * time.Second):
+			t.Fatal("task-finish did not fire")
+			return automationevents.TaskResult{}
+		}
+	}
+
 	deadline := time.Now().Add(2 * time.Second)
 	for len(fired) == 0 {
-		b.Publish(matching)
+		b.Publish(matching("warmup"))
 		time.Sleep(2 * time.Millisecond)
 		if time.Now().After(deadline) {
 			t.Fatal("task-finish did not fire")
 		}
 	}
-	for len(fired) > 0 {
-		<-fired
+
+	// FIFO delivery makes the sync event a barrier: once observed, every
+	// earlier publish has passed through the handler.
+	b.Publish(matching("sync"))
+	for next().Hostname != "sync" {
 	}
 
+	// Non-matching publishes precede the sentinel, so an event that wrongly
+	// passed the filter would be observed before it.
 	b.Publish(bus.Event{Type: "beacon.task-result", Payload: automationevents.TaskResult{Verb: "Other", TargetID: "b2"}})
 	b.Publish(bus.Event{Type: "beacon.task-result", Payload: automationevents.TaskResult{Verb: "Wanted", TargetID: "b9"}})
 	b.Publish(bus.Event{Type: "beacon.task-result", Payload: "not a task result"})
-	select {
-	case fe := <-fired:
-		t.Fatalf("filtered event fired: %+v", fe)
-	case <-time.After(50 * time.Millisecond):
+	b.Publish(matching("sentinel"))
+	entry := next()
+	if entry.Hostname != "sentinel" {
+		t.Fatalf("filtered event fired: %+v", entry)
+	}
+	if entry.Verb != "Wanted" || entry.TargetID != "b2" || entry.TargetKind != "beacon" {
+		t.Fatalf("matching payload = %+v", entry)
 	}
 }

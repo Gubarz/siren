@@ -112,6 +112,23 @@ func TestListSessionTasks(t *testing.T) {
 	}
 }
 
+func TestListSessionTasksNewestFirst(t *testing.T) {
+	st := openTaskStore(t)
+	older := seedTask(t, st)
+	newer := seedTask(t, st)
+
+	rows, err := listSessionTasks(st, "sess-9", 10)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows = %d, want 2", len(rows))
+	}
+	if rows[0].ChainRef != newer.chainRef || rows[1].ChainRef != older.chainRef {
+		t.Fatalf("order = %q, %q; want newest first", rows[0].ChainRef, rows[1].ChainRef)
+	}
+}
+
 func TestGetTaskCallPayloads(t *testing.T) {
 	st := openTaskStore(t)
 	seed := seedTask(t, st)
