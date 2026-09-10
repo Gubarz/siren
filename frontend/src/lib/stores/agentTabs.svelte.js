@@ -7,6 +7,7 @@ import { shellPath } from '../utils/shell.js'
 export const TAB_META = {
   console: { icon: 'terminal', label: 'Console' },
   tasks: { icon: 'list', label: 'Tasks' },
+  sessionTasks: { icon: 'list', label: 'Tasks' },
   fileBrowser: { icon: 'folder', label: 'Files' },
   processExplorer: { icon: 'cpu', label: 'Processes' },
   ifconfig: { icon: 'network-wired', label: 'Ifconfig' },

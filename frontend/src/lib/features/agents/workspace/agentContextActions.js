@@ -120,6 +120,7 @@ function buildCoreActions({
 
   const topLevel = [
     tabAction(agentTabs, compatibleAgents, 'console', compatibleAgents.length),
+    tabAction(agentTabs, sessionAgents, 'sessionTasks', sessionAgents.length),
     { icon: 'terminal-square', label: bulkLabel('New Shell', sessionAgents.length), disabled: sessionAgents.length === 0, on: () => sessionAgents.forEach(newShell) },
     tabAction(agentTabs, sessionAgents, 'fileBrowser', sessionAgents.length),
     tabAction(agentTabs, sessionAgents, 'processExplorer', sessionAgents.length),
