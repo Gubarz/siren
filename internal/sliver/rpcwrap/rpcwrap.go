@@ -103,7 +103,9 @@ func CallTarget[Req proto.Message, Resp any](
 	if !client.Connected() {
 		return zero, rpc.ErrNotConnected
 	}
-	SetRequest(req, &commonpb.Request{SessionID: sessionID})
+	if err := SetRequest(req, &commonpb.Request{SessionID: sessionID}); err != nil {
+		return zero, err
+	}
 	ctx, cancel := bounded(context.Background())
 	defer cancel()
 	return method(client.RPC(), ctx, req)
@@ -128,7 +130,9 @@ func TargetCall[Req proto.Message, Resp TargetResponse](
 	if err != nil {
 		return zero, err
 	}
-	SetRequest(req, request)
+	if err := SetRequest(req, request); err != nil {
+		return zero, err
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	resp, err := method(c.RPC(), ctx, req)
@@ -153,15 +157,18 @@ func TargetAction[Req proto.Message, Resp TargetResponse](
 	return err
 }
 
-// SetRequest stamps req with the common Sliver request envelope. Every
-// Sliver request message carries a singular "Request" field.
-func SetRequest(req proto.Message, request *commonpb.Request) {
+// SetRequest stamps req with the common Sliver request envelope. Every Sliver
+// request message carries a singular "Request" field; one that does not is a
+// programming error, but it is reported rather than panicked so a bad call
+// cannot end the process.
+func SetRequest(req proto.Message, request *commonpb.Request) error {
 	msg := req.ProtoReflect()
 	field := msg.Descriptor().Fields().ByName("Request")
 	if field == nil {
-		panic("rpcwrap: request message has no Request field")
+		return fmt.Errorf("rpcwrap: %s has no Request field", msg.Descriptor().FullName())
 	}
 	msg.Set(field, protoreflect.ValueOfMessage(request.ProtoReflect()))
+	return nil
 }
 
 // Client returns client when it is connected, or ErrNotConnected. Use it for
