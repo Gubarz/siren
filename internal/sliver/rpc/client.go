@@ -25,12 +25,11 @@ import (
 )
 
 type Client struct {
-	// These are read from every domain service and written by Connect, so they
-	// are accessed atomically rather than through connectMu: a reader must not
-	// block behind a dial, and IsConnectedTo already holds that lock.
-	cfgVal  atomic.Value // *assets.ClientConfig
-	rpcVal  atomic.Value // rpcpb.SliverRPCClient
-	connVal atomic.Value // *grpc.ClientConn
+	// state is the active connection, published as one unit. It is read from
+	// every domain service and written by Connect, so it is accessed atomically
+	// rather than through connectMu: a reader must not block behind a dial, and
+	// IsConnectedTo already holds that lock.
+	state atomic.Pointer[connState]
 
 	// CaptureStore, when set, enables capture recording on Connect. The
 	// recorder is rebuilt per connection so annotations carry the operator
@@ -109,7 +108,6 @@ func (c *Client) Connect(profileName string, teardown func()) error {
 	// intentional and must not be surfaced to the UI as a server outage.
 	c.stopEventStream()
 	oldConn := c.Conn()
-	c.cfgVal.Store(config)
 	if c.CaptureStore != nil {
 		c.Recorder = capture.NewRecorder(c.CaptureStore, captureann.New(config.Operator))
 	}
@@ -117,8 +115,7 @@ func (c *Client) Connect(profileName string, teardown func()) error {
 	if c.Recorder != nil {
 		wrapped = WrapCapture(wrapped, c.Recorder)
 	}
-	c.rpcVal.Store(wrapped)
-	c.connVal.Store(grpcConn)
+	c.state.Store(&connState{config: config, rpc: wrapped, conn: grpcConn})
 	c.connected.Store(true)
 	if oldConn != nil && oldConn != grpcConn {
 		_ = oldConn.Close()
@@ -167,10 +164,14 @@ func (c *Client) Disconnect() {
 	defer c.connectMu.Unlock()
 
 	c.stopEventStream()
-	if conn := c.Conn(); conn != nil {
+	conn := c.Conn()
+	// Clear the published state before closing, so a reader never picks up a
+	// connection that is already being torn down.
+	c.state.Store(nil)
+	c.connected.Store(false)
+	if conn != nil {
 		_ = conn.Close()
 	}
-	c.connected.Store(false)
 }
 
 func (c *Client) IsConnectedTo(profileName string) bool {

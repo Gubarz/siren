@@ -86,14 +86,14 @@ func TestAwaitAsyncResponse_BeaconTask(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	c := &Client{}
-	c.rpcVal.Store(&fakeSliverRPC{
+	c.state.Store(&connState{rpc: &fakeSliverRPC{
 		getBeaconTaskContent: func(_ context.Context, in *clientpb.BeaconTask, _ ...grpc.CallOption) (*clientpb.BeaconTask, error) {
 			if in.ID != "task-1" {
 				t.Fatalf("polled wrong task ID: %q", in.ID)
 			}
 			return &clientpb.BeaconTask{ID: in.ID, State: "completed", Response: taskData}, nil
 		},
-	})
+	}})
 
 	resp := &sliverpb.Download{
 		Response: &commonpb.Response{Async: true, TaskID: "task-1"},
@@ -108,11 +108,11 @@ func TestAwaitAsyncResponse_BeaconTask(t *testing.T) {
 
 func TestAwaitAsyncResponse_BeaconTaskFailed(t *testing.T) {
 	c := &Client{}
-	c.rpcVal.Store(&fakeSliverRPC{
+	c.state.Store(&connState{rpc: &fakeSliverRPC{
 		getBeaconTaskContent: func(_ context.Context, in *clientpb.BeaconTask, _ ...grpc.CallOption) (*clientpb.BeaconTask, error) {
 			return &clientpb.BeaconTask{ID: in.ID, State: "failed"}, nil
 		},
-	})
+	}})
 	resp := &sliverpb.Download{
 		Response: &commonpb.Response{Async: true, TaskID: "task-1"},
 	}

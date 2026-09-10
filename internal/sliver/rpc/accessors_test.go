@@ -34,3 +34,26 @@ func TestNewForTestMarksTheClientConnected(t *testing.T) {
 		t.Fatal("RPC() = nil after NewForTest")
 	}
 }
+
+// Disconnect retires the active connection, so every accessor has to stop
+// reporting it. Callers treat a non-nil Config as "still attached to this
+// teamserver", which is what made the GUI keep offering the server it had just
+// left.
+func TestDisconnectClearsTheConnectionAccessors(t *testing.T) {
+	c := NewForTest(&fakeSliverRPC{})
+
+	c.Disconnect()
+
+	if c.Connected() {
+		t.Error("Connected() = true after Disconnect")
+	}
+	if c.Config() != nil {
+		t.Error("Config() is non-nil after Disconnect")
+	}
+	if c.RPC() != nil {
+		t.Error("RPC() is non-nil after Disconnect")
+	}
+	if c.Conn() != nil {
+		t.Error("Conn() is non-nil after Disconnect")
+	}
+}
