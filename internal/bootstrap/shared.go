@@ -14,12 +14,10 @@ import (
 	"siren/internal/automation/triggers"
 	"siren/internal/bus"
 	"siren/internal/envvars"
-	"siren/internal/journal"
 	automationstate "siren/internal/localstate/automation"
 	"siren/internal/localstate/casefile"
 	"siren/internal/localstate/comments"
 	"siren/internal/localstate/events"
-	localjournal "siren/internal/localstate/journal"
 	"siren/internal/localstate/tags"
 
 	automationexec "siren/internal/sliver/automationexec"
@@ -49,7 +47,6 @@ type SharedStack struct {
 	Cases        *casefile.Service
 	Events       *events.Store
 	Bus          bus.Bus
-	Journal      *journal.Service
 	CaptureStore *store.Store
 }
 
@@ -85,18 +82,11 @@ func NewShared(deps Dependencies) *SharedStack {
 		slog.Error("capture store open failed", "error", err)
 		captureStore = nil
 	}
-	journalStore, err := localjournal.NewSQLiteStore(deps.DataDir)
-	if err != nil {
-		log.Printf("bootstrap: journal store unavailable, journal disabled: %v", err)
-		journalStore = nil
-	}
-	journalSvc := journal.NewService(journalStore, busImpl)
 	rpcClient := rpc.NewClient()
 	rpcClient.CaptureStore = captureStore
-	rpcClient.JournalHook = rpc.NewJournalHook(journalSvc)
 	con := console.New(rpcClient)
 	beac := beacons.New(rpcClient, con)
-	beac.SetJournal(journalSvc)
+	beac.SetBus(busImpl)
 	tagsSvc := tags.New(deps.DataDir)
 	commentsSvc := comments.New(deps.DataDir)
 	eventsStore := events.New(deps.DataDir)
@@ -105,10 +95,14 @@ func NewShared(deps Dependencies) *SharedStack {
 	executor := automationexec.NewExecutor(con, beac)
 	targets := automationexec.NewTargetProvider(rpcClient)
 	lootWriter := automationexec.NewLootWriter(rpcClient)
+	var records automation.RecordQuerier
+	if captureStore != nil {
+		records = captureStore
+	}
 	eng := automation.New(automation.Dependencies{
 		Store: automationstate.New(deps.DataDir), Emitter: deps.Emitter,
 		Executor: executor, Targets: targets, Tags: tagsSvc,
-		Bus: busImpl, Journal: journalSvc, Cases: caseSvc,
+		Bus: busImpl, Records: records, Cases: caseSvc,
 		Loot: lootWriter,
 	})
 	registerBuiltinTriggers(eng, busImpl)
@@ -119,7 +113,7 @@ func NewShared(deps Dependencies) *SharedStack {
 		CheckinPub: automationexec.NewCheckinPublisher(rpcClient, busImpl),
 		LootWriter: lootWriter,
 		Tags:       tagsSvc, Comments: commentsSvc, Cases: caseSvc,
-		Events: eventsStore, Bus: busImpl, Journal: journalSvc,
+		Events: eventsStore, Bus: busImpl,
 		CaptureStore: captureStore,
 	}
 }

@@ -127,11 +127,6 @@ func (a *App) ServiceShutdown() error {
 	if a.RPC != nil && !preserveLiveResources {
 		a.RPC.Disconnect()
 	}
-	if a.Journal != nil {
-		if err := a.Journal.Close(); err != nil {
-			log.Printf("shutdown: close journal: %v", err)
-		}
-	}
 	if a.CaptureStore != nil {
 		if err := a.CaptureStore.Close(); err != nil {
 			log.Printf("shutdown: close capture store: %v", err)

@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"siren/internal/automation"
+	automationevents "siren/internal/automation/events"
 	"siren/internal/bus"
-	"siren/internal/journal"
 )
 
 func TaskFinish(b bus.Bus) automation.Trigger {
 	schema := []automation.FieldSpec{
-		{Key: "verb", Label: "Journal verb", Type: "string", Default: "BeaconTaskResult"},
+		{Key: "verb", Label: "Result verb", Type: "string", Default: "BeaconTaskResult"},
 		{Key: "targetID", Label: "Target ID (optional)", Type: "string"},
 	}
 	return &taskFinish{schema: schema, b: b}
@@ -21,7 +21,7 @@ type taskFinish struct {
 	b      bus.Bus
 }
 
-func (t *taskFinish) Type() string                        { return "task-finish" }
+func (t *taskFinish) Type() string                         { return "task-finish" }
 func (t *taskFinish) ConfigSchema() []automation.FieldSpec { return t.schema }
 
 func (t *taskFinish) Arm(ctx context.Context, cfg map[string]any, fire func(automation.FireEvent)) error {
@@ -30,19 +30,19 @@ func (t *taskFinish) Arm(ctx context.Context, cfg map[string]any, fire func(auto
 		verb = "BeaconTaskResult"
 	}
 	targetFilter, _ := cfg["targetID"].(string)
-	unsub := t.b.Subscribe([]string{"journal.action-recorded"}, func(ev bus.Event) {
-		entry, ok := ev.Payload.(journal.Entry)
-		if !ok || entry.Verb != verb {
+	unsub := t.b.Subscribe([]string{"beacon.task-result"}, func(ev bus.Event) {
+		result, ok := ev.Payload.(automationevents.TaskResult)
+		if !ok || result.Verb != verb {
 			return
 		}
-		if targetFilter != "" && entry.TargetID != targetFilter {
+		if targetFilter != "" && result.TargetID != targetFilter {
 			return
 		}
 		fire(automation.FireEvent{
 			Target: &automation.Target{
-				ID: entry.TargetID, Kind: entry.TargetKind, Hostname: entry.Hostname,
+				ID: result.TargetID, Kind: result.TargetKind, Hostname: result.Hostname,
 			},
-			Data: map[string]any{"entry": entry},
+			Data: map[string]any{"entry": result},
 		})
 	})
 	defer unsub()

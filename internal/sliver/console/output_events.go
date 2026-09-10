@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"siren/internal/bus"
-	"siren/internal/journal"
+	"siren/internal/execctx"
 )
 
 const outputTailMaxBytes = 64 * 1024
@@ -22,9 +22,9 @@ func (s *Service) publishConsoleOutput(ctx context.Context, line, output string)
 		tail = tail[len(tail)-outputTailMaxBytes:]
 	}
 	payload := map[string]any{"tail": tail}
-	if overlay, ok := journal.OverlayFrom(ctx); ok {
-		payload["targetID"] = overlay.TargetID
-		payload["targetKind"] = overlay.TargetKind
+	if targetID, targetKind, _ := execctx.Target(ctx); targetID != "" || targetKind != "" {
+		payload["targetID"] = targetID
+		payload["targetKind"] = targetKind
 	}
 	s.bus.Publish(bus.Event{
 		Type:         "gui.console-output",

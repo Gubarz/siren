@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"siren/internal/journal"
+	"siren/internal/execctx"
 )
 
 func (e *Engine) dispatchRule(rule AutomationRule, trigger string, target *Target) {
@@ -85,13 +85,11 @@ func (e *Engine) execute(rule AutomationRule, trigger string, target Target, key
 	if parent == nil {
 		parent = context.Background()
 	}
-	ctxWithOverlay := journal.WithContext(parent, journal.Overlay{
-		ActorKind: "automation", RuleID: rule.ID, RuleName: rule.Name, CorrelationID: run.ID,
-	})
+	ctxWithRun := execctx.WithRun(parent, run.ID, "")
 	var output strings.Builder
 	var commands []string
 	rc := &RunContext{
-		Ctx:      ctxWithOverlay,
+		Ctx:      ctxWithRun,
 		Rule:     rule,
 		Trigger:  trigger,
 		Target:   target,

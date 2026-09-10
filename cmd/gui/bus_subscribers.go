@@ -8,7 +8,6 @@ import (
 	consts "github.com/bishopfox/sliver/client/constants"
 
 	"siren/internal/bus"
-	"siren/internal/journal"
 	"siren/internal/localstate/events"
 )
 
@@ -54,10 +53,6 @@ func (a *App) frontendBusSubscriber(ev bus.Event) {
 			"type":    ev.Type,
 			"payload": payload,
 		})
-	case ev.Type == "journal.action-recorded":
-		if entry, ok := ev.Payload.(journal.Entry); ok {
-			a.bridge.Emit("journal-event", entryToMap(entry))
-		}
 	}
 }
 
@@ -67,28 +62,6 @@ func copyPayload(src map[string]interface{}) map[string]interface{} {
 		dst[k] = v
 	}
 	return dst
-}
-
-func entryToMap(e journal.Entry) map[string]interface{} {
-	return map[string]interface{}{
-		"type":           "action-recorded",
-		"id":             e.ID,
-		"time":           e.Time,
-		"connection_id":  e.ConnectionID,
-		"actor_kind":     e.ActorKind,
-		"rule_id":        e.RuleID,
-		"rule_name":      e.RuleName,
-		"verb":           e.Verb,
-		"command_line":   e.CommandLine,
-		"target_id":      e.TargetID,
-		"target_kind":    e.TargetKind,
-		"hostname":       e.Hostname,
-		"panel":          e.Panel,
-		"status":         e.Status,
-		"err":            e.Err,
-		"duration_ms":    e.DurationMs,
-		"correlation_id": e.CorrelationID,
-	}
 }
 
 func (a *App) eventsStoreBusSubscriber(ev bus.Event) {

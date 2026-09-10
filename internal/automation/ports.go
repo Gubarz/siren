@@ -65,7 +65,7 @@ type Dependencies struct {
 	Targets   TargetProvider
 	Tags      AgentTagStore
 	Bus       bus.Bus
-	Journal   JournalQuerier
+	Records   RecordQuerier
 	HTTP      HTTPDoer
 	Cases     CaseAppender
 	Loot      LootWriter

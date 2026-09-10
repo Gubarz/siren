@@ -29,10 +29,6 @@ type Client struct {
 	RPC    rpcpb.SliverRPCClient
 	Conn   *grpc.ClientConn
 
-	// JournalHook, when set (bootstrap wires it), makes Connect wrap the RPC
-	// client with the journal decorator.
-	JournalHook *JournalHook
-
 	// CaptureStore, when set, enables capture recording on Connect. The
 	// recorder is rebuilt per connection so annotations carry the operator
 	// from the active config.
@@ -101,10 +97,6 @@ func (c *Client) Connect(profileName string) error {
 		c.Recorder = capture.NewRecorder(c.CaptureStore, captureann.New(config.Operator))
 	}
 	wrapped := rpcClient
-	if c.JournalHook != nil {
-		c.JournalHook.SetConnection(fmt.Sprintf("%s:%d", config.LHost, config.LPort))
-		wrapped = WrapJournal(wrapped, c.JournalHook)
-	}
 	if c.Recorder != nil {
 		wrapped = WrapCapture(wrapped, c.Recorder)
 	}
