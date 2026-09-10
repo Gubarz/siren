@@ -3,6 +3,7 @@
 package console
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -30,6 +31,9 @@ func (s *Service) StartConsole(sessionID string) (string, error) {
 // terminal to answer its startup capability queries; an attached terminal must
 // not answer queries found in replayed history.
 func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
+	if !validSessionID(sessionID) {
+		return "", false, fmt.Errorf("refusing to open a console for a malformed session id")
+	}
 	s.subprocStart.Lock()
 	defer s.subprocStart.Unlock()
 	if id := s.subproc.acquireSession(sessionID); id != "" {

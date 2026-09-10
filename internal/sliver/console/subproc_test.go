@@ -227,10 +227,13 @@ func TestSubprocSessionLeasesShareOneJob(t *testing.T) {
 }
 
 func TestAcquireConsoleReportsExistingJob(t *testing.T) {
-	svc := New(nil)
-	svc.subproc.add(&subprocJob{id: "job-1", sessionID: "session-1"})
+	// AcquireConsole validates the id, so this has to look like a Sliver one.
+	const sessionID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
-	id, existing, err := svc.AcquireConsole("session-1")
+	svc := New(nil)
+	svc.subproc.add(&subprocJob{id: "job-1", sessionID: sessionID})
+
+	id, existing, err := svc.AcquireConsole(sessionID)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,6 +3,7 @@
 package console
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -25,6 +26,9 @@ func (s *Service) StartConsole(sessionID string) (string, error) {
 // the returned job was already running. Attached terminals use this to avoid
 // answering terminal queries found in replayed history.
 func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
+	if !validSessionID(sessionID) {
+		return "", false, fmt.Errorf("refusing to open a console for a malformed session id")
+	}
 	s.subprocStart.Lock()
 	defer s.subprocStart.Unlock()
 	if id := s.subproc.acquireSession(sessionID); id != "" {

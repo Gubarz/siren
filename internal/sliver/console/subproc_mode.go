@@ -23,6 +23,10 @@ func RunConsoleSubprocess(configPath, sessionID string) error {
 	if err := requireConsoleTerminal(); err != nil {
 		return err
 	}
+	// The id is interpolated into the rcScript below.
+	if !validSessionID(sessionID) {
+		return fmt.Errorf("refusing to start a console for a malformed session id")
+	}
 
 	cfg, err := loadConfigFromFile(configPath)
 	if err != nil {
