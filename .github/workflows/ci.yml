@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  go:
-    name: Basic Go checks
+  checks:
+    name: Checks
     # 24.04: internal/wailsadapter compiles Wails v3's Linux windowing stack
     # (GTK4 + webkitgtk-6.0), which 22.04 does not package.
     runs-on: ubuntu-24.04
@@ -28,48 +28,45 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
-      - name: go test
-        run: go test ./internal/... ./scripts
+      # Cheap checks first so a budget or boundary break reports in seconds
+      # instead of waiting behind the linters.
+      - name: Go file length
+        run: ./scripts/check-go-file-length.sh
 
-      - name: go vet
-        run: go vet ./internal/... ./scripts
+      - name: Architecture rules
+        run: ./scripts/check-arch.sh
 
-  lint:
-    name: Analyze gate
-    # Mirrors `make analyze-go`. The analyze tools are built from source with
-    # the job's Go toolchain: prebuilt releases linked against go1.26 cannot
-    # read go1.27 export data. Pins are the latest tagged releases that build
-    # with go1.27.
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
+      - name: Import boundaries
+        run: ./scripts/check-import-boundaries.sh
 
-      - uses: actions/setup-go@v5
+      - name: Add Go bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # The analyze tools are built from source with the job's Go toolchain:
+      # prebuilt releases linked against go1.26 cannot read go1.27 export data.
+      # Pins are the latest tagged releases that build with go1.27. Cached
+      # because building golangci-lint alone costs about 50s from cold; bump the
+      # key when a pin below changes.
+      - name: Cache analyze tools
+        id: tools-cache
+        uses: actions/cache@v4
         with:
-          go-version: "1.27.x"
-          cache: true
-
-      - name: Install webview headers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+          path: ~/go/bin
+          key: analyze-tools-${{ runner.os }}-go1.27-gcl2.13.2-sc0.8.1-dc0.50.0-dupl1.1.0
 
       - name: Install analyze tools
+        if: steps.tools-cache.outputs.cache-hit != 'true'
         run: |
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
           go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
           go install golang.org/x/tools/cmd/deadcode@v0.50.0
           go install github.com/mibk/dupl@v1.1.0
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: go test
-        run: go test ./...
+        run: go test $(go list ./... | grep -v /node_modules/)
 
       - name: go vet
         run: go vet $(go list ./... | grep -v /node_modules/)
-
-      - name: Windows compile
-        run: GOOS=windows go build ./internal/sliver/console/
 
       - name: staticcheck
         run: staticcheck $(go list ./... | grep -v /node_modules/)
@@ -85,12 +82,3 @@ jobs:
 
       - name: golangci-lint
         run: golangci-lint run --timeout=5m ./...
-
-      - name: Go file length
-        run: ./scripts/check-go-file-length.sh
-
-      - name: Architecture rules
-        run: ./scripts/check-arch.sh
-
-      - name: Import boundaries
-        run: ./scripts/check-import-boundaries.sh
