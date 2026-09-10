@@ -22,6 +22,11 @@ they delegate to. Lifecycle and connection state belong in
 Frontend size checks currently warn instead of failing, mostly so older code
 doesn't block unrelated work. For new code, treat the warning as a stop sign.
 
+`npm run deadcode` (knip) reports unused files and dependencies. Three exceptions
+live in `frontend/knip.json`: the generated `bindings/`, two UI primitives nothing
+imports yet, and `flowbite-svelte-icons`, which is only reached through an
+`@source` line in `src/styles/main.css`. Everything else it finds is real.
+
 Run the full set with:
 
 ```sh
