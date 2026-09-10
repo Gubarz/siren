@@ -93,6 +93,11 @@ func (s *Service) Close() {
 // nothing itself but keeps the loop responsive for shutdown.
 func (s *Service) pump(ctx context.Context, stream rpcpb.SliverRPC_ClientLogClient) {
 	defer func() { _ = stream.CloseSend() }()
+	// Whichever way the pump ends, release its stream and clear the running
+	// state. Without this a failed pump left running set, so every later Start
+	// returned early and the client log stayed dead until a reconnect, and the
+	// pump context was never cancelled so its capture record stayed open.
+	defer s.Close()
 	ticker := time.NewTicker(flushInterval)
 	defer ticker.Stop()
 	for {
