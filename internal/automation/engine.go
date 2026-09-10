@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"siren/internal/bus"
@@ -24,16 +25,23 @@ type Engine struct {
 	loot     LootWriter
 	ctx      context.Context
 
-	collectorMu  sync.RWMutex
-	collectorRef CollectorStarter
-
-	triggersMu sync.RWMutex
+	// Three locks, and no two of them are ever held at once: each is taken and
+	// released before the next is acquired, so there is no lock order to get
+	// wrong. Keep it that way.
+	//
+	//	registryMu guards the trigger and action registries. They are written
+	//	           once at startup and read on every fire and rule validation.
+	//	armedMu    guards the live trigger subscriptions and the generation
+	//	           counter that tells a re-armed rule from the one it replaced.
+	//	mu         guards the rules, their run history, and the counters that
+	//	           decide whether a rule may fire again.
+	registryMu sync.RWMutex
 	triggers   map[string]Trigger
-	actionsMu  sync.RWMutex
 	actions    map[string]Action
-	armedMu    sync.Mutex
-	armed      map[string]*armedRule
-	armGen     uint64
+
+	armedMu sync.Mutex
+	armed   map[string]*armedRule
+	armGen  uint64
 
 	mu           sync.RWMutex
 	rules        []AutomationRule
@@ -41,6 +49,9 @@ type Engine struct {
 	running      map[string]bool
 	activeByRule map[string]int
 	lastRun      map[string]time.Time
+
+	// collectorPtr is wired once after construction, so it needs no lock.
+	collectorPtr atomic.Pointer[CollectorStarter]
 }
 
 func New(deps Dependencies) *Engine {

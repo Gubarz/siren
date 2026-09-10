@@ -31,16 +31,16 @@ type configValidator interface {
 }
 
 func (e *Engine) RegisterTrigger(t Trigger) error {
-	return registerIn(&e.triggersMu, e.triggers, "trigger", t.Type(), t)
+	return registerIn(&e.registryMu, e.triggers, "trigger", t.Type(), t)
 }
 
 func (e *Engine) triggerByType(typ string) (Trigger, bool) {
-	return lookupIn(&e.triggersMu, e.triggers, typ)
+	return lookupIn(&e.registryMu, e.triggers, typ)
 }
 
 func (e *Engine) TriggerSchemas() map[string][]FieldSpec {
-	e.triggersMu.RLock()
-	defer e.triggersMu.RUnlock()
+	e.registryMu.RLock()
+	defer e.registryMu.RUnlock()
 	return collectSchemas(e.triggers)
 }
 
@@ -156,8 +156,8 @@ func (e *Engine) logf(format string, args ...any) {
 }
 
 func sortedTriggerTypes(e *Engine) []string {
-	e.triggersMu.RLock()
-	defer e.triggersMu.RUnlock()
+	e.registryMu.RLock()
+	defer e.registryMu.RUnlock()
 	types := make([]string, 0, len(e.triggers))
 	for typ := range e.triggers {
 		types = append(types, typ)
