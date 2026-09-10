@@ -47,8 +47,12 @@ api/       ->  utils/ and bindings/
 ```
 
 Only `src/lib/api/` should import from `frontend/bindings` (the generated
-Wails v3 bindings). The lint rules enforce this
-with `eslint-plugin-boundaries` and `no-restricted-imports`.
+Wails v3 bindings). `no-restricted-imports` enforces that one. The
+stack above is checked by `npm run boundaries`
+(`frontend/scripts/check-boundaries.mjs`), which walks the real import graph and
+fails on any violation outside a frozen allowlist. The
+`boundaries/dependencies` eslint rule is configured for the same thing but
+reports nothing with the eslint version in use, so it is not the mechanism.
 
 So if a feature needs a new App method, add a wrapper in the right
 `src/lib/api/*.js` file first. Feature code should import that wrapper, not the

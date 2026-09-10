@@ -459,6 +459,9 @@ export default [
       'tailwindcss/no-contradicting-classname': 'error',
       'tailwindcss/no-custom-classname': 'warn',
 
+      // This rule reports nothing with the eslint version in use, so it is not
+      // what enforces the layer stack: `npm run boundaries` is. It is left
+      // configured because the policy it describes is still the intent.
       'boundaries/dependencies': ['warn', {
         default: 'disallow',
         policies: [
@@ -519,6 +522,15 @@ export default [
       // Runes and markup share one file, so components get a tighter budget
       // than plain modules.
       'max-lines': ['warn', { max: 300 }],
+    },
+  },
+  {
+    // Repository scripts run under node, not in the browser.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: { ...globals.node },
     },
   },
 

@@ -13,7 +13,8 @@
     "duplicates": "jscpd src --format svelte,javascript",
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
-    "analyze": "npm run lint && npm run deadcode && npm run duplicates && npm run test:run"
+    "analyze": "npm run lint && npm run boundaries && npm run deadcode && npm run duplicates && npm run test:run",
+    "boundaries": "node scripts/check-boundaries.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
