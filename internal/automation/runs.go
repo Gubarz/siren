@@ -70,7 +70,21 @@ func (e *Engine) queueRun(rule AutomationRule, trigger string, target Target) {
 	e.activeByRule[rule.ID]++
 	e.lastRun[key] = now
 	e.mu.Unlock()
-	go e.execute(rule, trigger, target, key)
+	go e.runProtected(rule, trigger, target, key)
+}
+
+// runProtected is the goroutine entry point for a run. A panic anywhere inside
+// it (state persistence, the emitter, a trigger callback) would otherwise end
+// the process and leave the rule marked as running, blocking it from ever
+// firing again.
+func (e *Engine) runProtected(rule AutomationRule, trigger string, target Target, key string) {
+	defer func() {
+		if r := recover(); r != nil {
+			e.logf("rule %s panicked: %v", rule.ID, r)
+			e.releaseRun(rule.ID, key)
+		}
+	}()
+	e.execute(rule, trigger, target, key)
 }
 
 func (e *Engine) execute(rule AutomationRule, trigger string, target Target, key string) {
@@ -165,8 +179,27 @@ func (e *Engine) finalizeRun(run AutomationRun, ruleID, key string) {
 	}
 }
 
-func (e *Engine) storeRun(run AutomationRun) {
+// releaseRun clears the bookkeeping for a run that never reached finalizeRun,
+// so the rule and target are not left permanently marked as running.
+func (e *Engine) releaseRun(ruleID, key string) {
 	e.mu.Lock()
+	defer e.mu.Unlock()
+	delete(e.running, key)
+	if e.activeByRule[ruleID] > 0 {
+		e.activeByRule[ruleID]--
+	}
+}
+
+func (e *Engine) storeRun(run AutomationRun) {
+	e.recordRunStart(run)
+	e.emit("automation-run", run)
+}
+
+// recordRunStart persists the run before it executes. The lock is released by
+// defer so a panic from the store cannot leave it held.
+func (e *Engine) recordRunStart(run AutomationRun) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.history = append([]AutomationRun{run}, e.history...)
 	if len(e.history) > automationHistoryLimit {
 		e.history = e.history[:automationHistoryLimit]
@@ -174,8 +207,6 @@ func (e *Engine) storeRun(run AutomationRun) {
 	if err := e.persistLocked(); err != nil {
 		log.Printf("automation: persist started run: %v", err)
 	}
-	e.mu.Unlock()
-	e.emit("automation-run", run)
 }
 
 func (e *Engine) replaceRunLocked(run AutomationRun) {
