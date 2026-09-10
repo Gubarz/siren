@@ -117,23 +117,33 @@ func (s *Store) load() {
 	s.assignMissingSeq()
 }
 
-// assignMissingSeq backfills seqs for events persisted before ack support
-// (all Seq == 0), so every stored event has a stable identity. Numbering in
-// slice order is deterministic across restarts, keeping ack state valid.
+// assignMissingSeq gives every stored event a stable identity. Events persisted
+// before ack support carry Seq == 0 and are numbered in slice order, which is
+// deterministic across restarts.
+//
+// nextSeq then continues above the highest seq in use rather than at
+// len(events). Once the ring has wrapped, the surviving events hold the newest
+// seqs and those exceed the slice length, so counting from the length re-issued
+// seqs that were still in the list and SetAcked matched the wrong events.
 func (s *Store) assignMissingSeq() {
-	needsSeq := false
+	next := s.highestSeq() + 1
 	for i := range s.events {
 		if s.events[i].Seq == 0 {
-			needsSeq = true
-			break
+			s.events[i].Seq = next
+			next++
 		}
 	}
-	if needsSeq {
-		for i := range s.events {
-			s.events[i].Seq = int64(i + 1)
+	s.nextSeq = next - 1
+}
+
+func (s *Store) highestSeq() int64 {
+	var highest int64
+	for i := range s.events {
+		if s.events[i].Seq > highest {
+			highest = s.events[i].Seq
 		}
 	}
-	s.nextSeq = int64(len(s.events))
+	return highest
 }
 
 func (s *Store) persistLocked() {
