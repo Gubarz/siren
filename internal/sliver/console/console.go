@@ -136,8 +136,8 @@ func (s *Service) init() error {
 		serverCmds := command.ServerCommands(con, nil)
 		sliverCmds := command.SliverCommands(con)
 
-		details := &console.ConnectionDetails{Config: s.rpc.Config}
-		if err := console.StartClient(con, s.rpc.RPC, s.rpc.Conn, details, serverCmds, sliverCmds, false, ""); err != nil {
+		details := &console.ConnectionDetails{Config: s.rpc.Config()}
+		if err := console.StartClient(con, s.rpc.RPC(), s.rpc.Conn(), details, serverCmds, sliverCmds, false, ""); err != nil {
 			s.consoleErr = err
 			return
 		}
@@ -203,7 +203,7 @@ func (s *Service) FindTarget(id string) (*clientpb.Session, *clientpb.Beacon, er
 	}
 
 	ctx := context.Background()
-	if sessions, err := s.rpc.RPC.GetSessions(ctx, &commonpb.Empty{}); err == nil {
+	if sessions, err := s.rpc.RPC().GetSessions(ctx, &commonpb.Empty{}); err == nil {
 		s.rpc.PopulateSessions(sessions)
 		for _, sess := range sessions.Sessions {
 			if sess.ID == id {
@@ -211,7 +211,7 @@ func (s *Service) FindTarget(id string) (*clientpb.Session, *clientpb.Beacon, er
 			}
 		}
 	}
-	if beacons, err := s.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{}); err == nil {
+	if beacons, err := s.rpc.RPC().GetBeacons(ctx, &commonpb.Empty{}); err == nil {
 		s.rpc.PopulateBeacons(beacons)
 		for _, b := range beacons.Beacons {
 			if b.ID == id {

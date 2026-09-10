@@ -71,7 +71,7 @@ func (s *Service) StartSocks(sessionID, bindAddr, username, password string) (ui
 	// it with our own loop instead of core.SocksProxies.Start, which imposes
 	// a 10-op/sec rate limit that caps throughput at ~40 KB/s.
 	wrapper := core.SocksProxies.Add(&core.TcpProxy{
-		Rpc:             s.rpc.RPC,
+		Rpc:             s.rpc.RPC(),
 		Session:         &clientpb.Session{ID: sessionID},
 		Listener:        listener,
 		BindAddr:        bindAddr,
@@ -80,7 +80,7 @@ func (s *Service) StartSocks(sessionID, bindAddr, username, password string) (ui
 		KeepAlivePeriod: 60 * time.Second,
 		DialTimeout:     30 * time.Second,
 	})
-	driver := newSocksDriver(s.rpc.RPC, sessionID, username, password, listener)
+	driver := newSocksDriver(s.rpc.RPC(), sessionID, username, password, listener)
 	if err := driver.start(); err != nil {
 		core.SocksProxies.Remove(wrapper.ID)
 		_ = listener.Close()
@@ -152,7 +152,7 @@ func (s *Service) Close() {
 				ID:      uint32(key.id),
 				Request: &commonpb.Request{SessionID: key.sessionID},
 			}
-			_, _ = s.rpc.RPC.StopRportFwdListener(context.Background(), req)
+			_, _ = s.rpc.RPC().StopRportFwdListener(context.Background(), req)
 		}
 	}
 }

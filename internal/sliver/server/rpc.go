@@ -35,68 +35,68 @@ func (r liveServerRPC) Connected() bool {
 }
 
 func (r liveServerRPC) GetOperators(ctx context.Context, req *commonpb.Empty) (*clientpb.Operators, error) {
-	return r.client.RPC.GetOperators(ctx, req)
+	return r.client.RPC().GetOperators(ctx, req)
 }
 
 func (r liveServerRPC) RestartJobs(ctx context.Context, req *clientpb.RestartJobReq) (*commonpb.Empty, error) {
-	return r.client.RPC.RestartJobs(ctx, req)
+	return r.client.RPC().RestartJobs(ctx, req)
 }
 
 func (r liveServerRPC) GetCertificateAuthorityInfo(
 	ctx context.Context,
 	req *commonpb.Empty,
 ) (*clientpb.CertificateAuthorityInfo, error) {
-	return r.client.RPC.GetCertificateAuthorityInfo(ctx, req)
+	return r.client.RPC().GetCertificateAuthorityInfo(ctx, req)
 }
 
 func (r liveServerRPC) GetCompiler(ctx context.Context, req *commonpb.Empty) (*clientpb.Compiler, error) {
-	return r.client.RPC.GetCompiler(ctx, req)
+	return r.client.RPC().GetCompiler(ctx, req)
 }
 
 func (r liveServerRPC) Canaries(ctx context.Context, req *commonpb.Empty) (*clientpb.Canaries, error) {
-	return r.client.RPC.Canaries(ctx, req)
+	return r.client.RPC().Canaries(ctx, req)
 }
 
 func (r liveServerRPC) TrafficEncoderMap(ctx context.Context, req *commonpb.Empty) (*clientpb.TrafficEncoderMap, error) {
-	return r.client.RPC.TrafficEncoderMap(ctx, req)
+	return r.client.RPC().TrafficEncoderMap(ctx, req)
 }
 
 func (r liveServerRPC) TrafficEncoderAdd(
 	ctx context.Context,
 	req *clientpb.TrafficEncoder,
 ) (*clientpb.TrafficEncoderTests, error) {
-	return r.client.RPC.TrafficEncoderAdd(ctx, req)
+	return r.client.RPC().TrafficEncoderAdd(ctx, req)
 }
 
 func (r liveServerRPC) TrafficEncoderRm(ctx context.Context, req *clientpb.TrafficEncoder) (*commonpb.Empty, error) {
-	return r.client.RPC.TrafficEncoderRm(ctx, req)
+	return r.client.RPC().TrafficEncoderRm(ctx, req)
 }
 
 func (r liveServerRPC) Websites(ctx context.Context, req *commonpb.Empty) (*clientpb.Websites, error) {
-	return r.client.RPC.Websites(ctx, req)
+	return r.client.RPC().Websites(ctx, req)
 }
 
 func (r liveServerRPC) GetCertificateInfo(
 	ctx context.Context,
 	req *clientpb.CertificatesReq,
 ) (*clientpb.CertificateInfo, error) {
-	return r.client.RPC.GetCertificateInfo(ctx, req)
+	return r.client.RPC().GetCertificateInfo(ctx, req)
 }
 
 func (r liveServerRPC) GetHTTPC2Profiles(ctx context.Context, req *commonpb.Empty) (*clientpb.HTTPC2Configs, error) {
-	return r.client.RPC.GetHTTPC2Profiles(ctx, req)
+	return r.client.RPC().GetHTTPC2Profiles(ctx, req)
 }
 
 func (r liveServerRPC) GetHTTPC2ProfileByName(
 	ctx context.Context,
 	req *clientpb.C2ProfileReq,
 ) (*clientpb.HTTPC2Config, error) {
-	return r.client.RPC.GetHTTPC2ProfileByName(ctx, req)
+	return r.client.RPC().GetHTTPC2ProfileByName(ctx, req)
 }
 
 func (r liveServerRPC) SaveHTTPC2Profile(
 	ctx context.Context,
 	req *clientpb.HTTPC2ConfigReq,
 ) (*commonpb.Empty, error) {
-	return r.client.RPC.SaveHTTPC2Profile(ctx, req)
+	return r.client.RPC().SaveHTTPC2Profile(ctx, req)
 }

@@ -114,7 +114,7 @@ func (s *Service) Kill(id string) error {
 	} else {
 		req.BeaconID = beacon.ID
 	}
-	_, err = c.RPC.Kill(context.Background(), &sliverpb.KillReq{Request: req, Force: true})
+	_, err = c.RPC().Kill(context.Background(), &sliverpb.KillReq{Request: req, Force: true})
 	return err
 }
 
@@ -133,7 +133,7 @@ func (s *Service) Rename(id, name string) error {
 	} else {
 		req.BeaconID = beacon.ID
 	}
-	_, err = c.RPC.Rename(context.Background(), req)
+	_, err = c.RPC().Rename(context.Background(), req)
 	return err
 }
 
@@ -145,7 +145,7 @@ func (s *Service) RemoveBeacon(id string) error {
 	if id == "" {
 		return fmt.Errorf("beacon ID is required")
 	}
-	_, err = c.RPC.RmBeacon(context.Background(), &clientpb.Beacon{ID: id})
+	_, err = c.RPC().RmBeacon(context.Background(), &clientpb.Beacon{ID: id})
 	return err
 }
 

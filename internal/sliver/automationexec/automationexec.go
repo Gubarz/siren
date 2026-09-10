@@ -104,14 +104,14 @@ func (p *TargetProvider) GetBeacons(ctx context.Context) ([]automation.Target, e
 
 func (p *TargetProvider) loadTargets(ctx context.Context, beacons bool) ([]automation.Target, error) {
 	if beacons {
-		resp, err := p.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{})
+		resp, err := p.rpc.RPC().GetBeacons(ctx, &commonpb.Empty{})
 		if err != nil {
 			return nil, err
 		}
 		p.rpc.PopulateBeacons(resp)
 		return collectTargets(resp.Beacons, targetFromBeacon), nil
 	}
-	resp, err := p.rpc.RPC.GetSessions(ctx, &commonpb.Empty{})
+	resp, err := p.rpc.RPC().GetSessions(ctx, &commonpb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (p *TargetProvider) FindTarget(ctx context.Context, targetID string) (autom
 	if beacon := p.rpc.LookupBeacon(targetID); beacon != nil {
 		return targetFromBeacon(beacon), nil
 	}
-	sessions, sessionErr := p.rpc.RPC.GetSessions(ctx, &commonpb.Empty{})
+	sessions, sessionErr := p.rpc.RPC().GetSessions(ctx, &commonpb.Empty{})
 	if sessionErr == nil {
 		p.rpc.PopulateSessions(sessions)
 		for _, s := range sessions.Sessions {
@@ -145,7 +145,7 @@ func (p *TargetProvider) FindTarget(ctx context.Context, targetID string) (autom
 			}
 		}
 	}
-	beaconsResp, beaconErr := p.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{})
+	beaconsResp, beaconErr := p.rpc.RPC().GetBeacons(ctx, &commonpb.Empty{})
 	if beaconErr == nil {
 		p.rpc.PopulateBeacons(beaconsResp)
 		for _, b := range beaconsResp.Beacons {

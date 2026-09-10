@@ -45,7 +45,7 @@ func (s *Service) GetWebsite(name string) (*clientpb.Website, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
 	defer cancel()
-	return s.rpc.RPC.Website(ctx, &clientpb.Website{Name: name})
+	return s.rpc.RPC().Website(ctx, &clientpb.Website{Name: name})
 }
 
 // RemoveWebsite drops the whole site — every registered path with it.
@@ -59,6 +59,6 @@ func (s *Service) RemoveWebsite(name string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
 	defer cancel()
-	_, err := s.rpc.RPC.WebsiteRemove(ctx, &clientpb.Website{Name: name})
+	_, err := s.rpc.RPC().WebsiteRemove(ctx, &clientpb.Website{Name: name})
 	return err
 }

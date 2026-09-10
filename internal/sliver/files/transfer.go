@@ -225,5 +225,5 @@ func (s *Service) downloadRPC(ctx context.Context, req *sliverpb.DownloadReq) (*
 	if s.dl != nil {
 		return s.dl(ctx, req)
 	}
-	return s.rpc.RPC.Download(ctx, req)
+	return s.rpc.RPC().Download(ctx, req)
 }

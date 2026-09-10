@@ -66,7 +66,7 @@ func (s *Service) CompletePath(sessionID, partial string) ([]string, error) {
 		listPath = "."
 	}
 
-	resp, err := s.rpc.RPC.Ls(context.Background(), &sliverpb.LsReq{
+	resp, err := s.rpc.RPC().Ls(context.Background(), &sliverpb.LsReq{
 		Request: &commonpb.Request{SessionID: sessionID},
 		Path:    listPath,
 	})

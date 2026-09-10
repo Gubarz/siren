@@ -55,7 +55,7 @@ func (s *Service) runDirectPing(args []string, sess *clientpb.Session, beacon *c
 		ctx, cancel := context.WithTimeout(context.Background(), rpcContextTimeout(*timeoutSeconds))
 		defer cancel()
 
-		pong, err := s.rpc.RPC.Ping(ctx, &sliverpb.Ping{
+		pong, err := s.rpc.RPC().Ping(ctx, &sliverpb.Ping{
 			Nonce:   nonce,
 			Request: targetRequest(sess, beacon, *timeoutSeconds),
 		})
@@ -124,7 +124,7 @@ func (s *Service) printProcessList(sess *clientpb.Session, beacon *clientpb.Beac
 	ctx, cancel := context.WithTimeout(context.Background(), rpcContextTimeout(timeoutSeconds))
 	defer cancel()
 
-	ps, err := s.rpc.RPC.Ps(ctx, &sliverpb.PsReq{
+	ps, err := s.rpc.RPC().Ps(ctx, &sliverpb.PsReq{
 		FullInfo: fullInfo,
 		Request:  targetRequest(sess, beacon, timeoutSeconds),
 	})

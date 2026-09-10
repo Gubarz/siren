@@ -37,7 +37,7 @@ func EncoderMap(client *rpc.Client) (*clientpb.ShellcodeEncoderMap, error) {
 	if !client.Connected() {
 		return nil, rpc.ErrNotConnected
 	}
-	return client.RPC.ShellcodeEncoderMap(context.Background(), &commonpb.Empty{})
+	return client.RPC().ShellcodeEncoderMap(context.Background(), &commonpb.Empty{})
 }
 
 func GenerateRDI(ui *wailsadapter.Bridge, client *rpc.Client, req RDIRequest) (string, error) {
@@ -48,7 +48,7 @@ func GenerateRDI(ui *wailsadapter.Bridge, client *rpc.Client, req RDIRequest) (s
 	if err != nil {
 		return "", err
 	}
-	resp, err := client.RPC.ShellcodeRDI(context.Background(), &clientpb.ShellcodeRDIReq{
+	resp, err := client.RPC().ShellcodeRDI(context.Background(), &clientpb.ShellcodeRDIReq{
 		Data: data, FunctionName: req.FunctionName, Arguments: req.Arguments,
 	})
 	if err != nil {
@@ -77,7 +77,7 @@ func Encode(ui *wailsadapter.Bridge, client *rpc.Client, req EncodeRequest) (str
 }
 
 func encodeBytes(client *rpc.Client, req EncodeRequest, data []byte, badChars []byte) (*clientpb.ShellcodeEncode, error) {
-	resp, err := client.RPC.ShellcodeEncoder(context.Background(), &clientpb.ShellcodeEncodeReq{
+	resp, err := client.RPC().ShellcodeEncoder(context.Background(), &clientpb.ShellcodeEncodeReq{
 		Encoder:      clientpb.ShellcodeEncoder(req.Encoder),
 		Architecture: req.Architecture,
 		Iterations:   req.Iterations,

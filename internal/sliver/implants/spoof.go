@@ -63,7 +63,7 @@ func (s *Service) GenerateSpoofMetadata(req SpoofMetadataRequest) error {
 		return fmt.Errorf("implant name or build ID is required")
 	}
 	config := spoofConfigFromRequest(req)
-	_, err := s.rpc.RPC.GenerateSpoofMetadata(context.Background(), &clientpb.GenerateSpoofMetadataReq{
+	_, err := s.rpc.RPC().GenerateSpoofMetadata(context.Background(), &clientpb.GenerateSpoofMetadataReq{
 		ImplantName:    req.ImplantName,
 		ImplantBuildID: req.ImplantBuildID,
 		ResourceID:     req.ResourceID,

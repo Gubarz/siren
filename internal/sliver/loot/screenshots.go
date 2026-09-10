@@ -15,7 +15,7 @@ func (s *Service) GetScreenshotData(lootID string) (string, error) {
 	if !s.rpc.Connected() {
 		return "", rpc.ErrNotConnected
 	}
-	loot, err := s.rpc.RPC.LootContent(context.Background(), &clientpb.Loot{ID: lootID})
+	loot, err := s.rpc.RPC().LootContent(context.Background(), &clientpb.Loot{ID: lootID})
 	if err != nil {
 		return "", err
 	}

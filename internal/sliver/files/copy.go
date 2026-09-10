@@ -18,7 +18,7 @@ func (s *Service) CopyPath(sessionID, src, dst string) (int64, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRPCTimeout)
 	defer cancel()
-	resp, err := s.rpc.RPC.Cp(ctx, &sliverpb.CpReq{
+	resp, err := s.rpc.RPC().Cp(ctx, &sliverpb.CpReq{
 		Request: req,
 		Src:     src,
 		Dst:     dst,

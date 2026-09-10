@@ -100,7 +100,7 @@ func (s *Service) UploadFromPath(localPath string, fileType clientpb.CrackFileTy
 
 	ctx := context.Background()
 	name := filepath.Base(localPath)
-	created, err := c.RPC.CrackFileCreate(ctx, &clientpb.CrackFile{
+	created, err := c.RPC().CrackFileCreate(ctx, &clientpb.CrackFile{
 		Name:             name,
 		Type:             fileType,
 		UncompressedSize: stat.Size(),
@@ -119,7 +119,7 @@ func (s *Service) UploadFromPath(localPath string, fileType clientpb.CrackFileTy
 	if err := s.uploadCrackChunks(ctx, created.ID, created.ChunkSize, compressed); err != nil {
 		return nil, err
 	}
-	_, err = c.RPC.CrackFileComplete(ctx, &clientpb.CrackFile{
+	_, err = c.RPC().CrackFileComplete(ctx, &clientpb.CrackFile{
 		ID:       created.ID,
 		Sha2_256: sha256Sum,
 	})
@@ -216,7 +216,7 @@ func (s *Service) uploadCrackChunks(ctx context.Context, fileID string, chunkSiz
 }
 
 func (s *Service) uploadCrackChunk(ctx context.Context, fileID string, n uint32, data []byte) error {
-	_, err := s.rpc.RPC.CrackFileChunkUpload(ctx, &clientpb.CrackFileChunk{
+	_, err := s.rpc.RPC().CrackFileChunkUpload(ctx, &clientpb.CrackFileChunk{
 		CrackFileID: fileID,
 		N:           n,
 		Data:        append([]byte(nil), data...),

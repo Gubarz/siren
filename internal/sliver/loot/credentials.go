@@ -60,7 +60,7 @@ func (s *Service) UpdateCredential(req UpdateCredentialRequest) error {
 	if strings.TrimSpace(req.ID) == "" {
 		return fmt.Errorf("credential ID is required")
 	}
-	_, err = c.RPC.CredsUpdate(context.Background(), &clientpb.Credentials{
+	_, err = c.RPC().CredsUpdate(context.Background(), &clientpb.Credentials{
 		Credentials: []*clientpb.Credential{{
 			ID:         req.ID,
 			Username:   req.Username,

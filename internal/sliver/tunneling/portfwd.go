@@ -103,7 +103,7 @@ func (pp *portfwdProxy) handleConn(conn net.Conn, sessionID, remoteAddr string) 
 		return
 	}
 
-	rpcTunnel, err := pp.rpc.RPC.CreateTunnel(context.Background(), &sliverpb.Tunnel{
+	rpcTunnel, err := pp.rpc.RPC().CreateTunnel(context.Background(), &sliverpb.Tunnel{
 		SessionID: sessionID,
 	})
 	if err != nil {
@@ -112,7 +112,7 @@ func (pp *portfwdProxy) handleConn(conn net.Conn, sessionID, remoteAddr string) 
 	tunnel := core.GetTunnels().Start(rpcTunnel.TunnelID, rpcTunnel.SessionID)
 	defer core.GetTunnels().Close(tunnel.ID)
 
-	_, err = pp.rpc.RPC.Portfwd(context.Background(), &sliverpb.PortfwdReq{
+	_, err = pp.rpc.RPC().Portfwd(context.Background(), &sliverpb.PortfwdReq{
 		Request:  &commonpb.Request{SessionID: sessionID},
 		Host:     host,
 		Port:     uint32(portNum),

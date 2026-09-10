@@ -40,11 +40,10 @@ func sessionClient(sessionID string) *rpc.Client {
 // beaconClient returns an rpc.Client whose cache knows beaconID as a beacon
 // and whose RPC stub serves the given task-content handler.
 func beaconClient(beaconID string, handler fakeTaskHandler) *rpc.Client {
-	c := &rpc.Client{}
+	c := rpc.NewForTest(&fakeTaskRPC{getBeaconTaskContent: handler})
 	c.PopulateBeacons(&clientpb.Beacons{
 		Beacons: []*clientpb.Beacon{{ID: beaconID}},
 	})
-	c.RPC = &fakeTaskRPC{getBeaconTaskContent: handler}
 	return c
 }
 

@@ -53,7 +53,7 @@ func (r *reporter) LootSummary(lootID string) string {
 	if !r.connected() {
 		return fmt.Sprintf("`%s` - server offline", lootID)
 	}
-	all, err := r.rpc.RPC.LootAll(context.Background(), &commonpb.Empty{})
+	all, err := r.rpc.RPC().LootAll(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		return fmt.Sprintf("`%s` - %s", lootID, err.Error())
 	}
@@ -109,7 +109,7 @@ func (r *reporter) lootPreview(loot *clientpb.Loot) string {
 	if !r.connected() {
 		return ""
 	}
-	full, err := r.rpc.RPC.LootContent(context.Background(), &clientpb.Loot{ID: loot.GetID()})
+	full, err := r.rpc.RPC().LootContent(context.Background(), &clientpb.Loot{ID: loot.GetID()})
 	if err != nil || full.GetFile() == nil {
 		return ""
 	}
@@ -120,7 +120,7 @@ func (r *reporter) CredSummary(credID string) string {
 	if !r.connected() {
 		return fmt.Sprintf("`%s` - server offline", credID)
 	}
-	c, err := r.rpc.RPC.GetCredByID(context.Background(), &clientpb.Credential{ID: credID})
+	c, err := r.rpc.RPC().GetCredByID(context.Background(), &clientpb.Credential{ID: credID})
 	if err != nil {
 		return fmt.Sprintf("`%s` - removed", credID)
 	}
@@ -155,7 +155,7 @@ func (r *reporter) HostSummary(hostID string) string {
 	if !r.connected() {
 		return fmt.Sprintf("`%s` - server offline", hostID)
 	}
-	h, err := r.rpc.RPC.Host(context.Background(), &clientpb.Host{HostUUID: hostID})
+	h, err := r.rpc.RPC().Host(context.Background(), &clientpb.Host{HostUUID: hostID})
 	if err != nil {
 		return fmt.Sprintf("`%s` - removed", hostID)
 	}
@@ -174,7 +174,7 @@ func (r *reporter) originHostLabel(hostID string) string {
 	if hostID == "" || hostID == "00000000-0000-0000-0000-000000000000" || !r.connected() {
 		return ""
 	}
-	host, err := r.rpc.RPC.Host(context.Background(), &clientpb.Host{HostUUID: hostID})
+	host, err := r.rpc.RPC().Host(context.Background(), &clientpb.Host{HostUUID: hostID})
 	if err == nil && host.GetHostname() != "" {
 		return fmt.Sprintf("**%s** `%s`", host.GetHostname(), shortID(hostID))
 	}
@@ -200,12 +200,12 @@ func (r *reporter) agentLabel(agentID string) string {
 		return ""
 	}
 	ctx := context.Background()
-	if sessions, err := r.rpc.RPC.GetSessions(ctx, &commonpb.Empty{}); err == nil {
+	if sessions, err := r.rpc.RPC().GetSessions(ctx, &commonpb.Empty{}); err == nil {
 		if label, ok := findAgentLabel(agentID, sessions.GetSessions()); ok {
 			return label
 		}
 	}
-	if beacons, err := r.rpc.RPC.GetBeacons(ctx, &commonpb.Empty{}); err == nil {
+	if beacons, err := r.rpc.RPC().GetBeacons(ctx, &commonpb.Empty{}); err == nil {
 		if label, ok := findAgentLabel(agentID, beacons.GetBeacons()); ok {
 			return label
 		}

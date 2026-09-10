@@ -35,7 +35,7 @@ func (s *Service) GetEnv(sessionID string) (*sliverpb.EnvInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
-	resp, err := s.rpc.RPC.GetEnv(ctx, req)
+	resp, err := s.rpc.RPC().GetEnv(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (s *Service) SetEnv(sessionID, key, value string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
-	resp, err := s.rpc.RPC.SetEnv(ctx, req)
+	resp, err := s.rpc.RPC().SetEnv(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (s *Service) UnsetEnv(sessionID, name string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
-	resp, err := s.rpc.RPC.UnsetEnv(ctx, req)
+	resp, err := s.rpc.RPC().UnsetEnv(ctx, req)
 	if err != nil {
 		return err
 	}

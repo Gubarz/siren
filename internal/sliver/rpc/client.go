@@ -25,9 +25,12 @@ import (
 )
 
 type Client struct {
-	Config *assets.ClientConfig
-	RPC    rpcpb.SliverRPCClient
-	Conn   *grpc.ClientConn
+	// These are read from every domain service and written by Connect, so they
+	// are accessed atomically rather than through connectMu: a reader must not
+	// block behind a dial, and IsConnectedTo already holds that lock.
+	cfgVal  atomic.Value // *assets.ClientConfig
+	rpcVal  atomic.Value // rpcpb.SliverRPCClient
+	connVal atomic.Value // *grpc.ClientConn
 
 	// CaptureStore, when set, enables capture recording on Connect. The
 	// recorder is rebuilt per connection so annotations carry the operator
@@ -105,8 +108,8 @@ func (c *Client) Connect(profileName string, teardown func()) error {
 	// Stop the old stream before closing its connection. Its cancellation is
 	// intentional and must not be surfaced to the UI as a server outage.
 	c.stopEventStream()
-	oldConn := c.Conn
-	c.Config = config
+	oldConn := c.Conn()
+	c.cfgVal.Store(config)
 	if c.CaptureStore != nil {
 		c.Recorder = capture.NewRecorder(c.CaptureStore, captureann.New(config.Operator))
 	}
@@ -114,8 +117,8 @@ func (c *Client) Connect(profileName string, teardown func()) error {
 	if c.Recorder != nil {
 		wrapped = WrapCapture(wrapped, c.Recorder)
 	}
-	c.RPC = wrapped
-	c.Conn = grpcConn
+	c.rpcVal.Store(wrapped)
+	c.connVal.Store(grpcConn)
 	c.connected.Store(true)
 	if oldConn != nil && oldConn != grpcConn {
 		_ = oldConn.Close()
@@ -164,8 +167,8 @@ func (c *Client) Disconnect() {
 	defer c.connectMu.Unlock()
 
 	c.stopEventStream()
-	if c.Conn != nil {
-		_ = c.Conn.Close()
+	if conn := c.Conn(); conn != nil {
+		_ = conn.Close()
 	}
 	c.connected.Store(false)
 }
@@ -181,12 +184,16 @@ func (c *Client) IsConnectedTo(profileName string) bool {
 		return true
 	}
 	config, err := selectClientConfig(profileName)
-	if err != nil || c.Config == nil {
+	if err != nil {
 		return false
 	}
-	return c.Config.LHost == config.LHost &&
-		c.Config.LPort == config.LPort &&
-		c.Config.Certificate == config.Certificate
+	current := c.Config()
+	if current == nil {
+		return false
+	}
+	return current.LHost == config.LHost &&
+		current.LPort == config.LPort &&
+		current.Certificate == config.Certificate
 }
 
 func (c *Client) stopEventStream() {
@@ -322,10 +329,11 @@ func findCached[T any](mu *sync.RWMutex, items []*T, match func(*T) bool) *T {
 }
 
 func (c *Client) ConnectionID() string {
-	if c.Config == nil {
+	config := c.Config()
+	if config == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s:%d", c.Config.LHost, c.Config.LPort)
+	return fmt.Sprintf("%s:%d", config.LHost, config.LPort)
 }
 
 func (c *Client) InvalidateAgentCache() {

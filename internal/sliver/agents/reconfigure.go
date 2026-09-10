@@ -40,7 +40,7 @@ func (s *Service) Reconfigure(req ReconfigureRequest) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), reconfigureTimeout)
 	defer cancel()
-	_, err = s.rpc.RPC.Reconfigure(ctx, &sliverpb.ReconfigureReq{
+	_, err = s.rpc.RPC().Reconfigure(ctx, &sliverpb.ReconfigureReq{
 		ReconnectInterval: req.ReconnectInterval,
 		BeaconInterval:    req.BeaconInterval,
 		BeaconJitter:      req.BeaconJitter,

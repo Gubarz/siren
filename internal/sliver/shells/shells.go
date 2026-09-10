@@ -154,7 +154,7 @@ func (s *Service) ResizeShell(id string, rows, cols uint32) error {
 	if !shell.info.PTY || rows == 0 || cols == 0 {
 		return nil
 	}
-	_, err = s.rpc.RPC.ShellResize(context.Background(), &sliverpb.ShellResizeReq{
+	_, err = s.rpc.RPC().ShellResize(context.Background(), &sliverpb.ShellResizeReq{
 		Request:  &commonpb.Request{SessionID: shell.info.SessionID, Timeout: int64(9 * time.Second)},
 		Rows:     rows,
 		Cols:     cols,

@@ -162,8 +162,8 @@ func (a *App) OpenFileDialog(title string) (string, error) {
 
 func (a *App) startEventStream() {
 	connID := ""
-	if a.RPC.Config != nil {
-		connID = fmt.Sprintf("%s:%d", a.RPC.Config.LHost, a.RPC.Config.LPort)
+	if a.RPC.Config() != nil {
+		connID = fmt.Sprintf("%s:%d", a.RPC.Config().LHost, a.RPC.Config().LPort)
 	}
 	a.RPC.StartEventStream(a.ctx, func(ev *clientpb.Event) {
 		a.Bus.Publish(bus.Event{

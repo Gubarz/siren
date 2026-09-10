@@ -33,7 +33,7 @@ func (s *Service) startRportfwd(sessionID, fullBind, fullForward string) (uint64
 		return 0, rpc.ErrNotConnected
 	}
 
-	resp, err := s.rpc.RPC.StartRportFwdListener(context.Background(), &sliverpb.RportFwdStartListenerReq{
+	resp, err := s.rpc.RPC().StartRportFwdListener(context.Background(), &sliverpb.RportFwdStartListenerReq{
 		Request:        &commonpb.Request{SessionID: sessionID},
 		BindAddress:    fullBind,
 		ForwardAddress: fullForward,
@@ -87,7 +87,7 @@ func (s *Service) StopRportfwd(id uint64, sessionID string) error {
 		ID:      uint32(id),
 		Request: &commonpb.Request{SessionID: sid},
 	}
-	resp, err := s.rpc.RPC.StopRportFwdListener(context.Background(), req)
+	resp, err := s.rpc.RPC().StopRportFwdListener(context.Background(), req)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (s *Service) ListRportfwds() ([]ProxyInfo, error) {
 
 	seen := s.snapshotLocalRportfwds()
 
-	sessions, err := s.rpc.RPC.GetSessions(context.Background(), &commonpb.Empty{})
+	sessions, err := s.rpc.RPC().GetSessions(context.Background(), &commonpb.Empty{})
 	if err != nil {
 		// Best-effort: return what we have locally instead of failing the panel.
 		return rportfwdSlice(seen), nil
@@ -134,7 +134,7 @@ func (s *Service) snapshotLocalRportfwds() map[rportfwdKey]ProxyInfo {
 }
 
 func (s *Service) mergeSessionRportfwds(seen map[rportfwdKey]ProxyInfo, sessionID string) {
-	resp, err := s.rpc.RPC.GetRportFwdListeners(context.Background(), &sliverpb.RportFwdListenersReq{
+	resp, err := s.rpc.RPC().GetRportFwdListeners(context.Background(), &sliverpb.RportFwdListenersReq{
 		Request: &commonpb.Request{SessionID: sessionID},
 	})
 	if err != nil || resp == nil {
