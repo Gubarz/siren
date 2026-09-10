@@ -34,6 +34,57 @@ jobs:
       - name: go vet
         run: go vet ./internal/... ./scripts
 
+  frontend:
+    name: Frontend
+    # svelte-check and the api tests resolve the generated Wails bindings, which
+    # are gitignored, so the CLI has to generate them first. That CLI links the
+    # same windowing stack as the app, hence the webview headers.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install webview headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+
+      - name: Install Wails CLI
+        run: go install -tags production github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
+
+      - name: Generate Wails bindings
+        run: wails3 generate bindings
+
+      - run: npm --prefix frontend ci
+
+      - name: eslint
+        run: npm --prefix frontend run lint
+
+      - name: svelte-check
+        run: npm --prefix frontend run check
+
+      - name: vitest
+        run: npm --prefix frontend run test:run
+
+      - name: knip
+        run: npm --prefix frontend run deadcode
+
+      - name: jscpd
+        run: npm --prefix frontend run duplicates
+
+      - name: vite build
+        run: npm --prefix frontend run build
+
   lint:
     name: Analyze gate
     # Mirrors `make analyze-go`. The analyze tools are built from source with
