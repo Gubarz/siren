@@ -27,6 +27,8 @@ func RunConsoleSubprocess(configPath, sessionID string) error {
 	if !validSessionID(sessionID) {
 		return fmt.Errorf("refusing to start a console for a malformed session id")
 	}
+	// Authenticates the control frames this process writes to its stdout.
+	controlFrameNonce = os.Getenv(controlFrameNonceEnv)
 
 	cfg, err := loadConfigFromFile(configPath)
 	if err != nil {

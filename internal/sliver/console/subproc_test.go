@@ -48,10 +48,11 @@ func TestShellCommandTail(t *testing.T) {
 }
 
 func TestFilterConsoleCommandFrames(t *testing.T) {
+	const nonce = "0123456789abcdef"
 	payload := base64.StdEncoding.EncodeToString([]byte("socks5 start --host 127.0.0.1 --port 1081"))
-	frame := []byte(consoleCommandFramePrefix + payload + controlFrameSuffix)
+	frame := []byte(consoleCommandFramePrefix + nonce + controlFrameNonceSeparator + payload + controlFrameSuffix)
 
-	visible, tails, commands, carry := filterConsoleControlFrames(nil, append([]byte("before"), append(frame, []byte("after")...)...))
+	visible, tails, commands, carry := filterConsoleControlFrames(nonce, nil, append([]byte("before"), append(frame, []byte("after")...)...))
 	if string(visible) != "beforeafter" {
 		t.Fatalf("visible = %q, want beforeafter", visible)
 	}

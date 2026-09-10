@@ -233,7 +233,7 @@ func (s *Service) pumpSubproc(job *subprocJob) {
 				flush()
 				return
 			}
-			visible, tails, commands, carry := filterConsoleControlFrames(controlCarry, chunk)
+			visible, tails, commands, carry := filterConsoleControlFrames(job.nonce, controlCarry, chunk)
 			controlCarry = carry
 			for _, tail := range tails {
 				s.emitConsoleOpenShell(job.id, job.sessionID, tail)

@@ -57,6 +57,11 @@ func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
+	nonce, err := newControlFrameNonce()
+	if err != nil {
+		_ = os.Remove(cfgPath)
+		return "", false, err
+	}
 
 	cmd := exec.Command(self, ConsoleModeFlag, cfgPath, sessionID)
 	// Pre-populate terminal capability env vars so termenv/lipgloss don't
@@ -69,6 +74,7 @@ func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
 		"TERM=xterm-256color",
 		"COLORTERM=truecolor",
 		"COLORFGBG=15;0",
+		controlFrameNonceEnv+"="+nonce,
 	)
 
 	master, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: 100, Rows: 30})
@@ -78,7 +84,7 @@ func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
 	}
 
 	id := s.subproc.newJobID()
-	job := &subprocJob{id: id, sessionID: sessionID, proc: &unixProc{cmd: cmd}, pty: master}
+	job := &subprocJob{id: id, sessionID: sessionID, nonce: nonce, proc: &unixProc{cmd: cmd}, pty: master}
 	s.subproc.add(job)
 	s.drainPendingCommands(job)
 	go s.pumpSubproc(job)
