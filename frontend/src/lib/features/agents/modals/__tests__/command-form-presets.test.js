@@ -44,6 +44,13 @@ async function applySavedPreset(pidInput, dumpNameInput) {
   expect(screen.getByLabelText('Additional arguments').value).toBe('--extra-flag foo')
 }
 
+// These tests drive real flowbite-svelte popovers through jsdom, which is
+// CPU-bound and competes with the rest of the suite for a worker. The
+// interaction is slow under load rather than hung, so each test gets its own
+// budget instead of a raised global testTimeout that would hide slowness
+// elsewhere.
+const INTERACTION_TIMEOUT_MS = 15_000
+
 describe('CommandFormV2 presets (third-class modal)', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -99,7 +106,7 @@ describe('CommandFormV2 presets (third-class modal)', () => {
 
     // Apply the preset
     await applySavedPreset(pidInput, dumpNameInput)
-  })
+  }, INTERACTION_TIMEOUT_MS)
 
   it('restores a saved preset after the modal is closed and reopened', async () => {
     // Seed a preset as if saved in a previous session of the modal.
@@ -136,5 +143,5 @@ describe('CommandFormV2 presets (third-class modal)', () => {
     expect(pidInput.value).toBe('')
 
     await applySavedPreset(pidInput, dumpNameInput)
-  })
+  }, INTERACTION_TIMEOUT_MS)
 })
