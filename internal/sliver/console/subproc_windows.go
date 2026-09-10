@@ -46,15 +46,20 @@ func (s *Service) AcquireConsole(sessionID string) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
+	nonce, err := newControlFrameNonce()
+	if err != nil {
+		_ = os.Remove(cfgPath)
+		return "", false, err
+	}
 
-	cpty, err := startConPTY(winQuoteArgs(append([]string{self}, ConsoleModeFlag, cfgPath, sessionID)), 100, 30)
+	cpty, err := startConPTY(winQuoteArgs(append([]string{self}, ConsoleModeFlag, cfgPath, sessionID)), 100, 30, nonce)
 	if err != nil {
 		_ = os.Remove(cfgPath)
 		return "", false, err
 	}
 
 	id := s.subproc.newJobID()
-	job := &subprocJob{id: id, sessionID: sessionID, proc: cpty, pty: cpty}
+	job := &subprocJob{id: id, sessionID: sessionID, nonce: nonce, proc: cpty, pty: cpty}
 	s.subproc.add(job)
 	s.drainPendingCommands(job)
 	go s.pumpSubproc(job)

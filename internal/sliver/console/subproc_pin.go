@@ -18,6 +18,8 @@ const (
 	consoleCommandFramePrefix = "\x1b]777;siren-command="
 	controlFrameSuffix        = "\x07"
 	shellOpenFrameSuffix      = controlFrameSuffix
+	// controlFrameNonceSeparator sits between the frame's nonce and its payload.
+	controlFrameNonceSeparator = ":"
 )
 
 func pinServerTargetCommands(base reefconsole.Commands, sessionID string, con *sliverconsole.SliverClient) reefconsole.Commands {
@@ -163,14 +165,22 @@ func shellCommandTail(cmd *cobra.Command, args []string) string {
 	return strings.Join(args, " ")
 }
 
+// controlFrameNonce authenticates the frames this process writes. The subprocess
+// sets it from the environment at startup; the parent leaves it empty and
+// validates each frame against the nonce it minted for that job.
+var controlFrameNonce string
+
 func emitShellOpenFrame(tail string) {
-	payload := base64.StdEncoding.EncodeToString([]byte(tail))
-	_, _ = os.Stdout.WriteString(shellOpenFramePrefix + payload + controlFrameSuffix)
+	_, _ = os.Stdout.WriteString(controlFrame(shellOpenFramePrefix, tail))
 }
 
 func emitConsoleCommandFrame(line string) {
-	payload := base64.StdEncoding.EncodeToString([]byte(line))
-	_, _ = os.Stdout.WriteString(consoleCommandFramePrefix + payload + controlFrameSuffix)
+	_, _ = os.Stdout.WriteString(controlFrame(consoleCommandFramePrefix, line))
+}
+
+func controlFrame(prefix, payload string) string {
+	encoded := base64.StdEncoding.EncodeToString([]byte(payload))
+	return prefix + controlFrameNonce + controlFrameNonceSeparator + encoded + controlFrameSuffix
 }
 
 func socksCommandLine(cmd *cobra.Command, args []string) string {
@@ -229,7 +239,7 @@ func rportfwdCommandLine(cmd *cobra.Command, args []string) string {
 	}
 }
 
-func filterConsoleControlFrames(carry, chunk []byte) ([]byte, []string, []string, []byte) {
+func filterConsoleControlFrames(expectedNonce string, carry, chunk []byte) ([]byte, []string, []string, []byte) {
 	buf := make([]byte, 0, len(carry)+len(chunk))
 	buf = append(buf, carry...)
 	buf = append(buf, chunk...)
@@ -255,7 +265,15 @@ func filterConsoleControlFrames(carry, chunk []byte) ([]byte, []string, []string
 			return visible, shellTails, commands, nextCarry
 		}
 
-		payload := rest[:end]
+		body := rest[:end]
+		buf = rest[end+len(controlFrameSuffix):]
+
+		// Anything that is not carrying this job's nonce came from the stream
+		// rather than from our own subprocess. Drop it rather than acting on it.
+		nonce, payload, ok := bytes.Cut(body, []byte(controlFrameNonceSeparator))
+		if !ok || string(nonce) != expectedNonce {
+			continue
+		}
 		if decoded, err := base64.StdEncoding.DecodeString(string(payload)); err == nil {
 			switch kind {
 			case "shell":
@@ -264,7 +282,6 @@ func filterConsoleControlFrames(carry, chunk []byte) ([]byte, []string, []string
 				commands = append(commands, string(decoded))
 			}
 		}
-		buf = rest[end+len(controlFrameSuffix):]
 	}
 
 	return visible, shellTails, commands, nil

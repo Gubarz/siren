@@ -33,11 +33,14 @@ type winConPTY struct {
 	proc     windows.Handle
 	exited   bool
 	exitCode int
+
+	// nonce authenticates the control frames the child writes to its stdout.
+	nonce string
 }
 
 // startConPTY creates a pseudoconsole of cols x rows and launches
 // cmdLine (pre-quoted) attached to it.
-func startConPTY(cmdLine string, cols, rows int16) (*winConPTY, error) {
+func startConPTY(cmdLine string, cols, rows int16, nonce string) (*winConPTY, error) {
 	// Pipe ends are created non-inheritable: ConPTY dups what it needs
 	// into conhost, and the child receives console handles through the
 	// pseudoconsole attribute rather than handle inheritance. The child is
@@ -55,7 +58,7 @@ func startConPTY(cmdLine string, cols, rows int16) (*winConPTY, error) {
 		return nil, fmt.Errorf("conpty output pipe: %w", err)
 	}
 
-	c := &winConPTY{}
+	c := &winConPTY{nonce: nonce}
 	size := windows.Coord{X: cols, Y: rows}
 	if err := windows.CreatePseudoConsole(size, inRead, outWrite, 0, &c.hpc); err != nil {
 		windows.CloseHandle(inRead)
@@ -137,6 +140,7 @@ func (c *winConPTY) spawn(cmdLine string) error {
 			passthrough = append(passthrough, name+"="+v)
 		}
 	}
+	passthrough = append(passthrough, controlFrameNonceEnv+"="+c.nonce)
 	// Build the UTF-16 environment block manually: each KEY=VALUE entry is
 	// NUL-terminated and the block ends with an extra NUL. UTF16FromString
 	// already appends the per-entry NUL, so only the final block terminator

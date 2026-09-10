@@ -1,7 +1,10 @@
 package console
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -11,6 +14,21 @@ import (
 
 	"github.com/bishopfox/sliver/client/assets"
 )
+
+// controlFrameNonceEnv carries the per-spawn nonce to the console subprocess.
+const controlFrameNonceEnv = "SIREN_CONSOLE_NONCE"
+
+// newControlFrameNonce mints the value that authenticates the control frames a
+// console subprocess writes to its stdout. Those frames share a stream with
+// implant output, so without a value the implant cannot know, a compromised
+// implant could emit one and have the GUI act on it.
+func newControlFrameNonce() (string, error) {
+	var buf [16]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return "", fmt.Errorf("control frame nonce: %w", err)
+	}
+	return hex.EncodeToString(buf[:]), nil
+}
 
 // ConsoleModeFlag names the CLI flag that puts a re-exec of this binary
 // into "run a sliver client console" mode. main.go checks for it before
@@ -70,6 +88,7 @@ type subprocMgr struct {
 type subprocJob struct {
 	id         string
 	sessionID  string
+	nonce      string
 	proc       consoleProc
 	pty        consolePTY
 	refs       int
