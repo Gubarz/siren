@@ -1,7 +1,12 @@
 package gui
 
 import (
+	"fmt"
 	"log"
+	"os"
+	"strings"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"siren/internal/sliver/rpc"
 )
@@ -18,8 +23,46 @@ func (a *App) ImportClientConfig(payload string) (string, error) {
 	return a.RPC.ImportClientConfig(payload)
 }
 
+// ExportClientConfig writes the profile to a path the operator picks and
+// returns it. The profile carries the client's private key, so it is written
+// here rather than handed to the webview to save.
 func (a *App) ExportClientConfig(name string) (string, error) {
-	return a.RPC.ExportClientConfig(name)
+	raw, err := a.RPC.ExportClientConfig(name)
+	if err != nil {
+		return "", err
+	}
+	localPath, err := a.bridge.SaveFileDialog(&application.SaveFileDialogOptions{
+		Title:    "Export Sliver profile",
+		Filename: profileFilename(name),
+	})
+	if err != nil {
+		return "", fmt.Errorf("dialog error: %w", err)
+	}
+	if localPath == "" {
+		return "", nil
+	}
+	if err := os.WriteFile(localPath, []byte(raw), 0o600); err != nil {
+		return "", err
+	}
+	return localPath, nil
+}
+
+// profileFilename turns a profile's display name into a usable file name.
+func profileFilename(name string) string {
+	safe := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return r
+		case r == '.', r == '@', r == '-', r == '_':
+			return r
+		default:
+			return '_'
+		}
+	}, strings.TrimSpace(name))
+	if safe == "" {
+		safe = "sliver-profile"
+	}
+	return safe + ".cfg"
 }
 
 func (a *App) DeleteClientConfig(name string) error {
