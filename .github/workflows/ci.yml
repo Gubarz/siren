@@ -62,8 +62,12 @@ jobs:
           go install github.com/mibk/dupl@v1.1.0
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: go test
-        run: go test ./...
+      # -race, because three of the concurrency fixes now on main have no other
+      # detector: the bus subscriber leak, BloodHound's lazy collector init, and
+      # the client connection fields. The Basic Go checks job keeps a fast plain
+      # run for early signal.
+      - name: go test (-race)
+        run: go test -race ./...
 
       - name: go vet
         run: go vet $(go list ./... | grep -v /node_modules/)
