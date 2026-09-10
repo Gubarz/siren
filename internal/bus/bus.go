@@ -18,6 +18,7 @@ type subscription struct {
 	types   map[string]struct{} // nil = all events
 	ch      chan Event
 	dropped atomic.Int64
+	closed  atomic.Bool
 }
 
 func (s *subscription) wants(eventType string) bool {
@@ -84,15 +85,22 @@ func (b *bus) Subscribe(types []string, h Handler) (unsub func()) {
 	var once sync.Once
 	return func() {
 		once.Do(func() {
+			sub.closed.Store(true)
+			// Publish sends while holding the read lock, so taking the write
+			// lock here guarantees no send is in flight when the channel closes.
 			b.mu.Lock()
+			defer b.mu.Unlock()
 			delete(b.subs, sub)
-			b.mu.Unlock()
+			close(sub.ch)
 		})
 	}
 }
 
 func (s *subscription) run(h Handler) {
 	for ev := range s.ch {
+		if s.closed.Load() {
+			return
+		}
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
