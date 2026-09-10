@@ -15,6 +15,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"siren/internal/localstate/jsonstore"
 )
 
 const (
@@ -97,6 +99,9 @@ func (s *Service) loadAllLocked() error {
 	}
 	var stored []Record
 	if err := json.Unmarshal(data, &stored); err != nil {
+		// Treating corrupt state as empty is deliberate, but the next Observe
+		// would overwrite the only copy, so move it aside first.
+		jsonstore.Quarantine(s.root)
 		return err
 	}
 	for i := range stored {
