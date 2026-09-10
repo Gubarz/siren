@@ -2,14 +2,16 @@ import { GetSystemTheme } from '../../api/discovery.js'
 
 export const SYSTEM_THEME = 'system'
 export const THEME_STORAGE_KEY = 'sliver-theme'
+export const RESOLVED_THEME_STORAGE_KEY = 'sliver-resolved-theme'
 
 const FALLBACK_THEME = 'dark'
+const NATIVE_THEME_POLL_MS = 10000
 
-function hasNativeSystemThemeProvider() {
-  // window._wails.flags is injected by the Wails backend on window load;
-  // it stays absent in plain-browser/test contexts.
-  return typeof window !== 'undefined' && window._wails?.flags != null
-}
+// The webview media query follows the GTK theme (often light) while the
+// backend detector reads the desktop color scheme, so a native answer wins
+// over the browser query. The flag only gates the media-query fallback for
+// plain-browser contexts where the binding never succeeds.
+let nativeResolutionSucceeded = false
 
 export function getBrowserSystemTheme() {
   try {
@@ -21,10 +23,6 @@ export function getBrowserSystemTheme() {
   }
 }
 
-export function getSystemTheme() {
-  return hasNativeSystemThemeProvider() ? FALLBACK_THEME : getBrowserSystemTheme()
-}
-
 async function getNativeSystemTheme() {
   try {
     const t = await GetSystemTheme()
@@ -32,6 +30,32 @@ async function getNativeSystemTheme() {
   } catch {
     return ''
   }
+}
+
+async function resolveSystemTheme() {
+  const nativeTheme = await getNativeSystemTheme()
+  if (nativeTheme) {
+    nativeResolutionSucceeded = true
+    return nativeTheme
+  }
+  return getBrowserSystemTheme()
+}
+
+function getStoredResolvedTheme() {
+  try {
+    const t = localStorage.getItem(RESOLVED_THEME_STORAGE_KEY)
+    return t === 'dark' || t === 'light' ? t : ''
+  } catch {
+    return ''
+  }
+}
+
+function setResolvedTheme(resolvedTheme) {
+  document.documentElement.setAttribute('data-theme', resolvedTheme)
+  document.documentElement.setAttribute('data-system-theme', resolvedTheme)
+  try {
+    localStorage.setItem(RESOLVED_THEME_STORAGE_KEY, resolvedTheme)
+  } catch {}
 }
 
 export function getStoredThemePreference() {
@@ -42,41 +66,54 @@ export function getStoredThemePreference() {
   }
 }
 
-export function resolveThemePreference(preference = getStoredThemePreference()) {
-  return preference === SYSTEM_THEME ? getSystemTheme() : preference
-}
-
 export function applyThemePreference(preference = getStoredThemePreference()) {
-  const resolvedTheme = resolveThemePreference(preference)
-  document.documentElement.setAttribute('data-theme', resolvedTheme)
   document.documentElement.setAttribute('data-theme-preference', preference)
-  document.documentElement.setAttribute('data-system-theme', resolvedTheme)
-  if (preference === SYSTEM_THEME && hasNativeSystemThemeProvider()) {
-    getNativeSystemTheme().then((nativeTheme) => {
-      if (!nativeTheme || getStoredThemePreference() !== SYSTEM_THEME) return
-      document.documentElement.setAttribute('data-theme', nativeTheme)
-      document.documentElement.setAttribute('data-system-theme', nativeTheme)
-    })
+
+  if (preference !== SYSTEM_THEME) {
+    setResolvedTheme(preference)
+    return preference
   }
-  return resolvedTheme
+
+  const initialTheme = getStoredResolvedTheme() || FALLBACK_THEME
+  setResolvedTheme(initialTheme)
+
+  void resolveSystemTheme().then((resolvedTheme) => {
+    if (getStoredThemePreference() !== SYSTEM_THEME) return
+    setResolvedTheme(resolvedTheme)
+  })
+
+  return initialTheme
 }
 
 export function watchSystemThemePreference() {
-  let media
+  let media = null
   try {
     media = window.matchMedia?.('(prefers-color-scheme: light)')
-  } catch {
-    return () => {}
-  }
+  } catch {}
 
-  if (!media?.addEventListener) return () => {}
-
-  function handleChange() {
+  function handleMediaChange() {
+    if (nativeResolutionSucceeded) return
     if (getStoredThemePreference() === SYSTEM_THEME) applyThemePreference(SYSTEM_THEME)
   }
 
-  media.addEventListener('change', handleChange)
-  return () => media.removeEventListener('change', handleChange)
+  async function pollNativeTheme() {
+    if (getStoredThemePreference() !== SYSTEM_THEME) return
+    const nativeTheme = await getNativeSystemTheme()
+    if (!nativeTheme) return
+    nativeResolutionSucceeded = true
+    if (getStoredThemePreference() !== SYSTEM_THEME) return
+    if (document.documentElement.getAttribute('data-theme') !== nativeTheme) {
+      setResolvedTheme(nativeTheme)
+    }
+  }
+
+  const pollTimer = setInterval(pollNativeTheme, NATIVE_THEME_POLL_MS)
+  if (media?.addEventListener) media.addEventListener('change', handleMediaChange)
+
+  return () => {
+    clearInterval(pollTimer)
+    if (media?.removeEventListener) media.removeEventListener('change', handleMediaChange)
+  }
 }
 
 class Theme {
