@@ -1,10 +1,32 @@
 import {defineConfig} from 'vite'
 import {svelte} from '@sveltejs/vite-plugin-svelte'
 import tailwind from '@tailwindcss/vite'
+import fs from 'fs'
 import path from 'path'
 
+// main.go embeds the built frontend with `//go:embed all:frontend/dist`, which
+// needs that directory to exist and hold at least one file, so dist/.gitkeep is
+// tracked to keep `go build` working on a fresh clone. Vite empties outDir on
+// every build and takes the placeholder with it, which leaves the working tree
+// dirty and breaks the next Go build until someone restores it by hand. Write it
+// back once the output is on disk. outDir stays emptied, so no stale assets from
+// a previous build can end up embedded in the binary.
+const restoreDistPlaceholder = () => {
+  let placeholder = 'dist/.gitkeep'
+  return {
+    name: 'siren:restore-dist-placeholder',
+    configResolved(config) {
+      placeholder = path.resolve(config.root, config.build.outDir, '.gitkeep')
+    },
+    closeBundle() {
+      fs.mkdirSync(path.dirname(placeholder), {recursive: true})
+      fs.writeFileSync(placeholder, '')
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [tailwind(), svelte()],
+  plugins: [restoreDistPlaceholder(), tailwind(), svelte()],
   // `wails3 dev` hands the dev-server port to both the app
   // (FRONTEND_DEVSERVER_URL) and vite (WAILS_VITE_PORT).
   server: {
