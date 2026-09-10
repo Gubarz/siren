@@ -29,9 +29,6 @@ type appCollectorStarter struct {
 }
 
 func (s appCollectorStarter) StartCollection(ctx context.Context, agentID, agentKind, agentOS string, req automation.CollectorRequest) (string, error) {
-	if s.app.BloodHoundCollection == nil {
-		s.app.BloodHoundCollection = s.app.newCollectionRunner()
-	}
 	opts := bloodhound.CollectionOptions{
 		Collector:      req.Collector,
 		Methods:        req.Methods,
@@ -41,14 +38,15 @@ func (s appCollectorStarter) StartCollection(ctx context.Context, agentID, agent
 		Ingest:         req.Ingest,
 		Loot:           req.Loot,
 	}
-	return s.app.BloodHoundCollection.Start(ctx, agentID, agentKind, agentOS, opts)
+	return s.app.collectionRunner().Start(ctx, agentID, agentKind, agentOS, opts)
 }
 
 func (s appCollectorStarter) CollectionState(ctx context.Context, id string) (automation.CollectorProgress, bool) {
-	if s.app.BloodHoundCollection == nil {
+	runner := s.app.existingCollectionRunner()
+	if runner == nil {
 		return automation.CollectorProgress{}, false
 	}
-	st, ok := s.app.BloodHoundCollection.Status(id)
+	st, ok := runner.Status(id)
 	return automation.CollectorProgress{Stage: string(st.Stage), Error: st.Err}, ok
 }
 
@@ -85,26 +83,51 @@ func (a *App) newCollectionRunner() *bloodhound.CollectionRunner {
 	)
 }
 
-func (a *App) BloodHoundStartCollection(agentID, agentKind, agentOS string, opts bloodhound.CollectionOptions) (string, error) {
+// collectionRunner returns the collector, building it at most once. Two
+// goroutines reach this: a Wails binding thread and the automation engine, so
+// the nil check has to be guarded.
+func (a *App) collectionRunner() *bloodhound.CollectionRunner {
+	return a.collectionRunnerWith(a.newCollectionRunner)
+}
+
+// collectionRunnerWith is collectionRunner with the builder injected, so the
+// guard can be exercised without standing up the whole service graph.
+func (a *App) collectionRunnerWith(build func() *bloodhound.CollectionRunner) *bloodhound.CollectionRunner {
+	a.bloodhoundMu.Lock()
+	defer a.bloodhoundMu.Unlock()
 	if a.BloodHoundCollection == nil {
-		a.BloodHoundCollection = a.newCollectionRunner()
+		a.BloodHoundCollection = build()
 	}
-	return a.BloodHoundCollection.Start(context.Background(), agentID, agentKind, agentOS, opts)
+	return a.BloodHoundCollection
+}
+
+// existingCollectionRunner returns the collector if it has been built, without
+// building one just to answer a status query.
+func (a *App) existingCollectionRunner() *bloodhound.CollectionRunner {
+	a.bloodhoundMu.Lock()
+	defer a.bloodhoundMu.Unlock()
+	return a.BloodHoundCollection
+}
+
+func (a *App) BloodHoundStartCollection(agentID, agentKind, agentOS string, opts bloodhound.CollectionOptions) (string, error) {
+	return a.collectionRunner().Start(context.Background(), agentID, agentKind, agentOS, opts)
 }
 
 func (a *App) BloodHoundCollectionStatus(id string) (bloodhound.CollectionState, error) {
-	if a.BloodHoundCollection == nil {
+	runner := a.existingCollectionRunner()
+	if runner == nil {
 		return bloodhound.CollectionState{}, bloodhound.ErrNotConnected
 	}
-	if st, ok := a.BloodHoundCollection.Status(id); ok {
+	if st, ok := runner.Status(id); ok {
 		return st, nil
 	}
 	return bloodhound.CollectionState{}, nil
 }
 
 func (a *App) BloodHoundCollections() []bloodhound.CollectionState {
-	if a.BloodHoundCollection == nil {
+	runner := a.existingCollectionRunner()
+	if runner == nil {
 		return []bloodhound.CollectionState{}
 	}
-	return a.BloodHoundCollection.List()
+	return runner.List()
 }
