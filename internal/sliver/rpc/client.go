@@ -37,7 +37,6 @@ type Client struct {
 	CaptureStore *store.Store
 	Recorder     *capture.Recorder
 
-	connected atomic.Bool
 	connectMu sync.Mutex
 
 	cacheMu        sync.RWMutex
@@ -116,7 +115,6 @@ func (c *Client) Connect(profileName string, teardown func()) error {
 		wrapped = WrapCapture(wrapped, c.Recorder)
 	}
 	c.state.Store(&connState{config: config, rpc: wrapped, conn: grpcConn})
-	c.connected.Store(true)
 	if oldConn != nil && oldConn != grpcConn {
 		_ = oldConn.Close()
 	}
@@ -168,7 +166,6 @@ func (c *Client) Disconnect() {
 	// Clear the published state before closing, so a reader never picks up a
 	// connection that is already being torn down.
 	c.state.Store(nil)
-	c.connected.Store(false)
 	if conn != nil {
 		_ = conn.Close()
 	}
@@ -178,7 +175,7 @@ func (c *Client) IsConnectedTo(profileName string) bool {
 	c.connectMu.Lock()
 	defer c.connectMu.Unlock()
 
-	if !c.connected.Load() {
+	if c.state.Load() == nil {
 		return false
 	}
 	if profileName == "" {
@@ -206,8 +203,11 @@ func (c *Client) stopEventStream() {
 	}
 }
 
+// Connected reports whether there is a connection to call. It deliberately says
+// nothing about the event stream: a stream failure leaves a usable connection
+// behind, and reporting it as "not connected" made every guarded RPC refuse.
 func (c *Client) Connected() bool {
-	return c.connected.Load()
+	return c.state.Load() != nil
 }
 
 func (c *Client) GetClientConfigs() ([]string, error) {
