@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  credentialFields,
   credentialLoginFields,
   credentialPickerOptions,
   parseCredentialUsername,
@@ -40,5 +41,20 @@ describe('credential utilities', () => {
       domain: 'CORP',
       password: 'Password1!',
     })
+  })
+
+  it('normalizes modal initial values onto credential fields', () => {
+    expect(credentialFields({
+      username: 'alice',
+      password: 'secret',
+      domain: 'CORP',
+      timeout: '30',
+    })).toEqual({
+      username: 'alice',
+      password: 'secret',
+      domain: 'CORP',
+      timeout: '30',
+    })
+    expect(credentialFields()).toEqual({ username: '', password: '', domain: '', timeout: '' })
   })
 })

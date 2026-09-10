@@ -40,6 +40,17 @@ export function credentialLoginFields(credential) {
   }
 }
 
+// credentialFields normalizes the modal initial-values shape onto the
+// username/password/domain/timeout fields CredentialPicker binds.
+export function credentialFields(values = {}) {
+  return {
+    username: values['username'] || '',
+    password: values['password'] || '',
+    domain: values['domain'] || '',
+    timeout: values['timeout'] || '',
+  }
+}
+
 export function parseCredentialUsername(value = '') {
   const username = String(value || '').trim()
   if (!username) return { username: '', domain: '' }

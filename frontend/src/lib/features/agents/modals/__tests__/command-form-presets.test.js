@@ -32,6 +32,18 @@ async function openPresetsMenu() {
   await fireEvent.mouseDown(btn)
 }
 
+async function applySavedPreset(pidInput, dumpNameInput) {
+  await openPresetsMenu()
+  const presetItem = await screen.findByText('my preset', undefined, { timeout: 3000 })
+  await fireEvent.click(presetItem)
+
+  await waitFor(() => {
+    expect(pidInput.value).toBe('4444')
+  }, { timeout: 3000 })
+  expect(dumpNameInput.value).toBe('lsass.dmp')
+  expect(screen.getByLabelText('Additional arguments').value).toBe('--extra-flag foo')
+}
+
 describe('CommandFormV2 presets (third-class modal)', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -86,15 +98,7 @@ describe('CommandFormV2 presets (third-class modal)', () => {
     expect(pidInput.value).toBe('')
 
     // Apply the preset
-    await openPresetsMenu()
-    const presetItem = await screen.findByText('my preset', undefined, { timeout: 3000 })
-    await fireEvent.click(presetItem)
-
-    await waitFor(() => {
-      expect(pidInput.value).toBe('4444')
-    }, { timeout: 3000 })
-    expect(dumpNameInput.value).toBe('lsass.dmp')
-    expect(screen.getByLabelText('Additional arguments').value).toBe('--extra-flag foo')
+    await applySavedPreset(pidInput, dumpNameInput)
   })
 
   it('restores a saved preset after the modal is closed and reopened', async () => {
@@ -131,14 +135,6 @@ describe('CommandFormV2 presets (third-class modal)', () => {
     const dumpNameInput = screen.getByLabelText('DUMP NAME')
     expect(pidInput.value).toBe('')
 
-    await openPresetsMenu()
-    const presetItem = await screen.findByText('my preset', undefined, { timeout: 3000 })
-    await fireEvent.click(presetItem)
-
-    await waitFor(() => {
-      expect(pidInput.value).toBe('4444')
-    }, { timeout: 3000 })
-    expect(dumpNameInput.value).toBe('lsass.dmp')
-    expect(screen.getByLabelText('Additional arguments').value).toBe('--extra-flag foo')
+    await applySavedPreset(pidInput, dumpNameInput)
   })
 })

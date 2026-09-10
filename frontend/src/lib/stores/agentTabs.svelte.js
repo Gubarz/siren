@@ -60,6 +60,20 @@ function isShellTab(tab) {
   return tab?.type?.startsWith('shell-')
 }
 
+// appendTab adds a tab to a pane and normalizes the resulting state; the
+// pane is created on demand so callers don't need to pre-seed it.
+function appendTab(state, targetPane, newTab) {
+  const pane = state.panes[targetPane] || { tabs: [], activeTabId: '' }
+  return normalizeState({
+    ...state,
+    panes: {
+      ...state.panes,
+      [targetPane]: { tabs: [...pane.tabs, newTab], activeTabId: newTab.id },
+    },
+    focusPane: targetPane,
+  }, targetPane)
+}
+
 function normalizeShell(shell) {
   if (!shell) return null
   const id = shell.id || shell.ID
@@ -139,14 +153,7 @@ class AgentTabs {
       }
       const label = tabLabel(sessionId, type)
       const newTab = { id, sessionId, type, label, meta }
-      return normalizeState({
-        ...s,
-        panes: {
-          ...s.panes,
-          [targetPane]: { tabs: [...paneState.tabs, newTab], activeTabId: id },
-        },
-        focusPane: targetPane,
-      }, targetPane)
+      return appendTab(s, targetPane, newTab)
     })
   }
 
@@ -178,17 +185,9 @@ class AgentTabs {
         }
       }
       const targetPane = s.panes[s.focusPane] ? s.focusPane : 'left'
-      const paneState = s.panes[targetPane] || { tabs: [], activeTabId: '' }
       const label = tabLabel(sessionId, type)
       const newTab = { id, sessionId, type, label, meta }
-      return normalizeState({
-        ...s,
-        panes: {
-          ...s.panes,
-          [targetPane]: { tabs: [...paneState.tabs, newTab], activeTabId: id },
-        },
-        focusPane: targetPane,
-      }, targetPane)
+      return appendTab(s, targetPane, newTab)
     })
   }
 

@@ -71,52 +71,40 @@
     openItemMenu(item, event.clientX, event.clientY)
   }
 
+  function lootMenuItems(item) {
+    const enabled = Boolean(item)
+    const entry = (icon, label, handler, extra = {}) =>
+      enabled
+        ? { icon, label, on: () => handler(item), ...extra }
+        : { icon, label, disabled: true, ...extra }
+    return [
+      entry('eye', 'Preview', openPreview),
+      entry('download', 'Download', (it) => download(it._id)),
+      entry('tag', 'Tags', (it) => tagsModal.openTags('loot', it._id, it._name)),
+      entry('message-square', 'Comments', (it) => commentsModal.openComments('loot', it._id, it._name)),
+      entry('folder', 'Add to Case', (it) => addToCase.open({ collection: 'loot', itemID: it._id, label: it._name })),
+      { divider: true },
+      entry('trash', 'Delete', (it) => remove(it._id), { danger: true }),
+    ]
+  }
+
   function openItemMenu(item, x, y) {
     contextMenu.open({
       x,
       y,
       target: item,
-      sections: [{
-        items: [
-          { icon: 'eye', label: 'Preview', on: () => openPreview(item) },
-          { icon: 'download', label: 'Download', on: () => download(item._id) },
-          { icon: 'tag', label: 'Tags', on: () => tagsModal.openTags('loot', item._id, item._name) },
-          { icon: 'message-square', label: 'Comments', on: () => commentsModal.openComments('loot', item._id, item._name) },
-          { icon: 'folder', label: 'Add to Case', on: () => addToCase.open({ collection: 'loot', itemID: item._id, label: item._name }) },
-          { divider: true },
-          { icon: 'trash', label: 'Delete', danger: true, on: () => remove(item._id) },
-        ],
-      }],
+      sections: [{ items: lootMenuItems(item) }],
     })
   }
 
   function openMoreMenu(event) {
     const rect = event.currentTarget.getBoundingClientRect()
     const item = getSingleSelected()
-    const items = item
-      ? [
-          { icon: 'eye', label: 'Preview', on: () => openPreview(item) },
-          { icon: 'download', label: 'Download', on: () => download(item._id) },
-          { icon: 'tag', label: 'Tags', on: () => tagsModal.openTags('loot', item._id, item._name) },
-          { icon: 'message-square', label: 'Comments', on: () => commentsModal.openComments('loot', item._id, item._name) },
-          { icon: 'folder', label: 'Add to Case', on: () => addToCase.open({ collection: 'loot', itemID: item._id, label: item._name }) },
-          { divider: true },
-          { icon: 'trash', label: 'Delete', danger: true, on: () => remove(item._id) },
-        ]
-      : [
-          { icon: 'eye', label: 'Preview', disabled: true },
-          { icon: 'download', label: 'Download', disabled: true },
-          { icon: 'tag', label: 'Tags', disabled: true },
-          { icon: 'message-square', label: 'Comments', disabled: true },
-          { icon: 'folder', label: 'Add to Case', disabled: true },
-          { divider: true },
-          { icon: 'trash', label: 'Delete', danger: true, disabled: true },
-        ]
     contextMenu.open({
       x: rect.left,
       y: rect.bottom + 4,
       target: item,
-      sections: [{ items }],
+      sections: [{ items: lootMenuItems(item) }],
     })
   }
 

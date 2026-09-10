@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatListenerC2, listenerHost, listenerProtocol } from '../listeners.js'
+import { buildC2Listeners, formatListenerC2, listenerHost, listenerProtocol } from '../listeners.js'
 
 describe('listener utilities', () => {
   describe('listenerProtocol', () => {
@@ -38,6 +38,33 @@ describe('listener utilities', () => {
     it('uses fallback when host is 0.0.0.0 or empty', () => {
       expect(listenerHost({ Host: '0.0.0.0' }, 'server.local')).toBe('server.local')
       expect(listenerHost(null, 'default.host')).toBe('default.host')
+    })
+  })
+
+  describe('buildC2Listeners', () => {
+    it('normalizes jobs and keeps only C2 protocols', () => {
+      const listeners = buildC2Listeners([
+        { ID: 'job-1', Name: 'mtls-c2', Protocol: 'mtls', Port: 443, Domains: ['c2.example.com'] },
+        { ID: 'job-2', Name: 'custom', Protocol: 'custom', Port: 9000 },
+      ], 'server.local')
+
+      expect(listeners).toEqual([
+        {
+          id: 'job-1',
+          name: 'mtls-c2',
+          protocol: 'mtls',
+          port: 443,
+          host: 'c2.example.com',
+          domains: ['c2.example.com'],
+          description: '',
+        },
+      ])
+    })
+
+    it('uses the server host fallback and tolerates missing jobs', () => {
+      expect(buildC2Listeners(null)).toEqual([])
+      expect(buildC2Listeners([{ name: 'https-listener', port: 8443 }], 'fallback.local')[0].host)
+        .toBe('fallback.local')
     })
   })
 

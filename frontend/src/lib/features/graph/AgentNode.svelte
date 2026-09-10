@@ -4,20 +4,17 @@
   import FittedTagBadges from '$components/ui/FittedTagBadges.svelte'
   import GraphCommentButton from './GraphCommentButton.svelte'
   import { Handle, Position } from '@xyflow/svelte'
-  import { colorTint } from '../../utils/agentColors.js'
+  import { buildNodeStyle } from './nodeStyle.js'
 
   let { data, selected = false } = $props()
   let horizontal = $derived(data.direction === 'LR')
 
-  // Row color (internal/tags palette) washes over the node's opaque panel
-  // background (gradient layer on top, panel color preserved underneath);
-  // the left border keeps its kind/selection meaning.
-  let tint = $derived(colorTint(data.color))
   let nodeStyle = $derived(
-    (selected
-      ? `border-color: var(--color-brand);`
-      : `border-left-color: var(--color-${data.kind === 'beacon' ? 'beacon' : 'success'}-500);`) +
-    (tint ? ` background-image: linear-gradient(${tint}, ${tint});` : '')
+    buildNodeStyle(
+      data,
+      selected,
+      `border-left-color: var(--color-${data.kind === 'beacon' ? 'beacon' : 'success'}-500);`,
+    ),
   )
 </script>
 

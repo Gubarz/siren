@@ -7,7 +7,7 @@
   import { ReconfigureAgent } from '../../../api/operatorControls.js'
   import { GetServerInfo } from '../../../api/server.js'
   import { errorMessage } from '../../../utils/errors.js'
-  import { listenerHost, listenerProtocol } from '../../../utils/listeners.js'
+  import { buildC2Listeners } from '../../../utils/listeners.js'
   import { jobs } from '../../../stores/resources/jobs.svelte.js'
   import { useResource } from '../../../stores/lib/createResource.svelte.js'
 
@@ -27,24 +27,7 @@
   let submitting = $state(false)
   let error = $state('')
 
-  const C2_PROTOCOLS = ['mtls', 'http', 'https', 'dns', 'wg']
-
-  let c2Listeners = $derived.by(() => {
-    const list = jobs?.data || []
-    return list
-      .map((job) => {
-        const protocol = listenerProtocol(job)
-        return {
-          id: job.ID ?? job.id,
-          name: job.Name ?? job.name,
-          protocol,
-          port: job.Port ?? job.port,
-          host: listenerHost(job, serverHost),
-          domains: job.Domains ?? job.domains ?? [],
-        }
-      })
-      .filter((l) => C2_PROTOCOLS.includes(l.protocol))
-  })
+  let c2Listeners = $derived(buildC2Listeners(jobs?.data, serverHost))
 
   $effect(() => {
     if (open && agent) {

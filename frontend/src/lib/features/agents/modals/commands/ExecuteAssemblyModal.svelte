@@ -1,5 +1,4 @@
 <script>
-  import Modal from '../../../../components/patterns/Modal.svelte'
   import { quote } from '../../../../utils/shell.js'
   import CollapsibleGroup from '../../../../components/forms/CollapsibleGroup.svelte'
   import TextField from '../../../../components/forms/TextField.svelte'
@@ -7,16 +6,9 @@
   import SelectField from '../../../../components/forms/SelectField.svelte'
   import FilePickerField from '../../../../components/forms/FilePickerField.svelte'
   import PidPickerField from '../pickers/PidPickerField.svelte'
-  import CommandPreview from './CommandPreview.svelte'
-  import CommandModalFooter from './CommandModalFooter.svelte'
+  import CommandModalFrame from './CommandModalFrame.svelte'
 
-  let {
-    firstSessionID = '',
-    open = $bindable(false),
-    onexecute,
-    onclose,
-    initialValues = {},
-  } = $props()
+  let { firstSessionID = '', open = $bindable(false), onexecute, ...rest } = $props()
 
   let assemblyPath = $state('')
   let assemblyArgs = $state('')
@@ -35,10 +27,6 @@
   let lootName = $state('')
   let save = $state(false)
   let timeout = $state('')
-
-  $effect.pre(() => {
-    resetForm(initialValues)
-  })
 
   function resetForm(values) {
     assemblyPath = values['local path to assembly'] || values['assembly'] || ''
@@ -95,7 +83,52 @@
   }
 </script>
 
-<Modal bind:open title="Execute .NET Assembly" size="2xl" {onclose}>
+<CommandModalFrame
+  bind:open
+  title="Execute .NET Assembly"
+  size="2xl"
+  {cmdPreview}
+  commandPath="execute-assembly"
+  currentValues={{
+    'local path to assembly': assemblyPath,
+    'arguments': assemblyArgs,
+    'process': processName,
+    'ppid': ppid,
+    'process-arguments': processArgs,
+    'amsi-bypass': amsiBypass,
+    'etw-bypass': etwBypass,
+    'in-process': inProcess,
+    'arch': arch,
+    'runtime': runtime,
+    'app-domain': appDomain,
+    'class': className,
+    'method': methodName,
+    'loot': saveToLoot,
+    'name': lootName,
+  }}
+  onapply={(values) => {
+    if (values['local path to assembly'] != null) assemblyPath = values['local path to assembly']
+    if (values['arguments'] != null) assemblyArgs = values['arguments']
+    if (values['process'] != null) processName = values['process']
+    if (values['ppid'] != null) ppid = values['ppid']
+    if (values['process-arguments'] != null) processArgs = values['process-arguments']
+    if (values['amsi-bypass'] != null) amsiBypass = values['amsi-bypass']
+    if (values['etw-bypass'] != null) etwBypass = values['etw-bypass']
+    if (values['in-process'] != null) inProcess = values['in-process']
+    if (values['arch'] != null) arch = values['arch']
+    if (values['runtime'] != null) runtime = values['runtime']
+    if (values['app-domain'] != null) appDomain = values['app-domain']
+    if (values['class'] != null) className = values['class']
+    if (values['method'] != null) methodName = values['method']
+    if (values['loot'] != null) saveToLoot = values['loot']
+    if (values['name'] != null) lootName = values['name']
+  }}
+  primaryLabel="Execute"
+  onprimary={execute}
+  primaryDisabled={!assemblyPath}
+  onreset={resetForm}
+  {...rest}
+>
   
     <p class="text-fg-muted text-sm mb-4">Load and execute a .NET assembly in a remote process.</p>
 
@@ -167,50 +200,4 @@
         />
       {/if}
     </CollapsibleGroup>
-
-  <CommandPreview cmd={cmdPreview} />
-
-  {#snippet footer()}
-    <CommandModalFooter
-      commandPath="execute-assembly"
-      currentValues={{
-        'local path to assembly': assemblyPath,
-        'arguments': assemblyArgs,
-        'process': processName,
-        'ppid': ppid,
-        'process-arguments': processArgs,
-        'amsi-bypass': amsiBypass,
-        'etw-bypass': etwBypass,
-        'in-process': inProcess,
-        'arch': arch,
-        'runtime': runtime,
-        'app-domain': appDomain,
-        'class': className,
-        'method': methodName,
-        'loot': saveToLoot,
-        'name': lootName,
-      }}
-      onapply={(values) => {
-        if (values['local path to assembly'] != null) assemblyPath = values['local path to assembly']
-        if (values['arguments'] != null) assemblyArgs = values['arguments']
-        if (values['process'] != null) processName = values['process']
-        if (values['ppid'] != null) ppid = values['ppid']
-        if (values['process-arguments'] != null) processArgs = values['process-arguments']
-        if (values['amsi-bypass'] != null) amsiBypass = values['amsi-bypass']
-        if (values['etw-bypass'] != null) etwBypass = values['etw-bypass']
-        if (values['in-process'] != null) inProcess = values['in-process']
-        if (values['arch'] != null) arch = values['arch']
-        if (values['runtime'] != null) runtime = values['runtime']
-        if (values['app-domain'] != null) appDomain = values['app-domain']
-        if (values['class'] != null) className = values['class']
-        if (values['method'] != null) methodName = values['method']
-        if (values['loot'] != null) saveToLoot = values['loot']
-        if (values['name'] != null) lootName = values['name']
-      }}
-      primaryLabel="Execute"
-      onprimary={execute}
-      primaryDisabled={!assemblyPath}
-      oncancel={() => open = false}
-    />
-  {/snippet}
-</Modal>
+</CommandModalFrame>

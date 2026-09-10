@@ -65,3 +65,24 @@ export function formatListenerC2(listener, fallbackHost = '127.0.0.1') {
   }
   return `${proto}://${host}:${listener.port || 443}`
 }
+
+const C2_PROTOCOLS = ['mtls', 'http', 'https', 'dns', 'wg']
+
+// buildC2Listeners normalizes the job list into the listener descriptors
+// C2UriInput consumes, dropping jobs that aren't usable C2 channels.
+export function buildC2Listeners(jobs, serverHost = '') {
+  return (jobs || [])
+    .map((job) => {
+      const protocol = listenerProtocol(job)
+      return {
+        id: job.ID ?? job.id,
+        name: job.Name ?? job.name,
+        protocol,
+        port: job.Port ?? job.port,
+        host: listenerHost(job, serverHost),
+        domains: job.Domains ?? job.domains ?? [],
+        description: job.Description ?? job.description ?? '',
+      }
+    })
+    .filter((listener) => C2_PROTOCOLS.includes(listener.protocol))
+}

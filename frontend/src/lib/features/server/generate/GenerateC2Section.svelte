@@ -9,7 +9,7 @@
 
   useResource(jobs, httpC2Profiles)
   import { profileName } from '../../../api/httpc2.js'
-  import { listenerHost, listenerProtocol } from '../../../utils/listeners.js'
+  import { buildC2Listeners } from '../../../utils/listeners.js'
   import GenerateC2Row from './GenerateC2Row.svelte'
 
   let {
@@ -18,30 +18,12 @@
     serverHost = '',
   } = $props()
 
-  const C2_PROTOCOLS = ['mtls', 'http', 'https', 'dns', 'wg']
-
   onMount(() => {
     jobs.refresh?.()
     httpC2Profiles.refresh?.()
   })
 
-  let c2Listeners = $derived.by(() => {
-    const list = jobs?.data || []
-    return list
-      .map((job) => {
-        const protocol = listenerProtocol(job)
-        return {
-          id: job.ID ?? job.id,
-          name: job.Name ?? job.name,
-          protocol,
-          port: job.Port ?? job.port,
-          host: listenerHost(job, serverHost),
-          domains: job.Domains ?? job.domains ?? [],
-          description: job.Description ?? job.description ?? '',
-        }
-      })
-      .filter((listener) => C2_PROTOCOLS.includes(listener.protocol))
-  })
+  let c2Listeners = $derived(buildC2Listeners(jobs?.data, serverHost))
   let hasHttpChannel = $derived(c2Urls.some((url) => /^https?:\/\//i.test(url || '')))
   let httpC2Options = $derived.by(() => {
     const names = new Set(['default'])
