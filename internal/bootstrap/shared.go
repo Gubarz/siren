@@ -92,6 +92,7 @@ func NewShared(deps Dependencies) *SharedStack {
 	}
 	journalSvc := journal.NewService(journalStore, busImpl)
 	rpcClient := rpc.NewClient()
+	rpcClient.CaptureStore = captureStore
 	rpcClient.JournalHook = rpc.NewJournalHook(journalSvc)
 	con := console.New(rpcClient)
 	beac := beacons.New(rpcClient, con)

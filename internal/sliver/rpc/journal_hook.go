@@ -1,7 +1,5 @@
 package rpc
 
-//go:generate go run ./gen
-
 import (
 	"context"
 	"sync/atomic"

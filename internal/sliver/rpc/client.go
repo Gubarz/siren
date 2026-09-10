@@ -1,3 +1,5 @@
+//go:generate go run ./gen
+
 package rpc
 
 import (
@@ -15,7 +17,11 @@ import (
 	"github.com/bishopfox/sliver/client/transport"
 	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
+	"github.com/gubarz/revils/capture"
+	"github.com/gubarz/revils/store"
 	"google.golang.org/grpc"
+
+	"siren/internal/captureann"
 )
 
 type Client struct {
@@ -26,6 +32,12 @@ type Client struct {
 	// JournalHook, when set (bootstrap wires it), makes Connect wrap the RPC
 	// client with the journal decorator.
 	JournalHook *JournalHook
+
+	// CaptureStore, when set, enables capture recording on Connect. The
+	// recorder is rebuilt per connection so annotations carry the operator
+	// from the active config.
+	CaptureStore *store.Store
+	Recorder     *capture.Recorder
 
 	connected atomic.Bool
 	connectMu sync.Mutex
@@ -85,12 +97,18 @@ func (c *Client) Connect(profileName string) error {
 	c.stopEventStream()
 	oldConn := c.Conn
 	c.Config = config
+	if c.CaptureStore != nil {
+		c.Recorder = capture.NewRecorder(c.CaptureStore, captureann.New(config.Operator))
+	}
+	wrapped := rpcClient
 	if c.JournalHook != nil {
 		c.JournalHook.SetConnection(fmt.Sprintf("%s:%d", config.LHost, config.LPort))
-		c.RPC = WrapJournal(rpcClient, c.JournalHook)
-	} else {
-		c.RPC = rpcClient
+		wrapped = WrapJournal(wrapped, c.JournalHook)
 	}
+	if c.Recorder != nil {
+		wrapped = WrapCapture(wrapped, c.Recorder)
+	}
+	c.RPC = wrapped
 	c.Conn = grpcConn
 	c.connected.Store(true)
 	if oldConn != nil && oldConn != grpcConn {
