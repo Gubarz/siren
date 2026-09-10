@@ -62,6 +62,7 @@ type RunContext struct {
 	Trigger     string
 	Target      Target
 	RunID       string
+	StageID     string
 	Action      ActionSpec
 	Log         func(...any)
 	Commands    *[]string

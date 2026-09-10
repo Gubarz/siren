@@ -120,8 +120,10 @@ func (e *Engine) execute(rule AutomationRule, trigger string, target Target, key
 }
 
 func (e *Engine) executeActionList(rc *RunContext, run *AutomationRun, output *strings.Builder) {
-	for _, spec := range rc.Rule.Actions {
+	for i, spec := range rc.Rule.Actions {
 		rc.Action = spec
+		rc.StageID = fmt.Sprintf("%s#%d", spec.Type, i)
+		rc.Ctx = execctx.WithRun(rc.Ctx, rc.RunID, rc.StageID)
 		result := e.executeAction(rc, spec)
 		run.ActionResults = append(run.ActionResults, result)
 		if result.Output != "" {

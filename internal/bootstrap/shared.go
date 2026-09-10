@@ -93,6 +93,7 @@ func NewShared(deps Dependencies) *SharedStack {
 	caseSvc := casefile.New(deps.DataDir)
 	con.SetBus(busImpl)
 	executor := automationexec.NewExecutor(con, beac)
+	executor.SetStore(captureStore)
 	targets := automationexec.NewTargetProvider(rpcClient)
 	lootWriter := automationexec.NewLootWriter(rpcClient)
 	var records automation.RecordQuerier
