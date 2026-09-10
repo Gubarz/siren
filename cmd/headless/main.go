@@ -41,7 +41,7 @@ func main() {
 		DataDir: dataDir,
 	})
 
-	if err := shared.RPC.Connect(*profile); err != nil {
+	if err := shared.RPC.Connect(*profile, nil); err != nil {
 		log.Fatalf("connect: %v", err)
 	}
 

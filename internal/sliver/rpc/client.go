@@ -72,7 +72,15 @@ func selectClientConfig(profileName string) (*assets.ClientConfig, error) {
 	return nil, fmt.Errorf("no configs found")
 }
 
-func (c *Client) Connect(profileName string) error {
+// Connect dials profileName and makes it the active connection.
+//
+// teardown, when non-nil, runs once the replacement connection is established
+// and before the previous one is retired. That is where callers close resources
+// bound to the outgoing connection, because they write into its gRPC stream and
+// sliver's server has historically panicked when that stream drops mid-tunnel.
+// A failed dial returns before teardown runs, so the active connection and its
+// resources are left as they were.
+func (c *Client) Connect(profileName string, teardown func()) error {
 	c.connectMu.Lock()
 	defer c.connectMu.Unlock()
 
@@ -86,6 +94,12 @@ func (c *Client) Connect(profileName string) error {
 	rpcClient, grpcConn, err := dialWithTimeout(config)
 	if err != nil {
 		return err
+	}
+
+	// The replacement is live, so resources bound to the outgoing connection can
+	// be closed now, while the old connection is still up.
+	if teardown != nil {
+		teardown()
 	}
 
 	// Stop the old stream before closing its connection. Its cancellation is

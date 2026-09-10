@@ -30,14 +30,24 @@ func (a *App) Disconnect() error {
 	a.connectionMu.Lock()
 	defer a.connectionMu.Unlock()
 
-	if a.Tunneling != nil {
-		a.Tunneling.Close()
-	}
-	if a.Console != nil {
-		_ = a.Console.TryResetConsole()
-	}
+	a.teardownConnectionResources()
 	a.RPC.Disconnect()
 	return nil
+}
+
+// teardownConnectionResources closes everything bound to the connection being
+// retired, and is the superset of closeLiveResources used when the connection is
+// changing rather than the app shutting down: the in-process console also has to
+// be reset because it caches the previous server's targets.
+//
+// Each console subprocess is its own sliver client holding an authenticated
+// session, so leaving any of this up would keep talking to a teamserver the
+// operator has moved on from.
+func (a *App) teardownConnectionResources() {
+	a.closeLiveResources()
+	if a.Console != nil && !a.Console.TryResetConsole() {
+		log.Printf("connection: console is busy; skipping console reset")
+	}
 }
 
 func (a *App) Connect(profileName string) error {
@@ -53,10 +63,13 @@ func (a *App) Connect(profileName string) error {
 	if a.ClientLog != nil {
 		a.ClientLog.Close()
 	}
-	if !a.Console.TryResetConsole() {
-		log.Printf("connect: console is busy; skipping connect-time console reset")
-	}
-	if err := a.RPC.Connect(profileName); err != nil {
+	// Teardown runs as Connect's hook, so it happens once the replacement
+	// connection is up but before the old one is retired. Live tunnels, shells,
+	// and console subprocesses write into the outgoing gRPC stream, and sliver's
+	// server has historically panicked when that stream drops mid-tunnel. Running
+	// it here rather than up front means a failed profile switch leaves them
+	// running against the current server.
+	if err := a.RPC.Connect(profileName, a.teardownConnectionResources); err != nil {
 		return err
 	}
 	if a.RPC.Config != nil {
