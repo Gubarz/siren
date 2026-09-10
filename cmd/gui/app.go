@@ -82,7 +82,9 @@ type App struct {
 	Health     *health.Service
 	Env        *env.Service
 	BloodHound *bloodhound.Service
-	// BloodHoundCollection is built lazily on first collection start.
+	// BloodHoundCollection is built on first use. bloodhoundMu guards it: a
+	// Wails binding thread and the automation engine both reach it.
+	bloodhoundMu         sync.Mutex
 	BloodHoundCollection *bloodhound.CollectionRunner
 }
 
