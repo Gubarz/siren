@@ -136,7 +136,7 @@ func TestTerminalOnlyCommandReasons(t *testing.T) {
 		}
 	}
 
-	for _, path := range []string{"shell attach", "edit", "hexedit", "docs", "switch", "ai"} {
+	for _, path := range []string{"shell attach", "edit", "hexedit", "docs", "switch", "ai", "exit"} {
 		if reason := NonInteractiveCommandReason(path); reason == "" {
 			t.Fatalf("%s should be rejected in the GUI console", path)
 		}
