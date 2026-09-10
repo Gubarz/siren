@@ -77,16 +77,16 @@ type Action interface {
 }
 
 func (e *Engine) RegisterAction(a Action) error {
-	return registerIn(&e.actionsMu, e.actions, "action", a.Type(), a)
+	return registerIn(&e.registryMu, e.actions, "action", a.Type(), a)
 }
 
 func (e *Engine) actionByType(typ string) (Action, bool) {
-	return lookupIn(&e.actionsMu, e.actions, typ)
+	return lookupIn(&e.registryMu, e.actions, typ)
 }
 
 func (e *Engine) ActionSchemas() map[string][]FieldSpec {
-	e.actionsMu.RLock()
-	defer e.actionsMu.RUnlock()
+	e.registryMu.RLock()
+	defer e.registryMu.RUnlock()
 	return collectSchemas(e.actions)
 }
 
@@ -161,15 +161,14 @@ func (e *Engine) actionDeps() ActionDeps {
 // startup after the engine is constructed (the runner needs sliver services
 // that do not exist at bootstrap time).
 func (e *Engine) SetCollector(c CollectorStarter) {
-	e.collectorMu.Lock()
-	defer e.collectorMu.Unlock()
-	e.collectorRef = c
+	e.collectorPtr.Store(&c)
 }
 
 func (e *Engine) collector() CollectorStarter {
-	e.collectorMu.RLock()
-	defer e.collectorMu.RUnlock()
-	return e.collectorRef
+	if p := e.collectorPtr.Load(); p != nil {
+		return *p
+	}
+	return nil
 }
 
 func (e *Engine) httpClient() HTTPDoer {
