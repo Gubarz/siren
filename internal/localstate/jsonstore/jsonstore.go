@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 // ScopedStore manages atomic JSON file persistence scoped optionally per teamserver.
@@ -59,9 +61,26 @@ func (s *ScopedStore[T]) loadLocked() (T, bool, error) {
 	}
 	var val T
 	if err := json.Unmarshal(data, &val); err != nil {
+		// Callers treat a failed load as empty state, so the next save would
+		// overwrite the only copy. Move it aside first, and keep reporting the
+		// error so the failure stays visible.
+		Quarantine(s.path)
 		return zero, false, err
 	}
 	return val, true, nil
+}
+
+// Quarantine moves a file that could not be decoded out of the way as
+// <path>.corrupt-<nanos>, so a later save cannot destroy it. It returns the new
+// name, or "" if the file could not be moved.
+func Quarantine(path string) string {
+	dest := fmt.Sprintf("%s.corrupt-%d", path, time.Now().UnixNano())
+	if err := os.Rename(path, dest); err != nil {
+		log.Printf("jsonstore: could not quarantine %s: %v", path, err)
+		return ""
+	}
+	log.Printf("jsonstore: %s was not valid JSON; moved to %s", path, dest)
+	return dest
 }
 
 // Save marshals the value with indentation and atomically writes it to disk.

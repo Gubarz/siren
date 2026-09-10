@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"siren/internal/localstate/jsonstore"
 )
 
 const casesDir = "gui-cases"
@@ -99,6 +101,9 @@ func (s *Service) readCase(path string) (*Record, error) {
 	}
 	var c Record
 	if err := json.Unmarshal(data, &c); err != nil {
+		// loadAllLocked skips unreadable cases, so a corrupt one would stay
+		// invisible. Moving it aside makes it discoverable instead.
+		jsonstore.Quarantine(path)
 		return nil, err
 	}
 	return &c, nil

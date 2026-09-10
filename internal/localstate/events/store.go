@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"siren/internal/localstate/jsonstore"
 )
 
 const maxStored = 10000
@@ -112,6 +114,8 @@ func (s *Store) load() {
 	}
 	if err := json.Unmarshal(data, &s.events); err != nil {
 		log.Printf("events: could not decode: %v", err)
+		// The next persist would overwrite the only copy of the history.
+		jsonstore.Quarantine(s.path)
 		s.events = nil
 	}
 	s.assignMissingSeq()
