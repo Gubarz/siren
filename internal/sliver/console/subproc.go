@@ -6,12 +6,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"siren/internal/envvars"
 
 	"github.com/creack/pty"
 )
+
+// subprocKillGrace is how long a console subprocess gets to honour SIGTERM
+// before it is forced.
+const subprocKillGrace = 3 * time.Second
 
 // subprocCommandTerminator submits a line to the subprocess console.
 // On a unix PTY the Enter key arrives as a newline.
@@ -97,16 +103,48 @@ func (s *Service) ResizeConsole(jobID string, cols, rows int) error {
 
 // unixProc adapts exec.Cmd to consoleProc.
 type unixProc struct {
-	cmd *exec.Cmd
+	cmd    *exec.Cmd
+	reaped atomic.Bool
 }
 
-func (p *unixProc) Wait() error { return p.cmd.Wait() }
+func (p *unixProc) Wait() error {
+	err := p.cmd.Wait()
+	p.reaped.Store(true)
+	return err
+}
 
+// Kill signals the child's whole process group, then escalates to SIGKILL if it
+// has not gone within the grace period. The PTY child is a session leader, so
+// its group covers anything it spawned; a client that ignores SIGTERM would
+// otherwise leave watchConsole blocked in Wait for good, and with it the job
+// registration and the temp config removal.
 func (p *unixProc) Kill() error {
 	if p.cmd.Process == nil {
 		return nil
 	}
-	return p.cmd.Process.Signal(syscall.SIGTERM)
+	pid := p.cmd.Process.Pid
+	if err := signalProcessGroup(pid, syscall.SIGTERM); err != nil {
+		return err
+	}
+	go func() {
+		time.Sleep(subprocKillGrace)
+		// Nothing to force once it has been reaped, and signalling a reaped pid
+		// could hit a process that reused it.
+		if p.reaped.Load() {
+			return
+		}
+		_ = signalProcessGroup(pid, syscall.SIGKILL)
+	}()
+	return nil
+}
+
+// signalProcessGroup signals pid's group, falling back to the process itself
+// when the group is already gone.
+func signalProcessGroup(pid int, sig syscall.Signal) error {
+	if err := syscall.Kill(-pid, sig); err == nil {
+		return nil
+	}
+	return syscall.Kill(pid, sig)
 }
 
 func (p *unixProc) ExitCode() int {
