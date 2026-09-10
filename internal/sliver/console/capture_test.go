@@ -112,6 +112,12 @@ func TestConsoleCommandContextHonorsParentDeadline(t *testing.T) {
 }
 
 func TestRunLineCapturesHelp(t *testing.T) {
+	// Sliver keeps its console logs under the client root and calls log.Fatalf
+	// (process exit) when that directory is unwritable. Point the root at a temp
+	// tree so this test does not depend on $HOME being writable.
+	rootDir := t.TempDir()
+	t.Setenv("SLIVER_CLIENT_ROOT_DIR", rootDir)
+
 	svc := New(rpc.NewClient())
 
 	out, err := svc.RunLine("", "help")
