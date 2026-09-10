@@ -179,6 +179,8 @@ func sliverEventPayload(ev *clientpb.Event) map[string]interface{} {
 		payload["username"] = ev.Session.Username
 		payload["os"] = ev.Session.OS
 		payload["arch"] = ev.Session.Arch
+		payload["remoteAddress"] = ev.Session.RemoteAddress
+		payload["transport"] = ev.Session.Transport
 	}
 	if ev.Job != nil {
 		payload["job"] = ev.Job.Name

@@ -14,6 +14,7 @@ import (
 	"siren/internal/automation/triggers"
 	"siren/internal/bus"
 	"siren/internal/envvars"
+	knownagents "siren/internal/localstate/agents"
 	automationstate "siren/internal/localstate/automation"
 	"siren/internal/localstate/casefile"
 	"siren/internal/localstate/comments"
@@ -46,6 +47,7 @@ type SharedStack struct {
 	Comments     *comments.Service
 	Cases        *casefile.Service
 	Events       *events.Store
+	KnownAgents  *knownagents.Service
 	Bus          bus.Bus
 	CaptureStore *store.Store
 }
@@ -91,6 +93,7 @@ func NewShared(deps Dependencies) *SharedStack {
 	commentsSvc := comments.New(deps.DataDir)
 	eventsStore := events.New(deps.DataDir)
 	caseSvc := casefile.New(deps.DataDir)
+	knownAgents := knownagents.New(deps.DataDir)
 	con.SetBus(busImpl)
 	executor := automationexec.NewExecutor(con, beac)
 	executor.SetStore(captureStore)
@@ -114,7 +117,7 @@ func NewShared(deps Dependencies) *SharedStack {
 		CheckinPub: automationexec.NewCheckinPublisher(rpcClient, busImpl),
 		LootWriter: lootWriter,
 		Tags:       tagsSvc, Comments: commentsSvc, Cases: caseSvc,
-		Events: eventsStore, Bus: busImpl,
+		Events: eventsStore, KnownAgents: knownAgents, Bus: busImpl,
 		CaptureStore: captureStore,
 	}
 }
