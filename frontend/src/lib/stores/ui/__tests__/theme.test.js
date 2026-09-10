@@ -55,6 +55,20 @@ function loadTheme() {
   return import('../theme.svelte.js')
 }
 
+async function startSystemThemeWatcher(media) {
+  const { applyThemePreference, watchSystemThemePreference } = await loadTheme()
+  applyThemePreference()
+  await vi.advanceTimersByTimeAsync(0)
+  expect(themeAttribute()).toBe('dark')
+
+  const stop = watchSystemThemePreference()
+  media.state.dark = false
+  media.state.light = true
+  media.fireChange()
+  await vi.advanceTimersByTimeAsync(0)
+  return stop
+}
+
 describe('theme system resolution', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -146,16 +160,7 @@ describe('theme system watcher', () => {
     const media = installMatchMedia({ dark: true, light: false })
     mocks.GetSystemTheme.mockResolvedValue('dark')
 
-    const { applyThemePreference, watchSystemThemePreference } = await loadTheme()
-    applyThemePreference()
-    await vi.advanceTimersByTimeAsync(0)
-    expect(themeAttribute()).toBe('dark')
-
-    const stop = watchSystemThemePreference()
-    media.state.dark = false
-    media.state.light = true
-    media.fireChange()
-    await vi.advanceTimersByTimeAsync(0)
+    const stop = await startSystemThemeWatcher(media)
     expect(themeAttribute()).toBe('dark')
 
     mocks.GetSystemTheme.mockResolvedValue('light')
@@ -170,16 +175,7 @@ describe('theme system watcher', () => {
     const media = installMatchMedia({ dark: true, light: false })
     mocks.GetSystemTheme.mockRejectedValue(new Error('no native theme provider'))
 
-    const { applyThemePreference, watchSystemThemePreference } = await loadTheme()
-    applyThemePreference()
-    await vi.advanceTimersByTimeAsync(0)
-    expect(themeAttribute()).toBe('dark')
-
-    const stop = watchSystemThemePreference()
-    media.state.dark = false
-    media.state.light = true
-    media.fireChange()
-    await vi.advanceTimersByTimeAsync(0)
+    const stop = await startSystemThemeWatcher(media)
     expect(themeAttribute()).toBe('light')
 
     stop()

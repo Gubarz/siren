@@ -18,6 +18,7 @@ import AgentGlobalMenu from '../AgentGlobalMenu.svelte'
 import { selection } from '$stores/ui/selection.svelte.js'
 import { contextMenu } from '$stores/ui/contextMenu.svelte.js'
 import { commandModal } from '$stores/ui/commandModal.svelte.js'
+import { findItem, flattenItems } from './helpers/menuSections.js'
 
 const liveSession = {
   ID: 'live-1',
@@ -43,21 +44,6 @@ const lostRecord = {
 const categories = [
   { category: 'Sliver', commands: [{ name: 'whoami', description: 'who am i' }] },
 ]
-
-function flattenItems(sections) {
-  const items = []
-  for (const section of sections) {
-    for (const item of section.items ?? []) {
-      items.push(item)
-      for (const child of item.children ?? []) items.push(child)
-    }
-  }
-  return items
-}
-
-function findItem(sections, label) {
-  return flattenItems(sections).find((item) => item.label === label)
-}
 
 async function clickMenu(name) {
   await fireEvent.click(screen.getByRole('button', { name }))

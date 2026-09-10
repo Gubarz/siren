@@ -37,7 +37,6 @@
   import { knownAgents } from '$stores/knownAgents.svelte.js'
 
   import { RemoveNetworkDiscoveries } from '../../../api/discovery.js'
-  import { RemoveKnownAgent } from '../../../api/agents.js'
   import { GetCommandCatalog } from '../../../api/console.js'
   import { SetAgentColor } from '../../../api/tags.js'
   import { errorMessage } from '../../../utils/errors.js'
@@ -47,6 +46,7 @@
   import { createAgentActions } from './agentActions.js'
   import { createBulkActions } from './agentBulkActions.js'
   import { buildAgentContextSections, buildDiscoveryContextSections } from './agentContextActions.js'
+  import { buildAgentContextMenuHandlers } from './agentMenuHandlers.js'
   import { createAgentDataModel } from './useAgentData.svelte.js'
   import { useAgentShortcuts } from './useAgentShortcuts.svelte.js'
   import { catalogToCategories } from './catalog.js'
@@ -167,11 +167,7 @@
 
   const actions = createAgentActions({ dialog, discoveries, agentTabs, selectedAgentIDsIncluding })
   const bulk = createBulkActions({ dialog })
-  const {
-    runDiscovery, promptPingSweep, clearDiscoveries,
-    killAgent, killAgents, newShell, renameAgent, removeBeaconRecord, removeBeaconRecords,
-    promoteBeacon, demoteSession, runAutomationRule,
-  } = actions
+  const { clearDiscoveries, removeBeaconRecords } = actions
 
   let selectedBeacons = $derived(selectedAgents.filter((a) => a._kind === 'beacon' && !a._lost))
   let liveSelectedAgents = $derived(selectedAgents.filter((a) => !a._lost))
@@ -211,27 +207,6 @@
     }
   }
 
-  function copyAgentIDs(agents) {
-    const ids = (agents || []).map((a) => a?.ID).filter(Boolean).join('\n')
-    if (ids) navigator.clipboard?.writeText(ids)
-  }
-
-  async function removeLostAgents(agents) {
-    const targets = (agents || []).filter((a) => a?._lost)
-    if (targets.length === 0) return
-    const label = targets.length > 1
-      ? `${targets.length} lost sessions`
-      : `"${targets[0].Name || targets[0].Hostname || targets[0].ID}"`
-    if (!(await dialog.confirm(`Remove ${label} from known agents?`, 'Confirm Remove'))) return
-    try {
-      await Promise.all(targets.map((target) => RemoveKnownAgent(target.ID)))
-      await knownAgents.load()
-      selection.clear()
-    } catch (err) {
-      await dialog.alert(errorMessage(err, 'Remove failed: '), 'Remove Lost Session')
-    }
-  }
-
   // --- Context menus ---
   function openAgentContextMenu(nativeEvent, agent) {
     const isBeacon = agent._kind === 'beacon'
@@ -259,31 +234,20 @@
         targetAgents: selectedAgentsIncluding(agent),
         agentTabs,
         automationRules: automation.data || [],
-        contextMenuHandlers: {
-          openReconfigure: reconfigure.show,
-          openTags,
-          openComments,
-          openBeaconDetail: (a) => beaconDetail.show(a.ID),
-          promoteBeacon, demoteSession, newShell,
-          runDiscovery, promptPingSweep, clearDiscoveries,
-          renameAgent,
-          runAutomationRule,
-          setAgentRowColor,
-          addToCase: (payload) => addToCase.open(payload),
-          killAgent, killAgents, removeBeaconRecord, removeBeaconRecords,
-          copyID: copyAgentIDs,
-          onremovelost: removeLostAgents,
-          executeAgentCommand,
-          findAttackPaths: (agents) => {
-            for (const target of agents) {
-              agentTabs.openTab(target.ID, 'bloodhound');
-            }
+        contextMenuHandlers: buildAgentContextMenuHandlers({
+          actions, agentTabs, addToCase, beaconDetail, dialog, knownAgents, selection,
+          overrides: {
+            openReconfigure: reconfigure.show,
+            openTags,
+            openComments,
+            setAgentRowColor,
+            executeAgentCommand,
+            collectBloodHound: (agent) => {
+              requestCollection(agent.ID);
+              agentTabs.openTab(agent.ID, 'bloodhound');
+            },
           },
-          collectBloodHound: (agent) => {
-            requestCollection(agent.ID);
-            agentTabs.openTab(agent.ID, 'bloodhound');
-          },
-        },
+        }),
       }),
     })
   }

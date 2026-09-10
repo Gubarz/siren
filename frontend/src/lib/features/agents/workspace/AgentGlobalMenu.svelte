@@ -21,7 +21,6 @@
   import { knownAgents } from '$stores/knownAgents.svelte.js'
   import { useResource } from '$stores/lib/createResource.svelte.js'
   import { SetAgentColor } from '../../../api/tags.js'
-  import { RemoveKnownAgent } from '../../../api/agents.js'
   import { errorMessage } from '../../../utils/errors.js'
   import { runGuiAction } from '../../palette/GuiActions.js'
   import { ROW_COLORS, colorHex } from '../../../utils/agentColors.js'
@@ -29,6 +28,7 @@
   import BeaconDetailModal from '../modals/BeaconDetailModal.svelte'
   import { createAgentActions } from './agentActions.js'
   import { buildAgentActionsSections, buildAgentContextSections, buildCommandCategories } from './agentContextActions.js'
+  import { buildAgentContextMenuHandlers } from './agentMenuHandlers.js'
   import { mergeLostAgents } from './useAgentData.svelte.js'
 
   useResource(sessions, beacons, agentColors)
@@ -70,11 +70,7 @@
       agent.ID,
     ],
   })
-  const {
-    runDiscovery, promptPingSweep, clearDiscoveries,
-    killAgent, killAgents, newShell, renameAgent, removeBeaconRecord, removeBeaconRecords,
-    promoteBeacon, demoteSession, runAutomationRule,
-  } = actions
+  const { newShell, renameAgent, promoteBeacon, demoteSession } = actions
 
   function getAgentLabel(id) {
     const a = agentMap.get(id)
@@ -122,27 +118,6 @@
       await agentColors.refresh()
     } catch (err) {
       await dialog.alert(errorMessage(err, 'Color failed: '), 'Row Color')
-    }
-  }
-
-  function copyAgentIDs(agents) {
-    const ids = (agents || []).map((agent) => agent?.ID).filter(Boolean).join('\n')
-    if (ids) navigator.clipboard?.writeText(ids)
-  }
-
-  async function removeLostAgents(agents) {
-    const targets = (agents || []).filter((agent) => agent?._lost)
-    if (targets.length === 0) return
-    const label = targets.length > 1
-      ? `${targets.length} lost sessions`
-      : `"${targets[0].Name || targets[0].Hostname || targets[0].ID}"`
-    if (!(await dialog.confirm(`Remove ${label} from known agents?`, 'Confirm Remove'))) return
-    try {
-      await Promise.all(targets.map((target) => RemoveKnownAgent(target.ID)))
-      await knownAgents.load()
-      selection.clear()
-    } catch (err) {
-      await dialog.alert(errorMessage(err, 'Remove failed: '), 'Remove Lost Session')
     }
   }
 
@@ -210,32 +185,16 @@
         targetAgents: selectedAgentRows,
         agentTabs,
         automationRules: [],
-        contextMenuHandlers: {
-          openReconfigure: (a) => onReconfigure(a),
-          openTags: (type, id, label) => tagsModal.openTags(type, id, label),
-          openComments: (type, id, label) => commentsModal.openComments(type, id, label),
-          openBeaconDetail: (a) => beaconDetail.show(a.ID),
-          promoteBeacon,
-          demoteSession,
-          newShell,
-          runDiscovery,
-          promptPingSweep,
-          clearDiscoveries,
-          renameAgent,
-          runAutomationRule,
-          setAgentRowColor,
-          addToCase: (payload) => addToCase.open(payload),
-          killAgent,
-          killAgents,
-          removeBeaconRecord,
-          removeBeaconRecords,
-          copyID: copyAgentIDs,
-          onremovelost: removeLostAgents,
-          executeAgentCommand: (command, targetIDs) => commandModal.open({ command, useSession: true, targetIDs }),
-          findAttackPaths: (agents) => {
-            for (const target of agents) agentTabs.openTab(target.ID, 'bloodhound')
+        contextMenuHandlers: buildAgentContextMenuHandlers({
+          actions, agentTabs, addToCase, beaconDetail, dialog, knownAgents, selection,
+          overrides: {
+            openReconfigure: (agent) => onReconfigure(agent),
+            openTags: (type, id, label) => tagsModal.openTags(type, id, label),
+            openComments: (type, id, label) => commentsModal.openComments(type, id, label),
+            setAgentRowColor,
+            executeAgentCommand: (command, targetIDs) => commandModal.open({ command, useSession: true, targetIDs }),
           },
-        },
+        }),
       }),
     })
   }
