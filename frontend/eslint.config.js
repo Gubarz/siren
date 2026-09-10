@@ -419,6 +419,11 @@ export default [
     },
     rules: {
       'no-empty': ['error', { allowEmptyCatch: true }],
+      // CONTRIBUTING.md documents these budgets: 400 lines for a module and 45
+      // for a function. They warn rather than fail so older files do not block
+      // unrelated work, which is what that file says should happen.
+      'max-lines': ['warn', { max: 400 }],
+      'max-lines-per-function': ['warn', { max: 45, skipComments: true }],
       'local/no-btn-class': 'error',
       'local/no-raw-button': 'error',
       'local/no-raw-checkbox': 'error',
@@ -508,4 +513,13 @@ export default [
       }],
     },
   },
+  {
+    files: ['src/**/*.svelte'],
+    rules: {
+      // Runes and markup share one file, so components get a tighter budget
+      // than plain modules.
+      'max-lines': ['warn', { max: 300 }],
+    },
+  },
+
 ];
