@@ -12,6 +12,7 @@ import (
 	"github.com/gubarz/revils/capture"
 	"github.com/gubarz/revils/store"
 
+	"github.com/bishopfox/sliver/protobuf/clientpb"
 	"github.com/bishopfox/sliver/protobuf/commonpb"
 	"github.com/bishopfox/sliver/protobuf/rpcpb"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
@@ -25,12 +26,18 @@ import (
 // verb the test exercises.
 type fakeRPC struct {
 	rpcpb.SliverRPCClient
-	lsCalls int
+	lsCalls         int
+	getBeaconsCalls int
 }
 
 func (f *fakeRPC) Ls(_ context.Context, req *sliverpb.LsReq, _ ...grpc.CallOption) (*sliverpb.Ls, error) {
 	f.lsCalls++
 	return &sliverpb.Ls{Path: req.GetPath()}, nil
+}
+
+func (f *fakeRPC) GetBeacons(_ context.Context, _ *commonpb.Empty, _ ...grpc.CallOption) (*clientpb.Beacons, error) {
+	f.getBeaconsCalls++
+	return &clientpb.Beacons{}, nil
 }
 
 func TestCaptureDecoratorRecordsUnaryCall(t *testing.T) {
@@ -46,7 +53,7 @@ func TestCaptureDecoratorRecordsUnaryCall(t *testing.T) {
 	dec := WrapCapture(inner, rec)
 
 	_, err = dec.Ls(context.Background(), &sliverpb.LsReq{
-		Path:    "/tmp",
+		Path:    "/test/dir",
 		Request: &commonpb.Request{SessionID: "sess-9"},
 	})
 	if err != nil {
@@ -67,6 +74,35 @@ func TestCaptureDecoratorRecordsUnaryCall(t *testing.T) {
 	}
 	if n, _ := st.Count(store.Filter{Kind: store.KindCall, Direction: store.DirectionComplete, ChainRef: env[0].ChainRef}); n != 1 {
 		t.Fatalf("completions = %d, want 1", n)
+	}
+}
+
+func TestCaptureDecoratorSkipsPollRPCs(t *testing.T) {
+	key := make([]byte, 32)
+	st, err := store.Open(store.Config{DBPath: filepath.Join(t.TempDir(), "poll.sqlite"), Key: key})
+	if err != nil {
+		t.Fatalf("store: %v", err)
+	}
+	defer st.Close()
+
+	rec := capture.NewRecorder(st, captureann.New("op"))
+	inner := &fakeRPC{}
+	dec := WrapCapture(inner, rec)
+
+	if _, err := dec.GetBeacons(context.Background(), &commonpb.Empty{}); err != nil {
+		t.Fatalf("get beacons: %v", err)
+	}
+	if inner.getBeaconsCalls != 1 {
+		t.Fatalf("inner calls = %d", inner.getBeaconsCalls)
+	}
+	for _, kind := range []string{store.KindCall, store.KindMessage} {
+		n, err := st.Count(store.Filter{Kind: kind})
+		if err != nil {
+			t.Fatalf("count %s: %v", kind, err)
+		}
+		if n != 0 {
+			t.Fatalf("%s records = %d, want 0", kind, n)
+		}
 	}
 }
 

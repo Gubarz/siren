@@ -12,6 +12,7 @@
 //               the caller.
 
 import BeaconTasks from '../BeaconTasks.svelte'
+import SessionTasks from '../SessionTasks.svelte'
 import FileBrowser from '../FileBrowser.svelte'
 import ProcessExplorer from '../ProcessExplorer.svelte'
 import RegistryBrowser from '../RegistryBrowser.svelte'
@@ -43,6 +44,13 @@ const TabRegistry = {
     component: BeaconTasks,
     props: (tab, ctx) => ({
       beaconID: tab.sessionId,
+      active: ctx.isActive(tab),
+    }),
+  },
+  sessionTasks: {
+    component: SessionTasks,
+    props: (tab, ctx) => ({
+      sessionID: tab.sessionId,
       active: ctx.isActive(tab),
     }),
   },

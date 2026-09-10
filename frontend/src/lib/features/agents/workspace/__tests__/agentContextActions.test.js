@@ -194,6 +194,34 @@ describe('buildAgentActionsSections', () => {
     expect(labels).toContain('Close Interactive Session')
     expect(labels).not.toContain('New Shell')
   })
+
+  it('opens the session tasks tab for sessions', () => {
+    const sessionAgent = { ID: 's1', OS: 'linux', Name: 'sess', _kind: 'session', Hostname: 'PC1' }
+    const ctx = actionsCtx({
+      agent: sessionAgent,
+      isWindows: false,
+      targetAgents: [sessionAgent],
+    })
+    const items = flattenItems(buildAgentActionsSections(ctx))
+    const tasks = items.find((item) => item.label === 'Tasks')
+    expect(tasks).toBeTruthy()
+    tasks.on()
+    expect(ctx.agentTabs.openTab).toHaveBeenCalledWith(sessionAgent.ID, 'sessionTasks')
+  })
+
+  it('keeps the beacon tasks tab on type tasks', () => {
+    const beaconAgent = { ID: 'b1', OS: 'windows', Name: 'beacon', _kind: 'beacon', Hostname: 'PC1' }
+    const ctx = actionsCtx({
+      agent: beaconAgent,
+      isBeacon: true,
+      targetAgents: [beaconAgent],
+    })
+    const items = flattenItems(buildAgentActionsSections(ctx))
+    const tasks = items.find((item) => item.label === 'Tasks')
+    expect(tasks).toBeTruthy()
+    tasks.on()
+    expect(ctx.agentTabs.openTab).toHaveBeenCalledWith(beaconAgent.ID, 'tasks')
+  })
 })
 
 describe('danger actions — selection aware', () => {
