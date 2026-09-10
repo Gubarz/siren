@@ -40,10 +40,16 @@ analyze: analyze-go analyze-frontend
 
 analyze-go:
 	go test ./...
-	go vet .
-	staticcheck .
-	deadcode -test .
-	dupl -t 50 *.go
+	pkgs="$$(go list ./... | grep -v /node_modules/)"; \
+	[ -n "$$pkgs" ] || { echo "analyze-go: go list returned no packages" >&2; exit 1; }; \
+	files="$$(git ls-files '*.go' | grep -v '_decorator\.go$$')"; \
+	[ -n "$$files" ] || { echo "dupl: no first-party Go files found" >&2; exit 1; }; \
+	go vet $$pkgs && \
+	staticcheck $$pkgs && \
+	deadcode -test $$pkgs && \
+	dupl_out="$$(dupl -t 50 $$files)" && \
+	echo "$$dupl_out" && \
+	if echo "$$dupl_out" | grep -q '\.go:'; then echo "dupl: clones found" >&2; exit 1; fi
 	# Function length (45) via golangci-lint funlen; file length (350) via
 	# our shell check. Both budgets documented in CONTRIBUTING.md.
 	golangci-lint run --timeout=5m ./...
