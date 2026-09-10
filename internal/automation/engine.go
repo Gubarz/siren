@@ -92,9 +92,12 @@ func (e *Engine) Start(ctx context.Context) {
 
 func (e *Engine) SetServer(host string, port uint32) {
 	e.disarmAll()
-	e.store.SetServer(host, port)
+	// The write lock is taken before the path swap, not after. persistLocked
+	// runs under it, so swapping first let an in-flight run write the previous
+	// server's rules and history into the new server's file.
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	e.store.SetServer(host, port)
 	e.rules = nil
 	e.history = nil
 	if state, err := e.store.Load(context.Background()); err != nil {
