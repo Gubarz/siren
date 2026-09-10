@@ -65,6 +65,9 @@ func runCommandList(ctx context.Context, rc *automation.RunContext, list []strin
 				break
 			}
 		}
+		if output.Len() >= maxActionOutputSize {
+			break
+		}
 	}
 	if rc.Commands != nil {
 		*rc.Commands = append(*rc.Commands, ran...)
@@ -75,18 +78,38 @@ func runCommandList(ctx context.Context, rc *automation.RunContext, list []strin
 	return runErr
 }
 
+// maxActionOutputSize bounds what one action accumulates from command output.
+// The run is persisted with the automation state and that file is rewritten on
+// every run start and finish, so an unbounded result grows it without limit.
+const maxActionOutputSize = 10 * 1024 * 1024
+
 func appendCmdOutput(out *strings.Builder, command, result string, err error) {
+	if out.Len() >= maxActionOutputSize {
+		return
+	}
 	if out.Len() > 0 {
 		out.WriteString("\n\n")
 	}
 	fmt.Fprintf(out, "$ %s", command)
 	if result != "" {
 		out.WriteByte('\n')
-		out.WriteString(result)
+		out.WriteString(clipToBudget(result, maxActionOutputSize-out.Len()))
 	}
 	if err != nil {
 		fmt.Fprintf(out, "\n[!] %v", err)
 	}
+}
+
+// clipToBudget keeps the accumulated output within budget, marking it when the
+// text had to be cut.
+func clipToBudget(text string, budget int) string {
+	if budget <= 0 {
+		return ""
+	}
+	if len(text) <= budget {
+		return text
+	}
+	return text[:budget] + "\n... output truncated ..."
 }
 
 func timeoutFromRule(rule automation.AutomationRule) time.Duration {

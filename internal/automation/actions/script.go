@@ -12,8 +12,6 @@ import (
 	"siren/internal/automation"
 )
 
-const maxJSOutputSize = 10 * 1024 * 1024
-
 type script struct{}
 
 func Script() automation.Action { return script{} }
@@ -126,7 +124,7 @@ func (je *jsExec) log(values ...interface{}) {
 	if je.trunc {
 		return
 	}
-	if je.output.Len() >= maxJSOutputSize {
+	if je.output.Len() >= maxActionOutputSize {
 		je.output.WriteString("\n... output truncated ...")
 		je.trunc = true
 		return
@@ -155,7 +153,7 @@ func (je *jsExec) run(command string) (string, error) {
 	result, err := je.rc.Deps.Executor.Execute(je.ctx, je.rc.Target.ID, je.rc.Target.Kind, command)
 	if !je.trunc {
 		appendCmdOutput(&je.output, command, result, err)
-		if je.output.Len() >= maxJSOutputSize {
+		if je.output.Len() >= maxActionOutputSize {
 			je.output.WriteString("\n... output truncated ...")
 			je.trunc = true
 		}
